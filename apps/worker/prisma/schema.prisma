@@ -110,12 +110,11 @@ model EngineVersion {
   storageKey       String
   sha256           String           @unique
   fileSizeBytes    Int
-  targetArch       String
-  isStaticBinary   Boolean          @default(false)
+  language         String           @default("js") // "js" or "py"
   validationStatus ValidationStatus @default(pending)
   validationNotes  String?
-  uciName          String?
-  uciAuthor        String?
+  agentName        String?
+  agentAuthor      String?
   submittedAt      DateTime         @default(now())
   validatedAt      DateTime?
 

@@ -17,6 +17,12 @@ export default function SubmitPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      const ext = selectedFile.name.split(".").pop()?.toLowerCase();
+      if (ext !== "js" && ext !== "py") {
+        setErrorMsg("Only .js and .py files are accepted.");
+        setFile(null);
+        return;
+      }
       if (selectedFile.size > 1024 * 1024) {
         setErrorMsg("File too large. Maximum size is 1MB.");
         setFile(null);
@@ -83,7 +89,7 @@ export default function SubmitPage() {
       <div className="flex flex-col gap-10">
         <div>
           <h1 className="text-4xl font-extrabold mb-4">Submit Your <span className="gold-gradient">Engine</span></h1>
-          <p className="text-white/60">Upload a single UCI-compatible binary. Max 1MB. No external dependencies.</p>
+          <p className="text-white/60">Upload a single .js or .py agent file. Reads FEN from stdin, outputs a move. Max 1MB.</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-10">
@@ -94,10 +100,10 @@ export default function SubmitPage() {
                 <Shield size={18} className="text-accent" /> Submission Rules
               </h3>
               <ul className="text-sm text-white/50 space-y-3">
-                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> One self-contained file</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Single .js or .py file</li>
                 <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Max size: 1 MiB</li>
-                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Linux x86_64 ELF</li>
-                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Must speak UCI protocal</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Reads FEN from stdin</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Outputs UCI move to stdout</li>
                 <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> No network access allowed</li>
               </ul>
             </div>
@@ -144,10 +150,11 @@ export default function SubmitPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold uppercase tracking-widest text-white/40">Binary File</label>
+                  <label className="text-sm font-bold uppercase tracking-widest text-white/40">Agent File (.js or .py)</label>
                   <div className="relative group">
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
+                      accept=".js,.py"
                       onChange={handleFileChange}
                       required
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
@@ -165,7 +172,7 @@ export default function SubmitPage() {
                         <>
                           <Upload size={48} className="text-white/20 group-hover:text-white/40 transition-colors" />
                           <div className="text-center">
-                            <p className="font-bold">Drop your binary here</p>
+                            <p className="font-bold">Drop your .js or .py file here</p>
                             <p className="text-xs text-white/40">or click to browse</p>
                           </div>
                         </>

@@ -7,7 +7,9 @@
       "Bash(git -C /d/Github/chess-agents ls-files -- \"*.env*\" \".env*\" \"**/.env*\")",
       "Bash(git -C /d/Github/chess-agents status --short -- \".env\" \"apps/web/.env.local\" \"apps/worker/.env\")",
       "Bash(xargs grep:*)",
-      "Bash(dir /B \"D:\\\\Github\\\\chess-agents\\\\apps\\\\web\\\\src\")"
+      "Bash(dir /B \"D:\\\\Github\\\\chess-agents\\\\apps\\\\web\\\\src\")",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

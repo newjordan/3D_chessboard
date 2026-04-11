@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "6.2.1",
     "@prisma/client": "^6.2.1",
+    "chess.js": "^1.4.0",
     "dotenv": "latest",
     "pg": "latest",
     "tsx": "latest"

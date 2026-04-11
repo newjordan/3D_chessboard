@@ -109,18 +109,18 @@ export default async function Home() {
           {[
             {
               icon: <Cpu className="text-blue-400" size={32} />,
-              title: "GPU Accelerated",
-              desc: "Optimized infrastructure for neural network agents and heavy search heuristics."
+              title: "JS & Python Agents",
+              desc: "Submit a single .js or .py file. Your agent reads a FEN position and outputs its best move."
             },
             {
               icon: <Shield className="text-blue-400" size={32} />,
               title: "Sandboxed Execution",
-              desc: "Safe, isolated Linux environments for third-party binaries with resource gating."
+              desc: "Every agent runs in an isolated Docker container with no network access and strict resource limits."
             },
             {
               icon: <Sparkles className="text-blue-400" size={32} />,
               title: "Real-time Elo",
-              desc: "Dynamic rating updates powered by the Glicko-2 system for accurate agent ranking."
+              desc: "Dynamic Elo rating updates after every match. Climb the ladder and compete for monthly prizes."
             }
           ].map((feature, i) => (
             <div key={i} className="group bg-white/[0.02] hover:bg-white/[0.04] p-10 rounded-[2.5rem] border border-white/5 hover:border-blue-500/30 transition-all flex flex-col gap-6">

@@ -3,17 +3,16 @@ dotenv.config();
 
 import { prisma, JobStatus, JobType, EngineStatus, ValidationStatus, SubmissionStatus, MatchStatus } from "./db";
 import { storage, BUCKET_NAME } from "./storage";
-import { validateElfHeader } from "./validation/elf";
-import { probeUci } from "./validation/uci";
+import { validateFileType } from "./validation/filetype";
+import { probeAgent } from "./validation/probe";
 import { preparePlacementMatches } from "./matchmaking/placement";
-import { runMatch } from "./matchmaking/cutechess";
+import { runMatch } from "./matchmaking/runner";
 import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { updateRatingsForMatch } from "./ratings/elo";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import { Readable } from "stream";
-import { chmodSync } from "fs";
 
 const WORKER_ID = `worker-${process.env.HOSTNAME || Math.random().toString(36).substring(7)}`;
 
@@ -69,7 +68,6 @@ async function pollJobs() {
     console.error("Error in polling loop:", error);
   }
 
-  // Poll again after a delay
   setTimeout(pollJobs, 2000);
 }
 
@@ -94,11 +92,20 @@ async function processJob(job: any) {
 
 async function handleValidation(payload: any) {
   const { submissionId, versionId, storageKey } = payload;
+
+  // 1. Validate file type from storage key
+  const fileType = validateFileType(storageKey);
+  if (!fileType.isValid || !fileType.language) {
+    await failSubmission(submissionId, versionId, fileType.error || "Invalid file type");
+    return;
+  }
+
+  const ext = fileType.language;
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "engine-"));
-  const tempPath = path.join(tempDir, "engine_bin");
+  const tempPath = path.join(tempDir, `agent.${ext}`);
 
   try {
-    // 1. Download from R2
+    // 2. Download from R2
     console.log(`Downloading ${storageKey} to ${tempPath}...`);
     const { Body } = await storage.send(new GetObjectCommand({
       Bucket: BUCKET_NAME,
@@ -110,35 +117,22 @@ async function handleValidation(payload: any) {
     const arrayBuffer = await (Body as any).transformToByteArray();
     await fs.writeFile(tempPath, Buffer.from(arrayBuffer));
 
-    // 2. Set executable permissions
-    chmodSync(tempPath, 0o755);
-
-    // 3. Static check (ELF)
-    console.log("Running ELF header check...");
-    const staticCheck = await validateElfHeader(tempPath);
-    if (!staticCheck.isValid) {
-      await failSubmission(submissionId, versionId, staticCheck.error || "Invalid ELF header");
+    // 3. Probe agent — send FEN, expect legal move
+    console.log(`Running FEN probe (${ext})...`);
+    const probeResult = await probeAgent(tempPath, ext);
+    if (!probeResult.isValid) {
+      await failSubmission(submissionId, versionId, probeResult.error || "Agent did not return a valid move");
       return;
     }
 
-    // 4. Dynamic check (UCI Probe)
-    console.log("Running UCI handshake probe...");
-    const uciCheck = await probeUci(tempPath);
-    if (!uciCheck.isUci) {
-      await failSubmission(submissionId, versionId, uciCheck.error || "Binary does not speak UCI protocol");
-      return;
-    }
-
-    // 5. Success! Update DB
-    console.log(`Validation passed: ${uciCheck.name} by ${uciCheck.author}`);
+    // 4. Success! Update DB
+    console.log(`Validation passed for ${storageKey}`);
     await prisma.$transaction([
       prisma.engineVersion.update({
         where: { id: versionId },
         data: {
           validationStatus: ValidationStatus.passed,
           validatedAt: new Date(),
-          uciName: uciCheck.name,
-          uciAuthor: uciCheck.author,
         },
       }),
       prisma.submission.update({
@@ -159,7 +153,6 @@ async function handleValidation(payload: any) {
       }),
     ]);
   } finally {
-    // Cleanup
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
     } catch (e) {
@@ -181,29 +174,41 @@ async function handleMatchRun(payload: any) {
     include: {
       challengerVersion: true,
       defenderVersion: true,
+      challengerEngine: true,
+      defenderEngine: true,
     }
   });
 
   if (!match) throw new Error("Match not found");
 
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "match-"));
-  const pathA = path.join(tempDir, "engine_a");
-  const pathB = path.join(tempDir, "engine_b");
+
+  // Determine file extensions from storage keys
+  const challengerExt = path.extname(match.challengerVersion.storageKey) || `.${match.challengerVersion.language}`;
+  const defenderExt = path.extname(match.defenderVersion.storageKey) || `.${match.defenderVersion.language}`;
+  const pathA = path.join(tempDir, `agent_a${challengerExt}`);
+  const pathB = path.join(tempDir, `agent_b${defenderExt}`);
 
   try {
-    // 1. Download binaries
-    console.log(`Downloading engines for match ${matchId}...`);
-    await downloadBinary(match.challengerVersion.storageKey, pathA);
-    await downloadBinary(match.defenderVersion.storageKey, pathB);
-
-    chmodSync(pathA, 0o755);
-    chmodSync(pathB, 0o755);
+    // 1. Download agents
+    console.log(`Downloading agents for match ${matchId}...`);
+    await downloadAgent(match.challengerVersion.storageKey, pathA);
+    await downloadAgent(match.defenderVersion.storageKey, pathB);
 
     // 2. Run match
-    const result = await runMatch(pathA, pathB, {
-      games: match.gamesPlanned,
-      tc: "40/60" // 1 minute per 40 moves
-    });
+    const result = await runMatch(
+      {
+        path: pathA,
+        language: (match.challengerVersion.language || challengerExt.slice(1)) as "js" | "py",
+        name: match.challengerEngine.name,
+      },
+      {
+        path: pathB,
+        language: (match.defenderVersion.language || defenderExt.slice(1)) as "js" | "py",
+        name: match.defenderEngine.name,
+      },
+      { games: match.gamesPlanned }
+    );
 
     // 3. Validate score integrity
     const challengerWins = result.games.filter(g => g.result === "1-0").length;
@@ -212,16 +217,11 @@ async function handleMatchRun(payload: any) {
     const totalGames = challengerWins + defenderWins + draws;
 
     if (totalGames !== match.gamesPlanned) {
-      throw new Error(`Score integrity check failed: ${totalGames} games counted but ${match.gamesPlanned} expected`);
+      throw new Error(`Score integrity check failed: ${totalGames} counted vs ${match.gamesPlanned} expected`);
     }
 
     const challengerScore = challengerWins + (draws * 0.5);
     const defenderScore = defenderWins + (draws * 0.5);
-
-    // Verify scores are within valid bounds
-    if (challengerScore + defenderScore !== match.gamesPlanned) {
-      throw new Error(`Score integrity check failed: scores sum to ${challengerScore + defenderScore}, expected ${match.gamesPlanned}`);
-    }
 
     // 4. Save PGN to R2
     const pgnKey = `matches/${matchId}/match.pgn`;
@@ -244,7 +244,6 @@ async function handleMatchRun(payload: any) {
           pgnStorageKey: pgnKey,
         }
       }),
-      // Create Game records
       ...result.games.map(g => prisma.game.create({
         data: {
           matchId,
@@ -252,10 +251,10 @@ async function handleMatchRun(payload: any) {
           whiteEngineId: match.challengerEngineId,
           blackEngineId: match.defenderEngineId,
           result: g.result,
+          termination: g.termination,
           pgnStorageKey: "",
         }
       })),
-      // Enqueue Rating Update
       prisma.job.create({
         data: {
           jobType: JobType.rating_apply,
@@ -282,16 +281,13 @@ async function handleRatingApply(payload: any) {
 
   if (!match || match.status !== "completed") return;
 
-  // Idempotency check: skip if ratings already applied for this match
-  const existingRating = await prisma.rating.findFirst({
-    where: { matchId },
-  });
+  // Idempotency check
+  const existingRating = await prisma.rating.findFirst({ where: { matchId } });
   if (existingRating) {
     console.log(`Ratings already applied for match ${matchId}, skipping`);
     return;
   }
 
-  // 1. Calculate Elo Change
   const { deltaA, deltaB } = updateRatingsForMatch(
     match.challengerEngine.currentRating,
     match.defenderEngine.currentRating,
@@ -300,7 +296,6 @@ async function handleRatingApply(payload: any) {
     match.gamesPlanned
   );
 
-  // 2. Update Engines and Ratings atomically
   await prisma.$transaction([
     prisma.engine.update({
       where: { id: match.challengerEngineId },
@@ -339,12 +334,10 @@ async function handleRatingApply(payload: any) {
     })
   ]);
 
-  // 3. Recalculate Global Ranks atomically
   await updateGlobalRanks();
 }
 
 async function updateGlobalRanks() {
-  // Use a raw query to update all ranks atomically in a single statement
   await prisma.$executeRawUnsafe(`
     UPDATE "Engine" e
     SET "currentRank" = ranked.rank
@@ -357,7 +350,7 @@ async function updateGlobalRanks() {
   `);
 }
 
-async function downloadBinary(key: string, dest: string) {
+async function downloadAgent(key: string, dest: string) {
   const { Body } = await storage.send(new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
@@ -387,5 +380,5 @@ async function failSubmission(submissionId: string, versionId: string, reason: s
   ]);
 }
 
-console.log(`Chess Ladder Worker started with ID: ${WORKER_ID}`);
+console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
 pollJobs();

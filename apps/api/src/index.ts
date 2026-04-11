@@ -6,6 +6,7 @@ import { prisma, EngineStatus, ValidationStatus, SubmissionStatus, JobStatus, Jo
 import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
+import path from "path";
 
 dotenv.config();
 
@@ -54,7 +55,8 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.R2_BUCKET || "chess-agents";
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+const ALLOWED_EXTENSIONS = [".js", ".py"];
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE },
@@ -134,6 +136,12 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Validate file type
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return res.status(400).json({ error: "Only .js and .py files are accepted" });
+    }
+
     // Validate engine name
     if (typeof name !== "string" || name.length > MAX_ENGINE_NAME_LENGTH || name.trim().length === 0) {
       return res.status(400).json({ error: `Engine name must be 1-${MAX_ENGINE_NAME_LENGTH} characters` });
@@ -172,12 +180,13 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
     });
 
     // 2. Upload to S3/R2
-    const storageKey = `engines/${engine.id}/${sha256}`;
+    const storageKey = `engines/${engine.id}/${sha256}${ext}`;
+    const contentType = ext === ".js" ? "application/javascript" : "text/x-python";
     await s3Client.send(new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: storageKey,
       Body: buffer,
-      ContentType: "application/octet-stream",
+      ContentType: contentType,
     }));
 
     // 3. Create Version
@@ -187,7 +196,7 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
         storageKey,
         sha256,
         fileSizeBytes: buffer.length,
-        targetArch: "x86_64",
+        language: ext.slice(1), // "js" or "py"
         validationStatus: ValidationStatus.pending,
       },
     });
