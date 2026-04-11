@@ -8,6 +8,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
+    libqt5core5a \
+    libqt5network5 \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install cutechess-cli

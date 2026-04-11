@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowRight, Trophy, Zap, Shield, Cpu, Bot, Network, Sparkles } from "lucide-react";
 import { prisma, EngineStatus } from "db";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   // Fetch Live Data
   const [totalEngines, totalGames, topEngines] = await Promise.all([

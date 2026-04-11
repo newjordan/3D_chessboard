@@ -12,9 +12,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export default async function EngineDetailPage({ params }: { params: { slug: string } }) {
+export const dynamic = "force-dynamic";
+
+export default async function EngineDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  
   const engine = await prisma.engine.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: {
       owner: { select: { username: true } },
       versions: {
