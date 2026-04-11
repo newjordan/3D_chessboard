@@ -147,11 +147,18 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       return res.status(400).json({ error: `Engine name must be 1-${MAX_ENGINE_NAME_LENGTH} characters` });
     }
 
-    // Validate ownerUserId exists
-    const owner = await prisma.user.findUnique({ where: { id: ownerUserId } });
-    if (!owner) {
-      return res.status(400).json({ error: "Invalid owner" });
-    }
+    // Upsert owner — auto-create user on first submission
+    const { ownerUsername, ownerEmail, ownerName } = req.body;
+    const owner = await prisma.user.upsert({
+      where: { id: ownerUserId },
+      create: {
+        id: ownerUserId,
+        username: ownerUsername || null,
+        email: ownerEmail || null,
+        name: ownerName || null,
+      },
+      update: {},
+    });
 
     const buffer = file.buffer;
     const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
