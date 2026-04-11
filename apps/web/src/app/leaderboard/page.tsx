@@ -2,6 +2,8 @@ import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
 import { Trophy, Medal, ArrowUpRight } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function LeaderboardPage() {
   const engines = await ApiClient.getLeaderboard();
 

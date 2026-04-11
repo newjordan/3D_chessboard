@@ -4,7 +4,7 @@ import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EngineCard } from "@/components/EngineCard";
-import { Plus, LayoutDashboard, Settings, Activity } from "lucide-react";
+import { Plus } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
             </div>
             <h2 className="text-2xl font-bold text-slate-200">No engines found</h2>
             <p className="text-slate-500 mt-2 mb-8 max-w-md mx-auto">
-              You haven't submitted any chess engines to the ladder yet. Start by uploading a UCI-compatible binary.
+              You haven&apos;t submitted any chess engines to the ladder yet. Start by uploading a UCI-compatible binary.
             </p>
             <Link
               href="/submit"

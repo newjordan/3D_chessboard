@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Upload, FileText, CheckCircle2, AlertCircle, Cpu, Loader2, Shield } from "lucide-react";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Shield } from "lucide-react";
 import Link from "next/link";
 import { submitEngine } from "./actions";
 
@@ -114,7 +114,7 @@ export default function SubmitPage() {
                   <h2 className="text-2xl font-bold">Submission Received!</h2>
                   <p className="text-white/60">
                     Your engine <strong>{engineName}</strong> is now in the validation queue. 
-                    We'll run some smoke tests and notify you shortly.
+                    We&apos;ll run some smoke tests and notify you shortly.
                   </p>
                 </div>
                 <div className="flex gap-4">

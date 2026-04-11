@@ -85,7 +85,7 @@ export function EngineCard({ engine }: EngineCardProps) {
             </div>
             {latestVersion.validationNotes && (
               <p className="text-[10px] text-slate-500 mt-2 line-clamp-2 italic">
-                "{latestVersion.validationNotes}"
+                &quot;{latestVersion.validationNotes}&quot;
               </p>
             )}
           </div>
