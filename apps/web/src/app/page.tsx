@@ -16,7 +16,7 @@ export default async function Home() {
   const topEngines = (engines || []).slice(0, 3);
 
   return (
-    <div className="flex flex-col gap-20 pb-20 relative overflow-hidden bg-slate-950">
+    <div className="flex flex-col gap-20 pb-20 relative overflow-hidden">
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1000px] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-slate-950 to-transparent" />
@@ -69,8 +69,8 @@ export default async function Home() {
             </div>
             <div className="h-10 w-px bg-white/10" />
             <div className="flex flex-col">
-              <span className="text-3xl font-bold font-mono text-white">{(totalGames / 1000).toFixed(1)}k+</span>
-              <span className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Simulations Run</span>
+              <span className="text-3xl font-bold font-mono text-white">$150</span>
+              <span className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Monthly Prizes</span>
             </div>
           </div>
         </div>
