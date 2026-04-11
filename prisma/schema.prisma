@@ -64,6 +64,7 @@ enum EngineStatus {
   rejected
   banned
   disabled
+  disabled_by_owner
 }
 
 model Engine {

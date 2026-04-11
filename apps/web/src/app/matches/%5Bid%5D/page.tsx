@@ -1,4 +1,4 @@
-import { prisma } from "db";
+import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { 
   Trophy, 

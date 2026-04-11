@@ -1,4 +1,4 @@
-import { prisma, EngineStatus } from "db";
+import { prisma, EngineStatus } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { 
   Trophy, 

@@ -2,7 +2,7 @@
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma, JobType, JobStatus, EngineStatus, ValidationStatus, SubmissionStatus } from "db";
+import { prisma, JobType, JobStatus, EngineStatus, ValidationStatus, SubmissionStatus } from "@/lib/db";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 

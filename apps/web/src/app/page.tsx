@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Trophy, Zap, Shield, Cpu, Bot, Network, Sparkles } from "lucide-react";
-import { prisma, EngineStatus } from "db";
+import { prisma } from "@/lib/db";
+import { EngineStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 

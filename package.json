@@ -3,17 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
-    "build": "npm run generate --workspace=db && npm run build --workspaces --if-present",
+    "build": "npx prisma generate && npm run build --workspaces --if-present",
     "start": "npm run start --workspaces --if-present",
-    "postinstall": "npm run generate --workspace=db"
+    "postinstall": "npx prisma generate"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "turbo": "latest"
+    "prisma": "^7.7.0",
+    "turbo": "latest",
+    "typescript": "^5.0.0"
   }
 }

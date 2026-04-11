@@ -1,4 +1,4 @@
-import { prisma, EngineStatus } from "db";
+import { prisma, EngineStatus } from "@/lib/db";
 import Link from "next/link";
 import { Trophy, Medal, ArrowUpRight } from "lucide-react";
 

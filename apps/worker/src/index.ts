@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { prisma, JobStatus, JobType, EngineStatus, ValidationStatus, SubmissionStatus, MatchStatus } from "db";
+import { prisma, JobStatus, JobType, EngineStatus, ValidationStatus, SubmissionStatus, MatchStatus } from "./db";
 import { storage, BUCKET_NAME } from "./storage";
 import { validateElfHeader } from "./validation/elf";
 import { probeUci } from "./validation/uci";

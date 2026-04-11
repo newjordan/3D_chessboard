@@ -1,4 +1,4 @@
-import { prisma, MatchType, JobType, JobStatus, EngineStatus } from "db";
+import { prisma, MatchType, MatchStatus, JobType, JobStatus, EngineStatus } from "../db";
 
 /**
  * Prepares placement matches for a newly validated engine version.
