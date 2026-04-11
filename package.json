@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "build": "npm run generate && npm run build --workspaces --if-present",
-    "generate": "npm run generate --workspace @chess-agents/api && npm run generate --workspace @chess-agents/worker",
+    "generate": "prisma generate --schema ./prisma/schema.prisma",
     "start": "npm run start --workspaces --if-present",
     "postinstall": "npm run generate"
   },
