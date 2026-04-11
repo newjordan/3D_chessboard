@@ -92,7 +92,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <Activity className="text-accent" size={24} /> Game-by-Game
             </h3>
             <div className="flex flex-col gap-4">
-              {(match.games || []).map((game: any, idx: number) => (
+              {(match?.games || []).map((game: any, idx: number) => (
                 <div key={game.id} className="glass p-6 rounded-2xl border border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-8">
                     <span className="text-sm font-bold text-white/20 uppercase tracking-widest">Game {idx + 1}</span>

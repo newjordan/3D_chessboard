@@ -12,6 +12,14 @@
     "start": "npm run start --workspaces --if-present",
     "postinstall": "npm run generate"
   },
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
   "devDependencies": {
     "prisma": "6.2.1",
     "turbo": "latest",

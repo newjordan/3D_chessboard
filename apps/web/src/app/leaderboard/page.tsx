@@ -5,7 +5,7 @@ import { Trophy, Medal, ArrowUpRight } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
-  const engines = await ApiClient.getLeaderboard();
+  const engines = await ApiClient.getLeaderboard().catch(() => []);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -38,7 +38,7 @@ export default async function LeaderboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {engines.map((engine, index) => (
+              {(engines || []).map((engine, index) => (
                 <tr key={engine.id} className="hover:bg-white/[0.02] transition-colors group">
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-3">

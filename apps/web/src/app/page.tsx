@@ -12,8 +12,8 @@ export default async function Home() {
      ApiClient.getMatch("stats").catch(() => ({ gamesCount: 0 })) // Dummy for stats
   ]);
 
-  const totalEngines = engines.length;
-  const topEngines = engines.slice(0, 3);
+  const totalEngines = engines?.length || 0;
+  const topEngines = (engines || []).slice(0, 3);
 
   return (
     <div className="flex flex-col gap-20 pb-20 relative overflow-hidden bg-slate-950">
