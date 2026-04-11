@@ -9,13 +9,13 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY tsconfig.json ./
 
-# Copy the worker and its specific dependencies
+# Copy the worker
 COPY apps/worker apps/worker
-COPY apps/api/src/db.ts apps/api/src/db.ts 
-# Wait, the worker likely imports from a shared place or its own db.ts
-# Let's check imports in src/index.ts
 
-# For now, let's assume standard workspace install
+# Copy the prisma schema from root (it's shared)
+COPY prisma ./prisma
+
+# Install dependencies
 RUN npm install
 
 # Generate Prisma Client
@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy built artifacts and necessary files
+# We need the root node_modules for the generated Prisma client
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
