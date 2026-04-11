@@ -16,6 +16,7 @@
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
+    "express-rate-limit": "^8.3.2",
     "multer": "latest",
     "pg": "latest"
   },
