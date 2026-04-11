@@ -1,0 +1,32 @@
+{
+  "name": "@chess-agents/api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "latest",
+    "@prisma/client": "latest",
+    "@prisma/adapter-pg": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "multer": "latest",
+    "pg": "latest"
+  },
+  "devDependencies": {
+    "@types/cors": "latest",
+    "@types/express": "latest",
+    "@types/multer": "latest",
+    "@types/node": "latest",
+    "@types/pg": "latest",
+    "nodemon": "latest",
+    "prisma": "latest",
+    "ts-node": "latest",
+    "typescript": "latest"
+  }
+}

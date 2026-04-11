@@ -1,20 +1,9 @@
-import { prisma, EngineStatus } from "@/lib/db";
+import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
 import { Trophy, Medal, ArrowUpRight } from "lucide-react";
 
 export default async function LeaderboardPage() {
-  const engines = await prisma.engine.findMany({
-    where: { status: EngineStatus.active },
-    orderBy: [
-      { currentRating: "desc" },
-      { currentRank: "asc" },
-    ],
-    include: {
-      owner: {
-        select: { username: true }
-      }
-    }
-  });
+  const engines = await ApiClient.getLeaderboard();
 
   return (
     <div className="container mx-auto px-4 py-12">

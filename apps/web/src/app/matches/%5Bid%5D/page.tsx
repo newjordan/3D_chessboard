@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { ApiClient } from "@/lib/apiClient";
 import { notFound } from "next/navigation";
 import { 
   Trophy, 
@@ -7,7 +7,8 @@ import {
   Calendar, 
   Clock, 
   ShieldCheck,
-  Download
+  Download,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 
@@ -16,18 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   
-  const match = await prisma.match.findUnique({
-    where: { id },
-    include: {
-      challengerEngine: true,
-      defenderEngine: true,
-      challengerVersion: true,
-      defenderVersion: true,
-      games: {
-        orderBy: { roundIndex: "asc" }
-      }
-    }
-  });
+  const match = await ApiClient.getMatch(id).catch(() => null);
 
   if (!match) {
     notFound();
@@ -102,7 +92,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <Activity className="text-accent" size={24} /> Game-by-Game
             </h3>
             <div className="flex flex-col gap-4">
-              {match.games.map((game, idx) => (
+              {(match.games || []).map((game: any, idx: number) => (
                 <div key={game.id} className="glass p-6 rounded-2xl border border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-8">
                     <span className="text-sm font-bold text-white/20 uppercase tracking-widest">Game {idx + 1}</span>
@@ -169,21 +159,3 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   );
 }
 
-function Activity(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-    </svg>
-  )
-}

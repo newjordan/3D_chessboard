@@ -1,4 +1,4 @@
-import { prisma, EngineStatus } from "@/lib/db";
+import { ApiClient } from "@/lib/apiClient";
 import { notFound } from "next/navigation";
 import { 
   Trophy, 
@@ -17,34 +17,16 @@ export const dynamic = "force-dynamic";
 export default async function EngineDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   
-  const engine = await prisma.engine.findUnique({
-    where: { slug },
-    include: {
-      owner: { select: { username: true } },
-      versions: {
-        orderBy: { submittedAt: "desc" },
-      },
-      matchesChallenged: {
-        take: 5,
-        orderBy: { completedAt: "desc" },
-        include: { defenderEngine: true },
-      },
-      matchesDefended: {
-        take: 5,
-        orderBy: { completedAt: "desc" },
-        include: { challengerEngine: true },
-      },
-    },
-  });
+  const engine = await ApiClient.getEngine(slug).catch(() => null);
 
   if (!engine) {
     notFound();
   }
 
   const allMatches = [
-    ...engine.matchesChallenged.map(m => ({ ...m, role: 'challenger' })),
-    ...engine.matchesDefended.map(m => ({ ...m, role: 'defender' }))
-  ].sort((a, b) => (b.completedAt?.getTime() || 0) - (a.completedAt?.getTime() || 0))
+    ...(engine.matchesChallenged || []).map((m: any) => ({ ...m, role: 'challenger' })),
+    ...(engine.matchesDefended || []).map((m: any) => ({ ...m, role: 'defender' }))
+  ].sort((a, b) => (new Date(b.completedAt || 0).getTime()) - (new Date(a.completedAt || 0).getTime()))
    .slice(0, 5);
 
   return (
@@ -62,7 +44,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               <div className="flex items-center gap-4">
                 <h1 className="text-6xl font-extrabold tracking-tight">{engine.name}</h1>
                 <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                  engine.status === EngineStatus.active ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                  engine.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                 }`}>
                   {engine.status}
                 </div>
@@ -109,7 +91,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                   <span className="text-right">Size</span>
                 </div>
                 <div className="divide-y divide-white/5">
-                  {engine.versions.map((version) => (
+                  {(engine.versions || []).map((version: any) => (
                     <div key={version.id} className="p-4 grid grid-cols-4 items-center">
                       <div className="flex flex-col">
                         <span className="font-bold">{version.uciName || "Processing..."}</span>

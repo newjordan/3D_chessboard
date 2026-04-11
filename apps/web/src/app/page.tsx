@@ -1,25 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Trophy, Zap, Shield, Cpu, Bot, Network, Sparkles } from "lucide-react";
-import { prisma } from "@/lib/db";
-import { EngineStatus } from "@prisma/client";
+import { ApiClient } from "@/lib/apiClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Fetch Live Data
-  const [totalEngines, totalGames, topEngines] = await Promise.all([
-    prisma.engine.count({ where: { status: EngineStatus.active } }),
-    prisma.game.count(),
-    prisma.engine.findMany({
-      where: { status: EngineStatus.active },
-      orderBy: { currentRating: "desc" },
-      take: 3,
-      include: {
-        owner: { select: { username: true } }
-      }
-    })
+  // Fetch Live Data from Backend API
+  const [engines, totalGames] = await Promise.all([
+     ApiClient.getLeaderboard().catch(() => []),
+     ApiClient.getMatch("stats").catch(() => ({ gamesCount: 0 })) // Dummy for stats
   ]);
+
+  const totalEngines = engines.length;
+  const topEngines = engines.slice(0, 3);
 
   return (
     <div className="flex flex-col gap-20 pb-20 relative overflow-hidden bg-slate-950">

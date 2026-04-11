@@ -12,7 +12,7 @@
     "postinstall": "npx prisma generate"
   },
   "devDependencies": {
-    "prisma": "^7.7.0",
+    "prisma": "^6.2.1",
     "turbo": "latest",
     "typescript": "^5.0.0"
   }

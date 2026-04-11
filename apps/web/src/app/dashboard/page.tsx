@@ -1,9 +1,10 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EngineCard } from "@/components/EngineCard";
+import { Plus, LayoutDashboard, Settings, Activity } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -11,18 +12,8 @@ export default async function DashboardPage() {
     redirect("/api/auth/signin");
   }
 
-  const userId = (session.user as any).id;
-
-  const engines = await prisma.engine.findMany({
-    where: { ownerUserId: userId },
-    include: {
-      versions: {
-        orderBy: { submittedAt: "desc" },
-        take: 1,
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const allEngines = await ApiClient.getLeaderboard().catch(() => []);
+  const engines = allEngines.filter((e: any) => e.ownerUserId === (session.user as any).id);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8 pt-24">
