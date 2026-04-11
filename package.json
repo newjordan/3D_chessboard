@@ -13,7 +13,7 @@
     "postinstall": "npm run generate"
   },
   "devDependencies": {
-    "prisma": "latest",
+    "prisma": "6.2.1",
     "turbo": "latest",
     "typescript": "^5.0.0"
   }

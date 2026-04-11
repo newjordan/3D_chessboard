@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "latest",
-    "@prisma/client": "latest",
-    "@prisma/adapter-pg": "latest",
+    "@prisma/client": "6.2.1",
+    "@prisma/adapter-pg": "6.2.1",
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
@@ -26,7 +26,7 @@
     "@types/node": "latest",
     "@types/pg": "latest",
     "nodemon": "latest",
-    "prisma": "latest",
+    "prisma": "6.2.1",
     "ts-node": "latest",
     "typescript": "latest"
   }
