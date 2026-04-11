@@ -6,15 +6,17 @@ import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check } fro
 import Link from "next/link";
 import { submitEngine } from "./actions";
 
-const STARTER_TEMPLATE = `const readline = require("readline");
-const rl = readline.createInterface({ input: process.stdin });
+const AGENT_PROMPT = `Build me a chess agent as a single .js file (Node.js, no dependencies).
 
-rl.on("line", (fen) => {
-  // Your logic here — parse the FEN and pick a move
-  // For now, just play e2e4 or a random legal move
-  console.log("e2e4");
-  process.exit();
-});`;
+Requirements:
+- Read a single FEN string from stdin (one line)
+- Output a single UCI move to stdout (e.g. "e2e4") and exit
+- The move MUST be legal for the given position
+- You have 5 seconds per move, 256MB memory, 1 CPU core
+- No network access, no filesystem writes
+- No external packages — stdlib only
+
+The agent will be called once per move with the current board state as a FEN string. It should analyze the position and print the best move it can find in UCI notation (e.g. "e2e4", "g1f3", "e7e8q" for promotion).`;
 
 export default function SubmitPage() {
   const { data: session, status } = useSession();
@@ -25,8 +27,8 @@ export default function SubmitPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const copyTemplate = () => {
-    navigator.clipboard.writeText(STARTER_TEMPLATE);
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(AGENT_PROMPT);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -135,33 +137,22 @@ export default function SubmitPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-            {/* How it works + Starter template */}
+            {/* Agent prompt — copy and give to your AI */}
             <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-              <div className="p-6 border-b border-white/5 flex flex-col gap-4">
-                <h3 className="font-bold text-lg">How it works</h3>
-                <p className="text-sm text-white/50">
-                  Your agent is a single <span className="text-white/80 font-mono">.js</span> or <span className="text-white/80 font-mono">.py</span> file.
-                  It receives a FEN position on <span className="text-white/80 font-mono">stdin</span> and prints a UCI move to <span className="text-white/80 font-mono">stdout</span> (e.g. <span className="text-white/80 font-mono">e2e4</span>).
-                </p>
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/40">
-                  <span>5s per move</span>
-                  <span>256 MB memory</span>
-                  <span>1 CPU</span>
-                  <span>No network</span>
-                  <span>No filesystem writes</span>
-                  <span>Timeout / illegal move = forfeit</span>
+              <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-lg">Build your agent</h3>
+                  <p className="text-sm text-white/40 mt-1">Copy this prompt and give it to your AI coding assistant</p>
                 </div>
-              </div>
-              <div className="relative">
                 <button
                   type="button"
-                  onClick={copyTemplate}
-                  className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium transition-colors"
+                  onClick={copyPrompt}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 border border-accent/20 text-accent text-sm font-bold transition-colors shrink-0"
                 >
-                  {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy template</>}
+                  {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy prompt</>}
                 </button>
-                <pre className="p-6 text-sm font-mono text-white/70 overflow-x-auto leading-relaxed bg-black/30">{STARTER_TEMPLATE}</pre>
               </div>
+              <pre className="p-5 text-sm font-mono text-white/50 overflow-x-auto leading-relaxed bg-black/20 whitespace-pre-wrap">{AGENT_PROMPT}</pre>
             </div>
 
             <div className="flex flex-col gap-2">
