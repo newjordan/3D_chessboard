@@ -10,7 +10,28 @@
       "Bash(dir /B \"D:\\\\Github\\\\chess-agents\\\\apps\\\\web\\\\src\")",
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(gh api:*)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/BlackYellow/agent.js\" -o \"D:/Github/chess-agents/seed/agents/blackyellow.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/CagnusMarlson/agent.js\" -o \"D:/Github/chess-agents/seed/agents/cagnusmarlson.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/Cheeku/agent.js\" -o \"D:/Github/chess-agents/seed/agents/cheeku.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/Chess%20Chad/agent.js\" -o \"D:/Github/chess-agents/seed/agents/chess-chad.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/ChessBit/agent.js\" -o \"D:/Github/chess-agents/seed/agents/chessbit.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/Claudilot/agent.js\" -o \"D:/Github/chess-agents/seed/agents/claudilot.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/Deeper%20Blue/agent.js\" -o \"D:/Github/chess-agents/seed/agents/deeper-blue.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/FrostD4D/agent.js\" -o \"D:/Github/chess-agents/seed/agents/frostd4d.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/Iron%20Knight/agent.js\" -o \"D:/Github/chess-agents/seed/agents/iron-knight.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/MERSAL/agent.js\" -o \"D:/Github/chess-agents/seed/agents/mersal.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/Rookie/agent.js\" -o \"D:/Github/chess-agents/seed/agents/rookie.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/Surfing%20Llama's/agent.js\" -o \"D:/Github/chess-agents/seed/agents/surfing-llamas.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/chess%20Augmenter/agent.js\" -o \"D:/Github/chess-agents/seed/agents/chess-augmenter.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/flamki/agent.js\" -o \"D:/Github/chess-agents/seed/agents/flamki.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/pawnstorm/agent.js\" -o \"D:/Github/chess-agents/seed/agents/pawnstorm.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/thriver/agent.js\" -o \"D:/Github/chess-agents/seed/agents/thriver.js\" -w \"%{http_code}\")",
+      "Bash(curl -sL \"https://api.github.com/repos/aj47/vibe-code-cup-1-simulator/contents/submissions/real-submissions\")",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(d['name']\\) for d in data]\")",
+      "Bash(curl -sL \"https://api.github.com/repos/aj47/vibe-code-cup-1-simulator/contents/submissions/real-submissions/thriver\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/thriver/agent.ts\" -o \"D:/Github/chess-agents/seed/agents/thriver.js\" -w \"%{http_code}\")"
     ]
   }
 }

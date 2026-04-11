@@ -126,7 +126,24 @@ app.get("/api/matches/:id", async (req, res) => {
   }
 });
 
-// 4. Submit Engine
+// 4. Get Engines by Owner
+app.get("/api/engines/by-owner/:userId", async (req, res) => {
+  try {
+    const engines = await prisma.engine.findMany({
+      where: { ownerUserId: req.params.userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        owner: { select: { username: true } },
+      },
+    });
+    res.json(engines);
+  } catch (error: any) {
+    console.error("Owner engines error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 5. Submit Engine
 app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req, res) => {
   try {
     const { name, ownerUserId } = req.body;

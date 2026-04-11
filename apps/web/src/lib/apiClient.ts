@@ -34,6 +34,10 @@ export class ApiClient {
     return this.request<any>(`/api/matches/${id}`);
   }
 
+  static async getEnginesByOwner(userId: string) {
+    return this.request<any[]>(`/api/engines/by-owner/${userId}`);
+  }
+
   static async submitEngine(form: FormData) {
     const res = await fetch(`${API_BASE_URL}/api/engines/submit`, {
       method: "POST",

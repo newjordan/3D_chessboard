@@ -14,8 +14,8 @@ export default async function DashboardPage() {
     redirect("/api/auth/signin");
   }
 
-  const allEngines = await ApiClient.getLeaderboard().catch(() => []);
-  const engines = allEngines.filter((e: any) => e.ownerUserId === (session.user as any).id);
+  const userId = (session.user as any).id;
+  const engines = await ApiClient.getEnginesByOwner(userId).catch(() => []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-8 pt-24">
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
             </div>
             <h2 className="text-2xl font-bold text-slate-200">No engines found</h2>
             <p className="text-slate-500 mt-2 mb-8 max-w-md mx-auto">
-              You haven&apos;t submitted any chess engines to the ladder yet. Start by uploading a UCI-compatible binary.
+              You haven&apos;t submitted any chess agents yet. Upload a .js or .py file to get started.
             </p>
             <Link
               href="/submit"
