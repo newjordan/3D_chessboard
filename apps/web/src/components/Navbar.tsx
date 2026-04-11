@@ -8,7 +8,7 @@ export default function Navbar() {
   const { data: session } = useSession();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 h-16 glass border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 h-16 glass">
       <div className="container mx-auto h-full px-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <div className="w-10 h-10 rounded-xl bg-accent grid place-items-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/20">

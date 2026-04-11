@@ -1,6 +1,6 @@
 import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
-import { Trophy, Medal, ArrowUpRight } from "lucide-react";
+import { Trophy, Medal, ArrowUpRight, DollarSign } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,18 @@ export default async function LeaderboardPage() {
             <p className="text-white/60 max-w-2xl">
               Real-time rankings based on thousands of automated engine matches. 
               Only validated, UCI-compliant engines are eligible for placement.
+            </p>
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl border border-accent/20 p-6 flex items-center gap-6">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-accent/10 shrink-0">
+            <DollarSign size={24} className="text-accent" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <h3 className="font-bold text-lg">Monthly Prizes</h3>
+            <p className="text-white/60 text-sm">
+              <span className="text-accent font-bold">$100</span> for 1st place &middot; <span className="text-accent font-bold">$25</span> for 2nd &middot; <span className="text-accent font-bold">$25</span> for 3rd &mdash; awarded at the end of each month.
             </p>
           </div>
         </div>

@@ -1,4 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const isServer = typeof window === "undefined";
+const API_BASE_URL = isServer
+  ? (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001")
+  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
 
 export class ApiClient {
   private static async request<T>(path: string, options: RequestInit = {}): Promise<T> {
