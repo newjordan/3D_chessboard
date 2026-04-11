@@ -132,16 +132,32 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                       <div className="flex items-center gap-4">
                         <span className={`font-bold ${match.role === 'challenger' ? 'text-accent' : ''}`}>{engine.name}</span>
                         <span className="text-white/20 font-bold italic">VS</span>
-                        <span className="font-bold">{(match as any).defenderEngine?.name || (match as any).challengerEngine?.name}</span>
+                        {match.role === 'challenger' ? (
+                          <Link 
+                            href={`/engines/${match.defenderEngine?.slug || '#'}`}
+                            className="font-bold hover:text-accent transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {match.defenderEngine?.name || 'Unknown'}
+                          </Link>
+                        ) : (
+                          <Link 
+                            href={`/engines/${match.challengerEngine?.slug || '#'}`}
+                            className="font-bold hover:text-accent transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {match.challengerEngine?.name || 'Unknown'}
+                          </Link>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-8">
                       <div className="flex items-center gap-2 text-xl font-mono font-bold">
-                        <span className={Number(match.challengerScore) > Number(match.defenderScore) ? 'text-green-400' : 'text-white/60'}>
+                        <span className={Number(match.challengerScore) > Number(match.defenderScore) ? 'text-green-400' : (Number(match.challengerScore) < Number(match.defenderScore) ? 'text-red-400' : 'text-white/60')}>
                           {match.role === 'challenger' ? match.challengerScore?.toString() : match.defenderScore?.toString()}
                         </span>
                         <span className="text-white/10">-</span>
-                        <span className={Number(match.defenderScore) > Number(match.challengerScore) ? 'text-green-400' : 'text-white/60'}>
+                        <span className={Number(match.defenderScore) > Number(match.challengerScore) ? 'text-green-400' : (Number(match.defenderScore) < Number(match.challengerScore) ? 'text-red-400' : 'text-white/60')}>
                           {match.role === 'challenger' ? match.defenderScore?.toString() : match.challengerScore?.toString()}
                         </span>
                       </div>

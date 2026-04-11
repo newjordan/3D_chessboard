@@ -96,7 +96,17 @@ app.get("/api/engines/:slug", async (req, res) => {
         versions: {
           orderBy: { submittedAt: "desc" },
           take: 1
-        }
+        },
+        matchesChallenged: {
+          include: { defenderEngine: { select: { name: true } } },
+          orderBy: { completedAt: 'desc' },
+          take: 10,
+        },
+        matchesDefended: {
+          include: { challengerEngine: { select: { name: true } } },
+          orderBy: { completedAt: 'desc' },
+          take: 10,
+        },
       }
     });
     if (!engine) return res.status(404).json({ error: "Engine not found" });

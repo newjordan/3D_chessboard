@@ -301,7 +301,7 @@ async function handleRatingApply(payload: any) {
 
   // Calculate detailed stats from individual games
   const games = await prisma.game.findMany({ where: { matchId } });
-  
+
   let challengerWins = 0;
   let defenderWins = 0;
   let draws = 0;
