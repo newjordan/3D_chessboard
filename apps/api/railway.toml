@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "npm run start"
+startCommand = "npm run start --workspace @chess-agents/api"
 healthcheckPath = "/api/leaderboard"
 healthcheckTimeout = 100
 restartPolicy = "on-failure"
