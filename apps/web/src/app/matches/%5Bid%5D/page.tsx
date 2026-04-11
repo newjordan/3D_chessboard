@@ -123,7 +123,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <div className="flex flex-col gap-4 text-sm divide-y divide-white/5">
                 <div className="flex justify-between py-3">
                   <span className="text-white/40">Timestamp</span>
-                  <span className="text-white/80">{new Date(match.completedAt || match.startedAt || Date.now()).toLocaleString()}</span>
+                  <span className="text-white/80">
+                    {match.completedAt || match.startedAt ? new Date(match.completedAt || match.startedAt).toLocaleString() : "Pending"}
+                  </span>
                 </div>
                 <div className="flex justify-between py-3">
                   <span className="text-white/40">Type</span>

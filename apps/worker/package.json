@@ -10,8 +10,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@prisma/client": "6.2.1",
     "@prisma/adapter-pg": "6.2.1",
+    "@prisma/client": "^6.2.1",
     "dotenv": "latest",
     "pg": "latest",
     "tsx": "latest"
