@@ -7,12 +7,13 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
-    "build": "npx prisma generate && npm run build --workspaces --if-present",
+    "build": "npm run generate && npm run build --workspaces --if-present",
+    "generate": "npm run generate --workspace @chess-agents/api && npm run generate --workspace @chess-agents/worker",
     "start": "npm run start --workspaces --if-present",
-    "postinstall": "npx prisma generate"
+    "postinstall": "npm run generate"
   },
   "devDependencies": {
-    "prisma": "^6.2.1",
+    "prisma": "latest",
     "turbo": "latest",
     "typescript": "^5.0.0"
   }
