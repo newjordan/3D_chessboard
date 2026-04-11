@@ -10,6 +10,7 @@ export interface UciProbeResult {
 
 /**
  * Probes a binary to check if it's a valid UCI chess engine.
+ * Runs inside a Docker container for sandboxing.
  */
 export async function probeUci(
   filePath: string,
@@ -21,9 +22,18 @@ export async function probeUci(
     let author = "";
     let completed = false;
 
-    const child = spawn(filePath, [], {
+    // Run the probe inside Docker for isolation
+    const child = spawn("docker", [
+      "run", "--rm", "-i",
+      "--network", "none",
+      "--security-opt", "no-new-privileges",
+      "--memory", "256m",
+      "--cpus", "0.5",
+      "--mount", `type=bind,source=${filePath},target=/engine,readonly`,
+      "chess-engine-runner:latest",
+      "/engine",
+    ], {
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, PATH: "" }, // Strip path for security during basic probe
     });
 
     const rl = readline.createInterface({

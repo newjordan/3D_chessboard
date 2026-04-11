@@ -45,10 +45,10 @@ async function pollJobs() {
 
     if (job) {
       console.log(`[${new Date().toISOString()}] Processing job: ${job.jobType} (${job.id})`);
-      
+
       try {
         await processJob(job);
-        
+
         await prisma.job.update({
           where: { id: job.id },
           data: { status: JobStatus.completed, updatedAt: new Date() },
@@ -57,10 +57,10 @@ async function pollJobs() {
         console.error(`[${new Date().toISOString()}] Job failed: ${job.id}`, error);
         await prisma.job.update({
           where: { id: job.id },
-          data: { 
-            status: JobStatus.failed, 
+          data: {
+            status: JobStatus.failed,
             lastError: error.message || String(error),
-            updatedAt: new Date() 
+            updatedAt: new Date()
           },
         });
       }
@@ -106,10 +106,10 @@ async function handleValidation(payload: any) {
     }));
 
     if (!Body) throw new Error("Empty response from R2");
-    
+
     const arrayBuffer = await (Body as any).transformToByteArray();
     await fs.writeFile(tempPath, Buffer.from(arrayBuffer));
-    
+
     // 2. Set executable permissions
     chmodSync(tempPath, 0o755);
 
@@ -175,7 +175,7 @@ async function handlePlacementPrepare(payload: any) {
 
 async function handleMatchRun(payload: any) {
   const { matchId } = payload;
-  
+
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
@@ -195,7 +195,7 @@ async function handleMatchRun(payload: any) {
     console.log(`Downloading engines for match ${matchId}...`);
     await downloadBinary(match.challengerVersion.storageKey, pathA);
     await downloadBinary(match.defenderVersion.storageKey, pathB);
-    
+
     chmodSync(pathA, 0o755);
     chmodSync(pathB, 0o755);
 
@@ -205,7 +205,25 @@ async function handleMatchRun(payload: any) {
       tc: "40/60" // 1 minute per 40 moves
     });
 
-    // 3. Save PGN to R2
+    // 3. Validate score integrity
+    const challengerWins = result.games.filter(g => g.result === "1-0").length;
+    const defenderWins = result.games.filter(g => g.result === "0-1").length;
+    const draws = result.games.filter(g => g.result === "1/2-1/2").length;
+    const totalGames = challengerWins + defenderWins + draws;
+
+    if (totalGames !== match.gamesPlanned) {
+      throw new Error(`Score integrity check failed: ${totalGames} games counted but ${match.gamesPlanned} expected`);
+    }
+
+    const challengerScore = challengerWins + (draws * 0.5);
+    const defenderScore = defenderWins + (draws * 0.5);
+
+    // Verify scores are within valid bounds
+    if (challengerScore + defenderScore !== match.gamesPlanned) {
+      throw new Error(`Score integrity check failed: scores sum to ${challengerScore + defenderScore}, expected ${match.gamesPlanned}`);
+    }
+
+    // 4. Save PGN to R2
     const pgnKey = `matches/${matchId}/match.pgn`;
     await storage.send(new PutObjectCommand({
       Bucket: BUCKET_NAME,
@@ -214,19 +232,15 @@ async function handleMatchRun(payload: any) {
       ContentType: "application/x-chess-pgn",
     }));
 
-    // 4. Update Match results
-    const challengerWins = result.games.filter(g => g.result === "1-0").length;
-    const defenderWins = result.games.filter(g => g.result === "0-1").length;
-    const draws = result.games.filter(g => g.result === "1/2-1/2").length;
-
+    // 5. Update Match results
     await prisma.$transaction([
       prisma.match.update({
         where: { id: matchId },
         data: {
           status: "completed",
           completedAt: new Date(),
-          challengerScore: challengerWins + (draws * 0.5),
-          defenderScore: defenderWins + (draws * 0.5),
+          challengerScore,
+          defenderScore,
           pgnStorageKey: pgnKey,
         }
       }),
@@ -235,10 +249,10 @@ async function handleMatchRun(payload: any) {
         data: {
           matchId,
           roundIndex: g.round,
-          whiteEngineId: match.challengerEngineId, 
+          whiteEngineId: match.challengerEngineId,
           blackEngineId: match.defenderEngineId,
           result: g.result,
-          pgnStorageKey: "", 
+          pgnStorageKey: "",
         }
       })),
       // Enqueue Rating Update
@@ -268,6 +282,15 @@ async function handleRatingApply(payload: any) {
 
   if (!match || match.status !== "completed") return;
 
+  // Idempotency check: skip if ratings already applied for this match
+  const existingRating = await prisma.rating.findFirst({
+    where: { matchId },
+  });
+  if (existingRating) {
+    console.log(`Ratings already applied for match ${matchId}, skipping`);
+    return;
+  }
+
   // 1. Calculate Elo Change
   const { deltaA, deltaB } = updateRatingsForMatch(
     match.challengerEngine.currentRating,
@@ -277,15 +300,14 @@ async function handleRatingApply(payload: any) {
     match.gamesPlanned
   );
 
-  // 2. Update Engines and Ratings
+  // 2. Update Engines and Ratings atomically
   await prisma.$transaction([
     prisma.engine.update({
       where: { id: match.challengerEngineId },
       data: {
         currentRating: { increment: deltaA },
         gamesPlayed: { increment: match.gamesPlanned },
-        wins: { increment: Number(match.challengerScore) === match.gamesPlanned ? 1 : 0 }, // Simplified record
-        // Note: For record, we should ideally count games. For now keep it simple.
+        wins: { increment: Number(match.challengerScore) === match.gamesPlanned ? 1 : 0 },
         updatedAt: new Date(),
       }
     }),
@@ -317,22 +339,22 @@ async function handleRatingApply(payload: any) {
     })
   ]);
 
-  // 3. Recalculate Global Ranks
+  // 3. Recalculate Global Ranks atomically
   await updateGlobalRanks();
 }
 
 async function updateGlobalRanks() {
-  const engines = await prisma.engine.findMany({
-    where: { status: EngineStatus.active },
-    orderBy: { currentRating: "desc" },
-  });
-
-  for (let i = 0; i < engines.length; i++) {
-    await prisma.engine.update({
-      where: { id: engines[i].id },
-      data: { currentRank: i + 1 },
-    });
-  }
+  // Use a raw query to update all ranks atomically in a single statement
+  await prisma.$executeRawUnsafe(`
+    UPDATE "Engine" e
+    SET "currentRank" = ranked.rank
+    FROM (
+      SELECT id, ROW_NUMBER() OVER (ORDER BY "currentRating" DESC) as rank
+      FROM "Engine"
+      WHERE status = 'active'
+    ) ranked
+    WHERE e.id = ranked.id
+  `);
 }
 
 async function downloadBinary(key: string, dest: string) {
