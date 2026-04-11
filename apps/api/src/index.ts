@@ -186,27 +186,45 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       return res.status(400).json({ error: "Engine name must contain alphanumeric characters" });
     }
 
-    // Check for slug collision: if an engine with this slug exists owned by a different user, reject
+    // 1. Quota Check: Limit 3 engines per user
     const existingEngine = await prisma.engine.findUnique({ where: { slug } });
-    if (existingEngine && existingEngine.ownerUserId !== ownerUserId) {
+    
+    if (!existingEngine) {
+      // It's a NEW engine, count existing ones
+      const engineCount = await prisma.engine.count({
+        where: { ownerUserId }
+      });
+
+      if (engineCount >= 3) {
+        return res.status(403).json({ 
+          error: "Engine limit reached. You can only have a maximum of 3 engines. Please delete one to submit a new bot." 
+        });
+      }
+    } else if (existingEngine.ownerUserId !== ownerUserId) {
+      // Check for slug collision: if an engine with this slug exists owned by a different user, reject
       return res.status(409).json({ error: "An engine with a similar name already exists" });
     }
 
-    // 1. Upsert Engine (safe now — we verified ownership above)
+    // 2. Upsert Engine (safe now — we verified ownership and quota above)
     const engine = await prisma.engine.upsert({
       where: { slug },
       create: {
         name: name.trim(),
         slug,
         ownerUserId,
-        status: EngineStatus.pending,
+        status: EngineStatus.active, // Now that we have validation, we set this here or wait for handleValidation
       },
       update: { updatedAt: new Date() },
     });
 
-    // 2. Check for existing version with this SHA256 (global uniqueness check)
+    // 3. Check for existing version with this SHA256 (PER ENGINE uniqueness check)
     let version = await prisma.engineVersion.findUnique({
-      where: { sha256 }
+      where: {
+        engineId_sha256: {
+          engineId: engine.id,
+          sha256
+        }
+      }
     });
 
     let storageKey: string;
