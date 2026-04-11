@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\('root react:', require\\('./node_modules/react/package.json'\\).version\\); console.log\\('web react:', require\\('./apps/web/node_modules/react/package.json'\\).version\\); console.log\\('root react-dom:', require\\('./node_modules/react-dom/package.json'\\).version\\); console.log\\('web react-dom:', require\\('./apps/web/node_modules/react-dom/package.json'\\).version\\)\")",
+      "Bash(rm -rf apps/web/node_modules/react apps/web/node_modules/react-dom)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
