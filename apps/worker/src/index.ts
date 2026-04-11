@@ -299,13 +299,34 @@ async function handleRatingApply(payload: any) {
     match.gamesPlanned
   );
 
+  // Calculate detailed stats from individual games
+  const games = await prisma.game.findMany({ where: { matchId } });
+  
+  let challengerWins = 0;
+  let defenderWins = 0;
+  let draws = 0;
+
+  for (const game of games) {
+    if (game.result === "1-0") {
+      if (game.whiteEngineId === match.challengerEngineId) challengerWins++;
+      else defenderWins++;
+    } else if (game.result === "0-1") {
+      if (game.blackEngineId === match.challengerEngineId) challengerWins++;
+      else defenderWins++;
+    } else if (game.result === "1/2-1/2") {
+      draws++;
+    }
+  }
+
   await prisma.$transaction([
     prisma.engine.update({
       where: { id: match.challengerEngineId },
       data: {
         currentRating: { increment: deltaA },
         gamesPlayed: { increment: match.gamesPlanned },
-        wins: { increment: Number(match.challengerScore) === match.gamesPlanned ? 1 : 0 },
+        wins: { increment: challengerWins },
+        losses: { increment: defenderWins },
+        draws: { increment: draws },
         updatedAt: new Date(),
       }
     }),
@@ -314,6 +335,9 @@ async function handleRatingApply(payload: any) {
       data: {
         currentRating: { increment: deltaB },
         gamesPlayed: { increment: match.gamesPlanned },
+        wins: { increment: defenderWins },
+        losses: { increment: challengerWins },
+        draws: { increment: draws },
         updatedAt: new Date(),
       }
     }),
