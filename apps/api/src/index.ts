@@ -203,29 +203,43 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       update: { updatedAt: new Date() },
     });
 
-    // 2. Upload to S3/R2
-    const storageKey = `engines/${engine.id}/${sha256}${ext}`;
-    const contentType = ext === ".js" ? "application/javascript" : "text/x-python";
-    await s3Client.send(new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: storageKey,
-      Body: buffer,
-      ContentType: contentType,
-    }));
-
-    // 3. Create Version
-    const version = await prisma.engineVersion.create({
-      data: {
-        engineId: engine.id,
-        storageKey,
-        sha256,
-        fileSizeBytes: buffer.length,
-        language: ext.slice(1), // "js" or "py"
-        validationStatus: ValidationStatus.pending,
-      },
+    // 2. Check for existing version with this SHA256 (global uniqueness check)
+    let version = await prisma.engineVersion.findUnique({
+      where: { sha256 }
     });
 
-    // 4. Create Submission
+    let storageKey: string;
+
+    if (!version) {
+      // 2a. Upload to S3/R2 only if it's a new file
+      storageKey = `engines/${engine.id}/${sha256}${ext}`;
+      const contentType = ext === ".js" ? "application/javascript" : "text/x-python";
+      
+      console.log(`New file detected. Uploading to R2: ${storageKey}`);
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: storageKey,
+        Body: buffer,
+        ContentType: contentType,
+      }));
+
+      // 2b. Create new Version
+      version = await prisma.engineVersion.create({
+        data: {
+          engineId: engine.id,
+          storageKey,
+          sha256,
+          fileSizeBytes: buffer.length,
+          language: ext.slice(1),
+          validationStatus: ValidationStatus.pending,
+        },
+      });
+    } else {
+      storageKey = version.storageKey;
+      console.log(`Existing version found for SHA256: ${sha256}. Reusing version: ${version.id}`);
+    }
+
+    // 3. Create Submission
     const submission = await prisma.submission.create({
       data: {
         engineVersionId: version.id,
@@ -234,7 +248,7 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       },
     });
 
-    // 5. Create Validation Job
+    // 4. Create Validation Job
     await prisma.job.create({
       data: {
         jobType: JobType.submission_validate,
