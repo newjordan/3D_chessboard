@@ -7,5 +7,14 @@ startCommand = "npm run start --workspace @chess-agents/worker"
 restartPolicy = "always"
 
 [nixpacks]
-# Let Nixpacks layer Node automatically, or provide both if overriding
+# Combining nodejs and python3 in a single list
 pkgs = ["nodejs", "python3"]
+
+# Ensure we don't accidentally shadow the environment
+[nixpacks.phases.setup]
+nixPkgs = ["nodejs", "python3"]
+
+[nixpacks.phases.install]
+dependsOn = ["setup"]
+# Using full path or guaranteeing npm is here
+cmds = ["npm install"]
