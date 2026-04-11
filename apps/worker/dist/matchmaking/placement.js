@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.preparePlacementMatches = preparePlacementMatches;
-const db_1 = require("db");
+const db_1 = require("../db");
 /**
  * Prepares placement matches for a newly validated engine version.
  * Pairs it with up to 3 existing engines to determine its initial strength.
