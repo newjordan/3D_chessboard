@@ -36,7 +36,7 @@ export async function preparePlacementMatches(versionId: string) {
           orderBy: { submittedAt: "desc" },
         }))?.id || "",
         matchType: MatchType.placement,
-        gamesPlanned: 3,
+        gamesPlanned: 2,
         timeControl: "40/60",
       },
     });

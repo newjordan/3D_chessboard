@@ -244,17 +244,20 @@ async function handleMatchRun(payload: any) {
           pgnStorageKey: pgnKey,
         }
       }),
-      ...result.games.map(g => prisma.game.create({
-        data: {
-          matchId,
-          roundIndex: g.round,
-          whiteEngineId: match.challengerEngineId,
-          blackEngineId: match.defenderEngineId,
-          result: g.result,
-          termination: g.termination,
-          pgnStorageKey: "",
-        }
-      })),
+      ...result.games.map(g => {
+        const isChallengerWhite = g.round % 2 !== 0; // Odd rounds: Challenger is White
+        return prisma.game.create({
+          data: {
+            matchId,
+            roundIndex: g.round,
+            whiteEngineId: isChallengerWhite ? match.challengerEngineId : match.defenderEngineId,
+            blackEngineId: isChallengerWhite ? match.defenderEngineId : match.challengerEngineId,
+            result: g.result,
+            termination: g.termination,
+            pgnStorageKey: "",
+          }
+        });
+      }),
       prisma.job.create({
         data: {
           jobType: JobType.rating_apply,
