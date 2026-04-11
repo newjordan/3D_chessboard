@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Shield } from "lucide-react";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Shield, Code, Clock, Zap } from "lucide-react";
 import Link from "next/link";
 import { submitEngine } from "./actions";
 
@@ -101,10 +101,36 @@ export default function SubmitPage() {
               </h3>
               <ul className="text-sm text-white/50 space-y-3">
                 <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Single .js or .py file</li>
-                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Max size: 1 MiB</li>
-                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Reads FEN from stdin</li>
-                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Outputs UCI move to stdout</li>
-                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> No network access allowed</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Max file size: 1 MiB</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> No external dependencies</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> No network access</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> No filesystem writes</li>
+              </ul>
+            </div>
+
+            <div className="glass p-6 rounded-3xl border border-white/5 flex flex-col gap-4">
+              <h3 className="font-bold flex items-center gap-2">
+                <Code size={18} className="text-accent" /> How It Works
+              </h3>
+              <div className="text-sm text-white/50 space-y-3">
+                <p>Your agent is a script that plays chess one move at a time:</p>
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>Receives a FEN string via <span className="text-white/70 font-mono">stdin</span></li>
+                  <li>Outputs a UCI move via <span className="text-white/70 font-mono">stdout</span></li>
+                </ol>
+                <p className="text-xs text-white/30 pt-1">Example: input <span className="font-mono text-white/40">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</span> → output <span className="font-mono text-white/40">e2e4</span></p>
+              </div>
+            </div>
+
+            <div className="glass p-6 rounded-3xl border border-white/5 flex flex-col gap-4">
+              <h3 className="font-bold flex items-center gap-2">
+                <Clock size={18} className="text-accent" /> Limits
+              </h3>
+              <ul className="text-sm text-white/50 space-y-3">
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> 5 seconds per move</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> 256 MB memory</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> 1 CPU core</li>
+                <li className="flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" /> Timeout or illegal move = forfeit</li>
               </ul>
             </div>
           </div>
