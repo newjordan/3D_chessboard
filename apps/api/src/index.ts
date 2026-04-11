@@ -134,6 +134,7 @@ app.get("/api/engines/by-owner/:userId", async (req, res) => {
       orderBy: { createdAt: "desc" },
       include: {
         owner: { select: { username: true } },
+        versions: { orderBy: { submittedAt: "desc" }, take: 1 },
       },
     });
     res.json(engines);

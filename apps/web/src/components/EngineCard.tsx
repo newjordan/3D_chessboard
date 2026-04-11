@@ -23,7 +23,7 @@ export function EngineCard({ engine }: EngineCardProps) {
     }
   };
 
-  const latestVersion = engine.versions[0];
+  const latestVersion = engine.versions?.[0];
 
   return (
     <div
