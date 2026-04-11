@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Shield, Code, Clock, Zap } from "lucide-react";
 import Link from "next/link";
 import { submitEngine } from "./actions";
@@ -74,8 +74,8 @@ export default function SubmitPage() {
           You must be signed in to submit an engine to the ladder. 
           We use GitHub for identity to track engine ownership.
         </p>
-        <button 
-          onClick={() => window.location.href = "/api/auth/signin"}
+        <button
+          onClick={() => signIn("github")}
           className="px-8 py-3 rounded-full bg-accent text-background font-bold hover:scale-105 transition-transform"
         >
           Sign In with GitHub
