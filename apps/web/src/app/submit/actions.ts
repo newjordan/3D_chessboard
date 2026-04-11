@@ -13,7 +13,12 @@ export async function submitEngine(formData: FormData) {
 
   try {
     const userId = (session.user as any).id;
+    const username = (session.user as any).username || session.user?.name || "unknown";
+    const email = session.user?.email || "";
     formData.append("ownerUserId", userId);
+    formData.append("ownerUsername", username);
+    formData.append("ownerEmail", email);
+    formData.append("ownerName", session.user?.name || "");
 
     const result = await ApiClient.submitEngine(formData);
     
