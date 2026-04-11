@@ -31,7 +31,9 @@
       "Bash(curl -sL \"https://api.github.com/repos/aj47/vibe-code-cup-1-simulator/contents/submissions/real-submissions\")",
       "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(d['name']\\) for d in data]\")",
       "Bash(curl -sL \"https://api.github.com/repos/aj47/vibe-code-cup-1-simulator/contents/submissions/real-submissions/thriver\")",
-      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/thriver/agent.ts\" -o \"D:/Github/chess-agents/seed/agents/thriver.js\" -w \"%{http_code}\")"
+      "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/thriver/agent.ts\" -o \"D:/Github/chess-agents/seed/agents/thriver.js\" -w \"%{http_code}\")",
+      "Bash(npx ts-node:*)",
+      "Bash(npx tsx:*)"
     ]
   }
 }

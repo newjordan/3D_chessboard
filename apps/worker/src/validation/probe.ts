@@ -11,7 +11,6 @@ const MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
 
 /**
  * Probes an agent by sending a FEN position and checking if it returns a legal move.
- * Runs inside Docker for sandboxing.
  */
 export async function probeAgent(
   filePath: string,
@@ -23,19 +22,9 @@ export async function probeAgent(
 
     const runtime = language === "js" ? "node" : "python3";
 
-    const child = spawn("docker", [
-      "run", "--rm", "-i",
-      "--network", "none",
-      "--security-opt", "no-new-privileges",
-      "--memory", "256m",
-      "--cpus", "0.5",
-      "--pids-limit", "64",
-      "--read-only",
-      "--mount", `type=bind,source=${filePath},target=/agent/agent.${language},readonly`,
-      "chess-agent-runner:latest",
-      runtime, `/agent/agent.${language}`,
-    ], {
+    const child = spawn(runtime, [filePath], {
       stdio: ["pipe", "pipe", "pipe"],
+      env: { PATH: process.env.PATH },
     });
 
     const timeout = setTimeout(() => {
@@ -58,7 +47,6 @@ export async function probeAgent(
     child.stdout.on("data", (data) => {
       stdout += data.toString();
 
-      // Check if we have a complete line
       if (!completed && stdout.includes("\n")) {
         completed = true;
         clearTimeout(timeout);
@@ -71,7 +59,6 @@ export async function probeAgent(
           return;
         }
 
-        // Validate it's a legal move for the position
         const chess = new Chess(TEST_FEN);
         const result = chess.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] as any });
         if (!result) {
@@ -88,7 +75,6 @@ export async function probeAgent(
         completed = true;
         clearTimeout(timeout);
         if (stdout.trim()) {
-          // Process exited but we got output — try to validate
           const move = stdout.trim();
           if (!MOVE_REGEX.test(move)) {
             resolve({ isValid: false, error: `Agent returned invalid move format: "${move}".` });
@@ -107,7 +93,6 @@ export async function probeAgent(
       }
     });
 
-    // Send the test FEN
     child.stdin.write(TEST_FEN + "\n");
     child.stdin.end();
   });

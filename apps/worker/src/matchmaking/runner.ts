@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from "child_process";
+import { spawn } from "child_process";
 import { Chess } from "chess.js";
 
 export interface MatchResult {
@@ -38,7 +38,6 @@ export async function runMatch(
   const allPgns: string[] = [];
 
   for (let round = 1; round <= options.games; round++) {
-    // Alternate colors each game
     const white = round % 2 === 1 ? agentA : agentB;
     const black = round % 2 === 1 ? agentB : agentA;
 
@@ -57,9 +56,6 @@ export async function runMatch(
   };
 }
 
-/**
- * Runs a single game between two agents.
- */
 async function runGame(
   white: AgentConfig,
   black: AgentConfig,
@@ -76,7 +72,6 @@ async function runGame(
     try {
       move = await getAgentMove(currentAgent, fen);
     } catch (err: any) {
-      // Agent failed to respond — forfeit
       const loserColor = chess.turn();
       termination = err.message || "agent error";
       return {
@@ -89,7 +84,6 @@ async function runGame(
       };
     }
 
-    // Validate move format
     if (!MOVE_REGEX.test(move)) {
       const loserColor = chess.turn();
       termination = `invalid move format: ${move}`;
@@ -103,7 +97,6 @@ async function runGame(
       };
     }
 
-    // Apply move
     const moveResult = chess.move({
       from: move.slice(0, 2),
       to: move.slice(2, 4),
@@ -124,10 +117,8 @@ async function runGame(
     }
   }
 
-  // Determine result
   let result: "1-0" | "0-1" | "1/2-1/2";
   if (chess.isCheckmate()) {
-    // The side to move is mated
     result = chess.turn() === "w" ? "0-1" : "1-0";
     termination = "checkmate";
   } else if (chess.isDraw()) {
@@ -137,7 +128,6 @@ async function runGame(
     else if (chess.isInsufficientMaterial()) termination = "insufficient material";
     else termination = "50-move rule";
   } else {
-    // Max plies reached
     result = "1/2-1/2";
     termination = "max plies reached";
   }
@@ -153,26 +143,16 @@ async function runGame(
 }
 
 /**
- * Spawns an agent in Docker, sends FEN, reads move.
+ * Spawns an agent process, sends FEN, reads move.
  */
 function getAgentMove(agent: AgentConfig, fen: string): Promise<string> {
   return new Promise((resolve, reject) => {
     let completed = false;
     const runtime = agent.language === "js" ? "node" : "python3";
 
-    const child = spawn("docker", [
-      "run", "--rm", "-i",
-      "--network", "none",
-      "--security-opt", "no-new-privileges",
-      "--memory", "256m",
-      "--cpus", "1",
-      "--pids-limit", "64",
-      "--read-only",
-      "--mount", `type=bind,source=${agent.path},target=/agent/agent.${agent.language},readonly`,
-      "chess-agent-runner:latest",
-      runtime, `/agent/agent.${agent.language}`,
-    ], {
+    const child = spawn(runtime, [agent.path], {
       stdio: ["pipe", "pipe", "pipe"],
+      env: { PATH: process.env.PATH },
     });
 
     const timeout = setTimeout(() => {
