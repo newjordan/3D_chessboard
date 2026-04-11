@@ -7,7 +7,6 @@ WORKDIR /app
 
 # Copy root configuration to establish workspace context
 COPY package.json package-lock.json ./
-COPY tsconfig.json ./
 
 # Copy the worker source
 COPY apps/worker apps/worker
