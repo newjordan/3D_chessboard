@@ -6,6 +6,7 @@ import { storage, BUCKET_NAME } from "./storage";
 import { validateFileType } from "./validation/filetype";
 import { probeAgent } from "./validation/probe";
 import { preparePlacementMatches } from "./matchmaking/placement";
+import { scheduleMatches } from "./matchmaking/scheduler";
 import { runMatch } from "./matchmaking/runner";
 import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { updateRatingsForMatch } from "./ratings/elo";
@@ -69,6 +70,21 @@ async function pollJobs() {
   }
 
   setTimeout(pollJobs, 2000);
+}
+
+const SCHEDULER_INTERVAL_MS = 10_000;
+
+async function pollScheduler() {
+  try {
+    const scheduled = await scheduleMatches();
+    if (scheduled > 0) {
+      console.log(`[${new Date().toISOString()}] Scheduler queued ${scheduled} new match(es)`);
+    }
+  } catch (error) {
+    console.error("Scheduler error:", error);
+  }
+
+  setTimeout(pollScheduler, SCHEDULER_INTERVAL_MS);
 }
 
 async function processJob(job: any) {
@@ -409,3 +425,4 @@ async function failSubmission(submissionId: string, versionId: string, reason: s
 
 console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
 pollJobs();
+pollScheduler();
