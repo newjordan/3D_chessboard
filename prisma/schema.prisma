@@ -107,14 +107,15 @@ model EngineVersion {
   engineId         String
   versionLabel     String?
   storageKey       String
-  sha256           String           @unique
+  sha256           String
   fileSizeBytes    Int
-  targetArch       String
+  targetArch       String           @default("x86_64-linux")
   isStaticBinary   Boolean          @default(false)
   validationStatus ValidationStatus @default(pending)
   validationNotes  String?
   uciName          String?
   uciAuthor        String?
+  language         String?
   submittedAt      DateTime         @default(now())
   validatedAt      DateTime?
 
@@ -122,6 +123,8 @@ model EngineVersion {
   submissions      Submission[]
   matchesChallenged Match[]         @relation("ChallengerVersion")
   matchesDefended   Match[]         @relation("DefenderVersion")
+
+  @@unique([engineId, sha256], name: "engineId_sha256")
 }
 
 enum SubmissionStatus {
