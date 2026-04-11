@@ -8,15 +8,16 @@ WORKDIR /app
 # Copy root configuration to establish workspace context
 COPY package.json package-lock.json ./
 
-# Copy the worker source
+# Copy the worker source and the central prisma schema
 COPY apps/worker apps/worker
+COPY prisma ./prisma
 
 # Install dependencies (using --no-scripts to avoid parent workspace conflicts during build)
 RUN npm install --ignore-scripts
 
-# Generate Prisma Client for the worker specifically
+# Generate Prisma Client using the root schema
 WORKDIR /app/apps/worker
-RUN npx prisma generate
+RUN npx prisma generate --schema /app/prisma/schema.prisma
 
 # Build the worker TypeScript code
 RUN npm run build
@@ -40,7 +41,7 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy worker artifacts
 COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
 COPY --from=builder /app/apps/worker/package.json ./apps/worker/package.json
-COPY --from=builder /app/apps/worker/prisma ./apps/worker/prisma
+# Note: The prisma client is already in the copied node_modules
 
 # Set environment
 ENV NODE_ENV=production
