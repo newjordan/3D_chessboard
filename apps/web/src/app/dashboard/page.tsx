@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { EngineCard } from "@/components/EngineCard";
 import { Plus } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
