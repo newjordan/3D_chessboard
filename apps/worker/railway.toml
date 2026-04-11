@@ -1,14 +1,11 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npx prisma generate && npm run build"
+buildCommand = "npm run generate && npm run build"
 
 [deploy]
-startCommand = "npm run start"
+startCommand = "npm run start --workspace @chess-agents/worker"
 restartPolicy = "always"
 
 [nixpacks]
-# Ensure both Node and Python are available for executing agents
+# Let Nixpacks layer Node automatically, or provide both if overriding
 pkgs = ["nodejs", "python3"]
-
-[nixpacks.phases.setup]
-nixPkgs = ["nodejs", "python3"]
