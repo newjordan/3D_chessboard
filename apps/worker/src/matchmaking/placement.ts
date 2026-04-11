@@ -16,6 +16,9 @@ export async function preparePlacementMatches(versionId: string) {
     where: {
       id: { not: version.engineId },
       status: EngineStatus.active,
+      versions: {
+        some: { validationStatus: "passed" }
+      }
     },
     take: 3,
     orderBy: {
@@ -23,20 +26,27 @@ export async function preparePlacementMatches(versionId: string) {
     },
   });
 
-  console.log(`Preparing ${opponents.length} placement matches for ${version.engine.name}`);
+  console.log(`Preparing placement matches for ${version.engine.name} against ${opponents.length} valid opponents`);
 
   for (const opponent of opponents) {
+    const defenderVersion = await prisma.engineVersion.findFirst({
+      where: { engineId: opponent.id, validationStatus: "passed" },
+      orderBy: { submittedAt: "desc" },
+    });
+
+    if (!defenderVersion) {
+      console.warn(`Skipping opponent ${opponent.name} - no passed version found despite filter.`);
+      continue;
+    }
+
     const match = await prisma.match.create({
       data: {
         challengerVersionId: version.id,
         challengerEngineId: version.engineId,
         defenderEngineId: opponent.id,
-        defenderVersionId: (await prisma.engineVersion.findFirst({
-          where: { engineId: opponent.id, validationStatus: "passed" },
-          orderBy: { submittedAt: "desc" },
-        }))?.id || "",
+        defenderVersionId: defenderVersion.id,
         matchType: MatchType.placement,
-        gamesPlanned: 2,
+        gamesPlanned: 2, // Symmetric 2-game series
         timeControl: "40/60",
       },
     });
