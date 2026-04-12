@@ -2,3 +2,4 @@ node_modules
 .env
 /apps/worker/dist
 /apps/worker/dist
+/apps/worker/dist
