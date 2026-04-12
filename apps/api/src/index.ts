@@ -511,13 +511,26 @@ app.delete("/api/engines/:id", async (req, res) => {
     }
 
     const latestStatus = engine.versions[0]?.validationStatus;
-    if (latestStatus !== 'failed') {
-      return res.status(400).json({ error: "Decommissioning blocked: You can only delete agents with failed builds." });
+    const canDelete = !latestStatus || ['failed', 'pending', 'running'].includes(latestStatus);
+    
+    if (!canDelete) {
+      return res.status(400).json({ error: "Decommissioning blocked: You can only delete agents that are pending or have failed builds." });
     }
 
-    // Deletion cascade handled by Prisma schema (versions, match relations must be careful)
-    // Actually schema has onDelete: Cascade for versions, but Matches usually we keep or soft-delete.
-    // Given the request, we will perform a full delete.
+    // Check for match history which would block hard-deletion
+    const matchCount = await prisma.match.count({
+      where: {
+        OR: [
+          { challengerEngineId: id },
+          { defenderEngineId: id }
+        ]
+      }
+    });
+
+    if (matchCount > 0) {
+      return res.status(400).json({ error: "Cannot delete agent because it has existing match history in the ladder. Agents with history should be disabled instead." });
+    }
+
     await prisma.engine.delete({ where: { id } });
 
     res.json({ success: true, message: "Agent decommissioned successfully." });

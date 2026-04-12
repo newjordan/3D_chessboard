@@ -152,7 +152,7 @@ function getAgentMove(agent: AgentConfig, fen: string): Promise<string> {
 
     const child = spawn(runtime, [agent.path], {
       stdio: ["pipe", "pipe", "pipe"],
-      env: {}, // Completely isolated environment
+      env: { PATH: process.env.PATH }, // Ensure PATH is preserved for finding the runtime
     });
 
     const timeout = setTimeout(() => {

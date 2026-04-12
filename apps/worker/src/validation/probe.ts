@@ -24,7 +24,7 @@ export async function probeAgent(
 
     const child = spawn(runtime, [filePath], {
       stdio: ["pipe", "pipe", "pipe"],
-      env: {}, // Completely isolated environment
+      env: { PATH: process.env.PATH }, // Only provide PATH so it can find node/python, nothing else
     });
 
     const timeout = setTimeout(() => {
