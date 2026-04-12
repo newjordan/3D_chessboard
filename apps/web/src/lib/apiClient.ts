@@ -85,19 +85,19 @@ export class ApiClient {
 
   // Admin endpoints — routed through secure server-side proxy
   static async getAdminStats() {
-    return this.proxyRequest<any>('/admin-proxy/stats');
+    return this.proxyRequest<any>('/admin/proxy/stats');
   }
 
   static async getAdminUsers() {
-    return this.proxyRequest<any[]>('/admin-proxy/users');
+    return this.proxyRequest<any[]>('/admin/proxy/users');
   }
 
   static async getAdminEngines() {
-    return this.proxyRequest<any[]>('/admin-proxy/engines');
+    return this.proxyRequest<any[]>('/admin/proxy/engines');
   }
 
   static async updateEngineStatus(engineId: string, status: string) {
-    return this.proxyRequest<any>(`/admin-proxy/engines/${engineId}`, {
+    return this.proxyRequest<any>(`/admin/proxy/engines/${engineId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -105,27 +105,27 @@ export class ApiClient {
   }
 
   static async adminDeleteEngine(engineId: string) {
-    return this.proxyRequest<any>(`/admin-proxy/engines/${engineId}`, {
+    return this.proxyRequest<any>(`/admin/proxy/engines/${engineId}`, {
       method: "DELETE",
     });
   }
 
   static async getAdminJobs() {
-    return this.proxyRequest<any[]>('/admin-proxy/jobs');
+    return this.proxyRequest<any[]>('/admin/proxy/jobs');
   }
 
   static async retryJob(jobId: string) {
-    return this.proxyRequest<any>(`/admin-proxy/jobs/${jobId}/retry`, {
+    return this.proxyRequest<any>(`/admin/proxy/jobs/${jobId}/retry`, {
       method: "PATCH",
     });
   }
 
   static async getAdminMatches() {
-    return this.proxyRequest<any[]>('/admin-proxy/matches');
+    return this.proxyRequest<any[]>('/admin/proxy/matches');
   }
 
   static async updateMatchStatus(matchId: string, status: string) {
-    return this.proxyRequest<any>(`/admin-proxy/matches/${matchId}/status`, {
+    return this.proxyRequest<any>(`/admin/proxy/matches/${matchId}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -133,13 +133,13 @@ export class ApiClient {
   }
 
   static async retryMatch(matchId: string) {
-    return this.proxyRequest<any>(`/admin-proxy/matches/${matchId}/retry`, {
+    return this.proxyRequest<any>(`/admin/proxy/matches/${matchId}/retry`, {
       method: "POST",
     });
   }
 
   static async getAdvancedStats() {
-    return this.proxyRequest<any>('/admin-proxy/stats/advanced');
+    return this.proxyRequest<any>('/admin/proxy/stats/advanced');
   }
 
   // Proxy requests go to the Next.js server (same origin), not the Express API
