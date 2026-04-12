@@ -4,6 +4,19 @@ import { ChevronLeft } from 'lucide-react';
 import { ReplayController } from '@/components/replay/ReplayController';
 import { getMatchPgnAction } from '../actions';
 import { ApiClient } from '@/lib/apiClient';
+import { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const match = await ApiClient.getMatch(id).catch(() => null);
+  
+  if (!match) return { title: "Replay Not Found" };
+
+  return {
+    title: `Replay: ${match.challengerEngine.name} vs ${match.defenderEngine.name}`,
+    description: `Watch the full 3D match replay of ${match.challengerEngine.name} vs ${match.defenderEngine.name} in the AI Chess Arena.`,
+  };
+}
 
 interface ReplayPageProps {
   params: Promise<{ id: string }>;

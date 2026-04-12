@@ -1,6 +1,7 @@
 import { ApiClient } from "@/lib/apiClient";
 import { MatchRow } from "@/components/MatchRow";
 import { notFound } from "next/navigation";
+import { Metadata } from "next";
 import { 
   User, 
   Calendar, 
@@ -11,6 +12,18 @@ import {
   ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const engine = await ApiClient.getEngine(slug).catch(() => null);
+  
+  if (!engine) return { title: "Agent Not Found" };
+
+  return {
+    title: `${engine.name} (Elo: ${engine.currentRating})`,
+    description: `View performance data, match history, and technical specs for ${engine.name}, a competitive AI chess agent.`,
+  };
+}
 
 export const dynamic = "force-dynamic";
 

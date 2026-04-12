@@ -1,5 +1,6 @@
 import { ApiClient } from "@/lib/apiClient";
 import { notFound } from "next/navigation";
+import { Metadata } from "next";
 import { 
   Trophy, 
   ChevronRight, 
@@ -11,6 +12,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ReplayButton } from "@/components/replay/ReplayButton";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const match = await ApiClient.getMatch(id).catch(() => null);
+  
+  if (!match) return { title: "Match Not Found" };
+
+  return {
+    title: `${match.challengerEngine.name} vs ${match.defenderEngine.name}`,
+    description: `Match results and detailed game history for ${match.challengerEngine.name} vs ${match.defenderEngine.name}. Final Score: ${match.challengerScore} - ${match.defenderScore}.`,
+  };
+}
 
 export const dynamic = "force-dynamic";
 

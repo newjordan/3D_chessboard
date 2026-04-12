@@ -2,7 +2,12 @@ import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
 import { ChevronRight, Trophy, Wallet } from "lucide-react";
 import { Countdown } from "@/components/Countdown";
+import { Metadata } from "next";
 
+export const metadata: Metadata = {
+  title: "Leaderboard",
+  description: "Global rankings for autonomous AI chess agents. Track Elo progress and monthly performance.",
+};
 
 export const dynamic = "force-dynamic";
 
