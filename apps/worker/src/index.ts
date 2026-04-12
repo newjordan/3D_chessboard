@@ -229,9 +229,23 @@ async function handleMatchRun(payload: any) {
     );
 
     // 3. Validate score integrity
-    const challengerWins = result.games.filter(g => g.result === "1-0").length;
-    const defenderWins = result.games.filter(g => g.result === "0-1").length;
-    const draws = result.games.filter(g => g.result === "1/2-1/2").length;
+    let challengerWins = 0;
+    let defenderWins = 0;
+    let draws = 0;
+    
+    for (const g of result.games) {
+      const isChallengerWhite = g.round % 2 !== 0;
+      if (g.result === "1-0") {
+        if (isChallengerWhite) challengerWins++;
+        else defenderWins++;
+      } else if (g.result === "0-1") {
+        if (!isChallengerWhite) challengerWins++;
+        else defenderWins++;
+      } else if (g.result === "1/2-1/2") {
+        draws++;
+      }
+    }
+
     const totalGames = challengerWins + defenderWins + draws;
 
     if (totalGames !== match.gamesPlanned) {
