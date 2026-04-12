@@ -15,6 +15,7 @@ import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import { Readable } from "stream";
+import { notifyMatchStarted, notifyMatchResult, notifyEngineValidated } from "./notifications";
 
 const WORKER_ID = `worker-${process.env.HOSTNAME || Math.random().toString(36).substring(7)}`;
 
@@ -185,6 +186,19 @@ async function handleValidation(payload: any) {
         },
       }),
     ]);
+
+    // Send notification for new engine join
+    try {
+      const engineWithUser = await prisma.engine.findUnique({
+        where: { id: (await prisma.engineVersion.findUnique({ where: { id: versionId } }))?.engineId },
+        include: { owner: true }
+      });
+      if (engineWithUser) {
+        await notifyEngineValidated(engineWithUser, engineWithUser.owner);
+      }
+    } catch (err) {
+      console.error("Failed to fetch engine info for notification:", err);
+    }
   } finally {
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
@@ -213,6 +227,9 @@ async function handleMatchRun(payload: any) {
   });
 
   if (!match) throw new Error("Match not found");
+
+  // Send notification for match starting
+  await notifyMatchStarted(match);
 
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "match-"));
 
@@ -407,6 +424,9 @@ async function handleRatingApply(payload: any) {
       }
     })
   ]);
+
+  // Send result notification
+  await notifyMatchResult(match, deltaA, deltaB, challengerWins, defenderWins, draws);
 
   await updateGlobalRanks();
 }
