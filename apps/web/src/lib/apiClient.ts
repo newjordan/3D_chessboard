@@ -64,9 +64,8 @@ export class ApiClient {
   }
 
   static async deleteEngine(id: string, userId: string) {
-    return this.request<{ success: boolean }>(`/api/engines/${id}`, {
+    return this.request<{ success: boolean; message: string }>(`/api/engines/${id}?userId=${userId}`, {
       method: "DELETE",
-      body: JSON.stringify({ userId }),
     });
   }
 }

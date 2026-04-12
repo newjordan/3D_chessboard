@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Trash2, RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
+import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ApiClient } from '@/lib/apiClient';
 
 interface AgentManagementProps {
   engineId: string;
@@ -17,19 +18,16 @@ export function AgentManagement({ engineId, userId }: AgentManagementProps) {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const resp = await fetch(`http://localhost:3001/api/engines/${engineId}?userId=${userId}`, {
-        method: 'DELETE',
-      });
+      const resp = await ApiClient.deleteEngine(engineId, userId);
       
-      if (resp.ok) {
+      if (resp.success) {
         router.push('/leaderboard');
         router.refresh();
       } else {
-        const err = await resp.json();
-        alert(`Deletion failed: ${err.error || 'Unknown error'}`);
+        alert(`Deletion failed: Unexpected response from server`);
       }
-    } catch (e) {
-      alert('Network error during deletion.');
+    } catch (e: any) {
+      alert(`Deletion failed: ${e.message || 'Network error'}`);
     } finally {
       setIsDeleting(false);
       setShowConfirm(false);
