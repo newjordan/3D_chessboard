@@ -58,12 +58,15 @@ export default async function Home() {
               {topEngines.map((engine, i) => (
                 <div key={engine.id} className="grid grid-cols-[30px_1fr_60px] items-center py-4 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-2 last:border-0">
                   <span className="font-mono text-[9px] opacity-20">0{i + 1}</span>
-                  <div className="flex flex-col">
-                    <Link href={`/engines/${engine.slug}`} className="font-bold text-[13px] group-hover:underline truncate pr-2">
-                      {engine.name}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/engines/${engine.slug}`} className="font-bold text-[13px] group-hover:underline truncate pr-2">
+                        {engine.name}
+                      </Link>
+                      {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" title="In active match" />
+                      )}
+                    </div>
                     <span className="technical-label text-[9px] lowercase opacity-40 pr-2 truncate">@{engine.owner.username}</span>
-                  </div>
                   <div className="text-right">
                     <span className="font-mono text-sm font-bold tracking-tight">{engine.currentRating}</span>
                   </div>

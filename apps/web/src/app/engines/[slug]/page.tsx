@@ -46,6 +46,12 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               }`}>
                 {engine.status}
               </span>
+              {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/20 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                  <span className="text-[10px] font-bold text-accent uppercase tracking-tighter italic">In Arena</span>
+                </div>
+              )}
             </div>
             
             <div className="flex flex-wrap items-center gap-8 text-sm text-muted">

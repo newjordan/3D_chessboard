@@ -79,7 +79,13 @@ app.get("/api/leaderboard", async (req, res) => {
         { currentRank: "asc" },
       ],
       include: {
-        owner: { select: { username: true } }
+        owner: { select: { username: true } },
+        _count: {
+          select: {
+            matchesChallenged: { where: { status: "running" } },
+            matchesDefended: { where: { status: "running" } },
+          },
+        },
       }
     });
     res.json(engines);
@@ -109,6 +115,12 @@ app.get("/api/engines/:slug", async (req, res) => {
           include: { challengerEngine: { select: { name: true, slug: true } } },
           orderBy: { completedAt: 'desc' },
           take: 10,
+        },
+        _count: {
+          select: {
+            matchesChallenged: { where: { status: "running" } },
+            matchesDefended: { where: { status: "running" } },
+          },
         },
       }
     });
@@ -166,6 +178,12 @@ app.get("/api/engines/by-owner/:userId", async (req, res) => {
       include: {
         owner: { select: { username: true } },
         versions: { orderBy: { submittedAt: "desc" }, take: 1 },
+        _count: {
+          select: {
+            matchesChallenged: { where: { status: "running" } },
+            matchesDefended: { where: { status: "running" } },
+          },
+        },
       },
     });
     res.json(engines);

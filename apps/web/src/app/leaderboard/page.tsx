@@ -63,9 +63,17 @@ export default async function LeaderboardPage() {
                 <span className={`font-mono text-xs ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
                   {i + 1 < 10 ? `0${i + 1}` : i + 1}
                 </span>
-                <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
-                  {engine.name}
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
+                    {engine.name}
+                  </Link>
+                  {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
+                    <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-accent/10 border border-accent/20 rounded text-[8px] font-bold text-accent uppercase tracking-tighter">
+                      <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
+                      Live
+                    </div>
+                  )}
+                </div>
                 <span className="technical-label text-[10px] truncate pr-4 lowercase">@{engine.owner.username}</span>
                 <span className="text-right font-mono text-sm font-bold">{engine.currentRating}</span>
                 <div className="text-right font-mono text-[11px] flex gap-1 justify-end opacity-60">
