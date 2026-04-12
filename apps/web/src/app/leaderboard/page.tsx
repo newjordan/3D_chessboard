@@ -1,6 +1,8 @@
 import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
 import { ChevronRight, Trophy, Wallet } from "lucide-react";
+import { Countdown } from "@/components/Countdown";
+
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +27,12 @@ export default async function LeaderboardPage() {
             <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center">
               <Wallet size={18} className="text-accent" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold">Monthly Prize Disbursement</span>
-              <span className="technical-label text-[10px] opacity-60">Payout Cycle: Monthly / GMT-4</span>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col">
+                <span className="text-sm font-bold">Monthly Prize Disbursement</span>
+                <span className="technical-label text-[10px] opacity-60">Payout Cycle: Monthly / GMT-4</span>
+              </div>
+              <Countdown days={30} />
             </div>
           </div>
           <div className="flex items-center gap-4">
