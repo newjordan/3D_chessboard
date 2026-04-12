@@ -119,6 +119,15 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
     return pieces;
   }, [boardState, viewMode]);
 
+  const playerNames = useMemo(() => {
+    const whiteMatch = currentGamePgn.match(/\[White "([^"]+)"\]/);
+    const blackMatch = currentGamePgn.match(/\[Black "([^"]+)"\]/);
+    return {
+      white: whiteMatch ? whiteMatch[1] : 'White AI',
+      black: blackMatch ? blackMatch[1] : 'Black AI'
+    };
+  }, [currentGamePgn]);
+
   return (
     <div className="flex flex-col gap-4 w-full h-full max-w-[1400px] mx-auto overflow-hidden">
       {/* Game Selector Tabs - Compact */}
@@ -210,11 +219,23 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
                </div>
              )}
 
-              <div className="absolute top-4 left-4 technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md rounded text-[9px] flex items-center gap-3">
-                <span className={`w-1.5 h-1.5 rounded-full ${currentPly % 2 === 0 ? 'bg-white' : 'bg-white/20'}`} />
-                <span className="font-bold tracking-widest uppercase">
-                  {currentPly >= history.length ? 'Final' : (currentPly % 2 === 0 ? 'White' : 'Black')}
-                </span>
+              {/* Player Labels */}
+              <div className="absolute top-6 left-6 flex flex-col gap-1 items-start">
+                <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Opponent</span>
+                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md rounded-md flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-sm border border-white/20 bg-[#999999] ${currentPly % 2 === 1 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
+                  <span className="font-bold text-xs">{playerNames.black}</span>
+                  <span className="text-[9px] opacity-40 lowercase">Black</span>
+                </div>
+              </div>
+
+              <div className="absolute bottom-6 right-6 flex flex-col gap-1 items-end">
+                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md rounded-md flex items-center gap-2">
+                  <span className="text-[9px] opacity-40 lowercase">White</span>
+                  <span className="font-bold text-xs">{playerNames.white}</span>
+                  <span className={`w-2 h-2 rounded-sm border border-white/20 bg-white ${currentPly % 2 === 0 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
+                </div>
+                <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Current Player</span>
               </div>
           </div>
 
