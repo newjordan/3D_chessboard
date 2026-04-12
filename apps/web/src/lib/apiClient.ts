@@ -31,6 +31,10 @@ export class ApiClient {
     return this.request<any[]>(url);
   }
 
+  static async getRandomMatch() {
+    return this.request<any>("/api/matches/random");
+  }
+
   static async getEngine(slug: string) {
     return this.request<any>(`/api/engines/${slug}`);
   }

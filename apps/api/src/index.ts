@@ -81,6 +81,31 @@ app.get("/api/leaderboard", async (req, res) => {
   }
 });
 
+// 4. Get a Random Recent Match (for Showcase)
+app.get("/api/matches/random", async (req, res) => {
+  try {
+    const total = await prisma.match.count({ where: { status: "completed" } });
+    if (total === 0) return res.status(404).json({ error: "No completed matches found" });
+    
+    // Pick a random offset from recent games
+    const recentCount = Math.min(total, 50);
+    const skip = Math.floor(Math.random() * recentCount);
+    
+    const match = await prisma.match.findFirst({
+      where: { status: "completed" },
+      skip,
+      include: {
+        challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
+        defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
+      }
+    });
+    res.json(match);
+  } catch (error) {
+    console.error("Random match error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // 4. Get Recent Matches (with optional engine filtering)
 app.get("/api/matches", async (req, res) => {
   try {

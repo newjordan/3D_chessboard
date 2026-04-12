@@ -19,13 +19,11 @@ export function ShowcaseReplay() {
   useEffect(() => {
     const fetchRandomMatch = async () => {
       try {
-        const matches = await ApiClient.getMatches();
-        const completed = matches.filter(m => m.status === 'completed' && m.games.length > 0);
-        if (completed.length > 0) {
-          const random = completed[Math.floor(Math.random() * completed.length)];
+        const random = await ApiClient.getRandomMatch();
+        if (random) {
           setMatch(random);
           const matchPgn = await ApiClient.getMatchPgn(random.id);
-          setPgn(matchPgn);
+          if (matchPgn) setPgn(matchPgn);
         }
       } catch (e) {
         console.error("Failed to fetch showcase match", e);
