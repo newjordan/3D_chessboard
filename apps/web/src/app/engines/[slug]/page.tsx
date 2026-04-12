@@ -119,9 +119,8 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               </h2>
               <div className="flex flex-col gap-4">
                 {allMatches.map((match) => (
-                  <Link 
+                  <div 
                     key={match.id}
-                    href={`/matches/${match.id}`}
                     className="glass p-6 rounded-2xl border border-white/5 hover:border-accent/20 transition-all flex flex-col md:flex-row items-center justify-between gap-6 group"
                   >
                     <div className="flex items-center gap-6">
@@ -136,7 +135,6 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                           <Link 
                             href={`/engines/${match.defenderEngine?.slug || '#'}`}
                             className="font-bold hover:text-accent transition-colors"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             {match.defenderEngine?.name || 'Unknown'}
                           </Link>
@@ -144,7 +142,6 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                           <Link 
                             href={`/engines/${match.challengerEngine?.slug || '#'}`}
                             className="font-bold hover:text-accent transition-colors"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             {match.challengerEngine?.name || 'Unknown'}
                           </Link>
@@ -161,9 +158,11 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                           {match.role === 'challenger' ? match.defenderScore?.toString() : match.challengerScore?.toString()}
                         </span>
                       </div>
-                      <ChevronRight className="text-white/20 group-hover:text-accent transition-colors" />
+                      <Link href={`/matches/${match.id}`}>
+                        <ChevronRight className="text-white/20 group-hover:text-accent transition-colors" />
+                      </Link>
                     </div>
-                  </Link>
+                  </div>
                 ))}
                 {allMatches.length === 0 && (
                   <div className="glass p-12 rounded-3xl border border-white/5 flex flex-col items-center gap-4 text-white/40">
