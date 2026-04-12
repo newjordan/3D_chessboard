@@ -13,22 +13,39 @@ interface ReplayControllerProps {
 }
 
 export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
+  const [selectedGameIndex, setSelectedGameIndex] = useState(0);
   const [currentPly, setCurrentPly] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1000);
 
-  const chess = useMemo(() => new Chess(), []);
-  
+  // Split PGN into multiple games if they exist
+  const gamesList = useMemo(() => {
+    if (!pgn) return [];
+    // Split by [Event tag at the start of a line
+    const segments = pgn.trim().split(/\n(?=\[Event )/);
+    return segments.length > 0 ? segments : [pgn];
+  }, [pgn]);
+
+  const currentGamePgn = useMemo(() => {
+    return gamesList[selectedGameIndex] || "";
+  }, [gamesList, selectedGameIndex]);
+
   const history = useMemo(() => {
     const tempChess = new Chess();
     try {
-      tempChess.loadPgn(pgn);
+      tempChess.loadPgn(currentGamePgn);
       return tempChess.history({ verbose: true });
     } catch (e) {
       console.error("Failed to parse PGN:", e);
       return [];
     }
-  }, [pgn]);
+  }, [currentGamePgn]);
+
+  // Reset ply when switching games
+  useEffect(() => {
+    setCurrentPly(0);
+    setIsPlaying(false);
+  }, [selectedGameIndex]);
 
   // Derive board state at currentPly
   const boardState = useMemo(() => {
@@ -71,11 +88,33 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
   }, [boardState]);
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-4xl mx-auto">
-      {/* 3D Scene Container */}
-      <div className="aspect-square relative w-full border border-white/5 bg-black/40 soft-shadow overflow-hidden rounded-xl">
+    <div className="flex flex-col gap-8 w-full  mx-auto">
+      {/* Header with Game Selection */}
+      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <div className="flex items-center gap-4">
+          <span className="technical-label opacity-40 uppercase text-[10px]">Select Game</span>
+          <div className="flex gap-2">
+            {gamesList.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedGameIndex(idx)}
+                className={`px-4 py-1.5 technical-label text-[10px] border transition-all ${
+                  selectedGameIndex === idx 
+                    ? 'bg-foreground text-background border-foreground font-bold' 
+                    : 'bg-white/5 border-white/10 opacity-60 hover:opacity-100'
+                }`}
+              >
+                Game {idx + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 3D Scene Container - Larger for full page */}
+      <div className="aspect-[16/10] relative w-full border border-white/5 bg-black/40 soft-shadow overflow-hidden rounded-xl">
         <Canvas shadows gl={{ antialias: true, alpha: true }}>
-          <PerspectiveCamera makeDefault position={[0, 8, 8]} fov={45} />
+          <PerspectiveCamera makeDefault position={[0, 10, 10]} fov={45} />
           
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} intensity={1} castShadow />
