@@ -26,17 +26,17 @@ export default function UserProfilePage() {
   }, [handle]);
 
   const stats = useMemo(() => {
-    if (!user || !user.engines) return null;
-    const engines = user.engines;
-    const wins = engines.reduce((acc: number, e: any) => acc + e.wins, 0);
-    const losses = engines.reduce((acc: number, e: any) => acc + e.losses, 0);
-    const draws = engines.reduce((acc: number, e: any) => acc + e.draws, 0);
+    if (!user) return null;
+    
+    // Use server-side stats with client-side fallbacks during deployment transition
+    const s = user.stats || {};
+    const wins = s.totalWins || 0;
+    const losses = s.totalLosses || 0;
+    const draws = s.totalDraws || 0;
     const totalMatches = wins + losses + draws;
     const winRate = totalMatches > 0 ? ((wins / totalMatches) * 100).toFixed(1) : "0.0";
-    const topRating = engines.length > 0 ? Math.max(...engines.map((e: any) => e.currentRating)) : 1200;
-    
-    // Calculated Winnings Placeholder ($5 per win)
-    const winnings = (wins * 5.00).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    const topRating = s.peakRating || 1200;
+    const winnings = (s.totalEarnings || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
     return { wins, losses, draws, totalMatches, winRate, topRating, winnings };
   }, [user]);

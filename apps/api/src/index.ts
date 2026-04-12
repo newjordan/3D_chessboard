@@ -143,8 +143,8 @@ app.get("/api/users/:handle", async (req, res) => {
     let totalLosses = 0;
     let totalDraws = 0;
 
-    allMatches.forEach(match => {
-      const isChallenger = match.challengerEngineId ? (user?.engines.some(e => e.id === match.challengerEngineId)) : false;
+    allMatches.forEach((match: any) => {
+      const isChallenger = match.challengerEngineId ? (user?.engines.some((e: any) => e.id === match.challengerEngineId)) : false;
       const cScore = Number(match.challengerScore || 0);
       const dScore = Number(match.defenderScore || 0);
 
@@ -164,7 +164,7 @@ app.get("/api/users/:handle", async (req, res) => {
         totalLosses,
         totalDraws,
         totalEarnings: totalWins * 5.00, // $5.00 per win prize calculation
-        peakRating: Math.max(1200, ...user.engines.map(e => e.currentRating))
+        peakRating: Math.max(1200, ...user.engines.map((e: any) => e.currentRating))
       }
     });
   } catch (error) {
