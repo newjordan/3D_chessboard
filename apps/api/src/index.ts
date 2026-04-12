@@ -249,6 +249,25 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
           error: "Engine limit reached. You can only have a maximum of 3 engines. Please delete one to submit a new bot." 
         });
       }
+    }
+
+    // 2. Plagiarism Check: Check for duplicate code hash from different users
+    const duplicateCode = await prisma.engineVersion.findFirst({
+      where: {
+        sha256,
+        engine: {
+          ownerUserId: { not: ownerUserId }
+        }
+      },
+      include: {
+        engine: { select: { name: true } }
+      }
+    });
+
+    if (duplicateCode) {
+      return res.status(400).json({ 
+        error: `Submission rejected: This exact code has already been submitted by another user. Plagiarism is not allowed.` 
+      });
     } else if (existingEngine.ownerUserId !== ownerUserId) {
       // Check for slug collision: if an engine with this slug exists owned by a different user, reject
       return res.status(409).json({ error: "An engine with a similar name already exists" });

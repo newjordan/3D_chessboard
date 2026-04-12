@@ -4,6 +4,7 @@ dotenv.config();
 import { prisma, JobStatus, JobType, EngineStatus, ValidationStatus, SubmissionStatus, MatchStatus } from "./db";
 import { storage, BUCKET_NAME } from "./storage";
 import { validateFileType } from "./validation/filetype";
+import { analyzeStatic } from "./validation/StaticAnalyzer";
 import { probeAgent } from "./validation/probe";
 import { preparePlacementMatches } from "./matchmaking/placement";
 import { scheduleMatches } from "./matchmaking/scheduler";
@@ -141,7 +142,15 @@ async function handleValidation(payload: any) {
     const arrayBuffer = await (Body as any).transformToByteArray();
     await fs.writeFile(tempPath, Buffer.from(arrayBuffer));
 
-    // 3. Probe agent — send FEN, expect legal move
+    // 3. Static Analysis — Check for forbidden modules/keywords
+    console.log(`Analyzing code (${ext})...`);
+    const analysisResult = await analyzeStatic(tempPath, ext);
+    if (!analysisResult.isValid) {
+      await failSubmission(submissionId, versionId, analysisResult.error || "Security violation detected");
+      return;
+    }
+
+    // 4. Probe agent — send FEN, expect legal move
     console.log(`Running FEN probe (${ext})...`);
     const probeResult = await probeAgent(tempPath, ext);
     if (!probeResult.isValid) {
@@ -149,7 +158,7 @@ async function handleValidation(payload: any) {
       return;
     }
 
-    // 4. Success! Update DB
+    // 5. Success! Update DB
     console.log(`Validation passed for ${storageKey}`);
     await prisma.$transaction([
       prisma.engineVersion.update({

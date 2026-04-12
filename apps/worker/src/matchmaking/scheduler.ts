@@ -105,6 +105,11 @@ export async function scheduleMatches(): Promise<number> {
       continue;
     }
 
+    // Anti-win-trading check
+    if (engineA.ownerUserId === engineB.ownerUserId) {
+      continue;
+    }
+
     // Create match + job in a single transaction
     await prisma.$transaction(async (tx) => {
       const match = await tx.match.create({
