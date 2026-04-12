@@ -1,49 +1,20 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import rateLimit from "express-rate-limit";
-import { prisma } from "./db";
+import { PrismaClient } from "@prisma/client";
 import multer from "multer";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 import path from "path";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import rateLimit from "express-rate-limit";
 
 dotenv.config();
 
 const app = express();
+const prisma = new PrismaClient();
 const port = process.env.PORT || 3001;
 
-// CORS: only allow configured origins
-const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(",").map(o => o.trim())
-  : ["http://localhost:3000"];
-
-app.use(cors({
-  origin: ALLOWED_ORIGINS,
-  credentials: true,
-}));
-app.use(express.json());
-
-// Rate limiting
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests, please try again later." },
-});
-
-const submitLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many submissions, please try again later." },
-});
-
-app.use("/api/", generalLimiter);
-
-// S3 / R2 Configuration
+// S3/R2 Setup
 const s3Client = new S3Client({
   region: "auto",
   endpoint: process.env.R2_ENDPOINT,
@@ -55,98 +26,50 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.R2_BUCKET || "chess-agents";
 
-const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+app.use(cors());
+app.use(express.json());
+
+// Consts
 const ALLOWED_EXTENSIONS = [".js", ".py"];
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE },
+const MAX_ENGINE_NAME_LENGTH = 32;
+
+// Limiters
+const submitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many submissions. Please wait 15 minutes." }
 });
 
-const MAX_ENGINE_NAME_LENGTH = 64;
+// Helper: Slugify
+const slugify = (text: string) => {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+};
 
-// --- ROUTES ---
+// 1. Root
+app.get("/", (req, res) => {
+  res.json({ status: "ok", service: "Chess Agents API" });
+});
 
-// 1. Get Leaderboard
-app.get("/api/leaderboard", async (req, res) => {
+// 2. Monitoring
+app.get("/api/health", (req, res) => {
+  res.json({ status: "healthy" });
+});
+
+// 3. Get All Active Engines (Leaderboard)
+app.get("/api/engines", async (req, res) => {
   try {
     const engines = await prisma.engine.findMany({
-      where: { 
-        status: "active",
-        gamesPlayed: { gt: 0 }
-      },
-      orderBy: [
-        { currentRating: "desc" },
-        { currentRank: "asc" },
-      ],
+      where: { status: "active" },
+      orderBy: { currentRating: "desc" },
       include: {
         owner: { select: { username: true } },
-        _count: {
-          select: {
-            matchesChallenged: { where: { status: "running" } },
-            matchesDefended: { where: { status: "running" } },
-          },
-        },
-      }
+      },
     });
     res.json(engines);
-  } catch (error: any) {
-    console.error("Leaderboard error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 2. Get Engine Details
-app.get("/api/engines/:slug", async (req, res) => {
-  try {
-    const engine = await prisma.engine.findUnique({
-      where: { slug: req.params.slug },
-      include: {
-        owner: { select: { username: true } },
-        versions: {
-          orderBy: { submittedAt: "desc" },
-          take: 1
-        },
-        matchesChallenged: {
-          include: { defenderEngine: { select: { name: true, slug: true } } },
-          orderBy: { completedAt: 'desc' },
-          take: 10,
-        },
-        matchesDefended: {
-          include: { challengerEngine: { select: { name: true, slug: true } } },
-          orderBy: { completedAt: 'desc' },
-          take: 10,
-        },
-        _count: {
-          select: {
-            matchesChallenged: { where: { status: "running" } },
-            matchesDefended: { where: { status: "running" } },
-          },
-        },
-      }
-    });
-    if (!engine) return res.status(404).json({ error: "Engine not found" });
-    res.json(engine);
-  } catch (error: any) {
-    console.error("Engine fetch error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 3. Get Recent Matches (Global)
-app.get("/api/matches", async (req, res) => {
-  try {
-    const matches = await prisma.match.findMany({
-      where: { status: "completed" },
-      orderBy: { completedAt: "desc" },
-      take: 50,
-      include: {
-        challengerEngine: { select: { name: true, slug: true } },
-        defenderEngine: { select: { name: true, slug: true } },
-      }
-    });
-    res.json(matches);
-  } catch (error: any) {
-    console.error("Matches history error:", error);
+  } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -205,8 +128,7 @@ app.get("/api/matches/:id", async (req, res) => {
   }
 });
 
- // 4. Get Engines by Owner
-// 4. Get Engines by Owner
+// 6. Get Engines by Owner
 app.get("/api/engines/by-owner/:userId", async (req, res) => {
   try {
     const engines = await prisma.engine.findMany({
@@ -230,10 +152,12 @@ app.get("/api/engines/by-owner/:userId", async (req, res) => {
   }
 });
 
-// 5. Submit Engine
+const upload = multer({ storage: multer.memoryStorage() });
+
+// 7. Submit Engine
 app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req, res) => {
   try {
-    const { name, ownerUserId } = req.body;
+    const { name, ownerUserId, generationModel } = req.body;
     const file = req.file;
 
     if (!file || !name || !ownerUserId) {
@@ -247,123 +171,76 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
     }
 
     // Validate engine name
-    if (typeof name !== "string" || name.length > MAX_ENGINE_NAME_LENGTH || name.trim().length === 0) {
+    if (typeof name !== "string" || name.trim().length === 0 || name.length > MAX_ENGINE_NAME_LENGTH) {
       return res.status(400).json({ error: `Engine name must be 1-${MAX_ENGINE_NAME_LENGTH} characters` });
     }
 
-    // Upsert owner — auto-create user on first submission
-    const { ownerUsername, ownerEmail, ownerName } = req.body;
-    const owner = await prisma.user.upsert({
-      where: { id: ownerUserId },
-      create: {
-        id: ownerUserId,
-        username: ownerUsername || null,
-        email: ownerEmail || null,
-        name: ownerName || null,
-      },
-      update: {},
-    });
-
     const buffer = file.buffer;
     const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const slug = slugify(name);
 
-    if (!slug) {
-      return res.status(400).json({ error: "Engine name must contain alphanumeric characters" });
-    }
+    // Upsert owner
+    await prisma.user.upsert({
+      where: { id: ownerUserId },
+      create: { id: ownerUserId },
+      update: {},
+    });
 
     // 1. Quota Check: Limit 3 engines per user
     const existingEngine = await prisma.engine.findUnique({ where: { slug } });
     
     if (!existingEngine) {
-      // It's a NEW engine, count existing ones
       const engineCount = await prisma.engine.count({
         where: { ownerUserId }
       });
 
       if (engineCount >= 3) {
         return res.status(403).json({ 
-          error: "Engine limit reached. You can only have a maximum of 3 engines. Please delete one to submit a new bot." 
+          error: "Engine limit reached. You can only have 3 agents. Please delete one to submit a new bot." 
         });
       }
     }
 
-    // 2. Plagiarism Check: Check for duplicate code hash from different users
+    // 2. Plagiarism Check
     const duplicateCode = await prisma.engineVersion.findFirst({
       where: {
         sha256,
-        engine: {
-          ownerUserId: { not: ownerUserId }
-        }
-      },
-      include: {
-        engine: { select: { name: true } }
+        engine: { ownerUserId: { not: ownerUserId } }
       }
     });
 
     if (duplicateCode) {
       return res.status(400).json({ 
-        error: `Submission rejected: This exact code has already been submitted by another user. Plagiarism is not allowed.` 
+        error: "Submission rejected: This exact code has already been submitted by another user." 
       });
-    } else if (existingEngine && existingEngine.ownerUserId !== ownerUserId) {
-      // Check for slug collision: if an engine with this slug exists owned by a different user, reject
-      return res.status(409).json({ error: "An engine with a similar name already exists" });
     }
 
-    // 2. Upsert Engine (safe now — we verified ownership and quota above)
+    // 3. Upsert Engine
     const engine = await prisma.engine.upsert({
       where: { slug },
       create: {
         name: name.trim(),
         slug,
         ownerUserId,
-        status: "active", // Now that we have validation, we set this here or wait for handleValidation
+        status: "active",
       },
       update: { updatedAt: new Date() },
     });
 
-    // 3. Check for existing version with this SHA256 (PER ENGINE uniqueness check)
-    let version = await prisma.engineVersion.findUnique({
-      where: {
-        engineId_sha256: {
-          engineId: engine.id,
-          sha256
-        }
-      }
+    // 4. Create new Version
+    const version = await prisma.engineVersion.create({
+      data: {
+        engineId: engine.id,
+        storageKey: `engines/${engine.id}/${sha256}${ext}`,
+        sha256,
+        fileSizeBytes: buffer.length,
+        language: ext.slice(1),
+        generationModel: generationModel || null,
+        validationStatus: "pending",
+      },
     });
 
-    let storageKey: string;
-
-    if (!version) {
-      // 2a. Upload to S3/R2 only if it's a new file
-      storageKey = `engines/${engine.id}/${sha256}${ext}`;
-      const contentType = ext === ".js" ? "application/javascript" : "text/x-python";
-      
-      console.log(`New file detected. Uploading to R2: ${storageKey}`);
-      await s3Client.send(new PutObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: storageKey,
-        Body: buffer,
-        ContentType: contentType,
-      }));
-
-      // 2b. Create new Version
-      version = await prisma.engineVersion.create({
-        data: {
-          engineId: engine.id,
-          storageKey,
-          sha256,
-          fileSizeBytes: buffer.length,
-          language: ext.slice(1),
-          validationStatus: "pending",
-        },
-      });
-    } else {
-      storageKey = version.storageKey;
-      console.log(`Existing version found for SHA256: ${sha256}. Reusing version: ${version.id}`);
-    }
-
-    // 3. Create Submission
+    // 5. Create Submission
     const submission = await prisma.submission.create({
       data: {
         engineVersionId: version.id,
@@ -372,14 +249,22 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       },
     });
 
-    // 4. Create Validation Job
+    // 6. Upload to Storage
+    await s3Client.send(new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: version.storageKey,
+      Body: buffer,
+      ContentType: ext === ".js" ? "application/javascript" : "text/x-python",
+    }));
+
+    // 7. Create Validation Job
     await prisma.job.create({
       data: {
         jobType: "submission_validate",
         payloadJson: {
           submissionId: submission.id,
           versionId: version.id,
-          storageKey,
+          storageKey: version.storageKey,
         },
         status: "pending",
       },
@@ -392,11 +277,11 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
   }
 });
 
-// 5. Delete Engine (DISABLED)
+// 8. Delete Engine (DISABLED)
 app.delete("/api/engines/:id", async (req, res) => {
-  return res.status(403).json({ error: "Agent deletion is disabled to maintain competitive integrity. Agents are immutable once verified." });
+  return res.status(403).json({ error: "Agent deletion is disabled." });
 });
 
 app.listen(port, () => {
-  console.log(`[${new Date().toISOString()}] Backend API listening at http://localhost:${port}`);
+  console.log(`Backend API listening at http://localhost:${port}`);
 });

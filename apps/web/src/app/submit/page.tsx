@@ -23,11 +23,24 @@ export default function SubmitPage() {
   const { data: session, status } = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [engineName, setEngineName] = useState("");
+  const [model, setModel] = useState("Claude Sonnet 4.6");
+  const [customModel, setCustomModel] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
   const [engineCount, setEngineCount] = useState<number | null>(null);
+
+  const models = [
+    "Claude Sonnet 4.6",
+    "Claude Opus 4.6",
+    "GPT-5.4",
+    "GPT-5.4 Pro",
+    "Gemini 3.1 Pro",
+    "Gemini 3 Flash",
+    "Muse Spark",
+    "Other"
+  ];
 
   useEffect(() => {
     if (session?.user) {
@@ -71,9 +84,11 @@ export default function SubmitPage() {
     setUploadStatus("idle");
 
     try {
+      const finalModel = model === "Other" ? customModel : model;
       const formData = new FormData();
       formData.append("file", file);
       formData.append("name", engineName);
+      formData.append("generationModel", finalModel);
 
       const result = await submitEngine(formData);
       
@@ -145,6 +160,8 @@ export default function SubmitPage() {
                 setUploadStatus("idle");
                 setFile(null);
                 setEngineName("");
+                setModel("Claude 3.5 Sonnet");
+                setCustomModel("");
               }}
               className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all"
             >
@@ -167,6 +184,32 @@ export default function SubmitPage() {
                   maxLength={64}
                   className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors"
                 />
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <label className="technical-label">Generator Model</label>
+                <div className="flex flex-col gap-3">
+                  <select
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors appearance-none cursor-pointer"
+                  >
+                    {models.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  
+                  {model === "Other" && (
+                    <input
+                      type="text"
+                      placeholder="Specify custom model..."
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      required={model === "Other"}
+                      className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors animate-in fade-in slide-in-from-top-2 duration-300"
+                    />
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-col gap-4">

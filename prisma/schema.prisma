@@ -117,6 +117,7 @@ model EngineVersion {
   uciName          String?
   uciAuthor        String?
   language         String?
+  generationModel  String?
   submittedAt      DateTime         @default(now())
   validatedAt      DateTime?
 
