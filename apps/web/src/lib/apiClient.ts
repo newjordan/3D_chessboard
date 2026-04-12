@@ -38,6 +38,12 @@ export class ApiClient {
     return this.request<any>(`/api/matches/${id}`);
   }
 
+  static async getMatchPgn(id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/matches/${id}/pgn`);
+    if (!res.ok) throw new Error("Could not fetch PGN");
+    return res.text();
+  }
+
   static async getEnginesByOwner(userId: string) {
     return this.request<any[]>(`/api/engines/by-owner/${userId}`);
   }

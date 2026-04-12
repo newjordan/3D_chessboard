@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import { prisma } from "./db";
 import multer from "multer";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 import path from "path";
 
@@ -169,6 +169,35 @@ app.get("/api/matches/:id", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// 4b. Get Match PGN
+app.get("/api/matches/:id/pgn", async (req, res) => {
+  try {
+    const match = await prisma.match.findUnique({
+      where: { id: req.params.id },
+      select: { pgnStorageKey: true }
+    });
+
+    if (!match || !match.pgnStorageKey) {
+      return res.status(404).json({ error: "PGN not found for this match" });
+    }
+
+    const response = await s3Client.send(new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: match.pgnStorageKey,
+    })) as any;
+
+    const Body = response.Body;
+
+    if (!Body) throw new Error("Empty response from R2");
+
+    const pgnText = await (Body as any).transformToString();
+    res.type("text/plain").send(pgnText);
+  } catch (error: any) {
+    console.error("PGN fetch error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 // 4. Get Engines by Owner
 app.get("/api/engines/by-owner/:userId", async (req, res) => {
   try {
@@ -268,7 +297,7 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       return res.status(400).json({ 
         error: `Submission rejected: This exact code has already been submitted by another user. Plagiarism is not allowed.` 
       });
-    } else if (existingEngine.ownerUserId !== ownerUserId) {
+    } else if (existingEngine && existingEngine.ownerUserId !== ownerUserId) {
       // Check for slug collision: if an engine with this slug exists owned by a different user, reject
       return res.status(409).json({ error: "An engine with a similar name already exists" });
     }

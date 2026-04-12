@@ -10,6 +10,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1029.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@types/three": "^0.183.1",
+    "chess.js": "^1.4.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.474.0",
@@ -18,7 +22,8 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "sharp": "^0.33.5",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
