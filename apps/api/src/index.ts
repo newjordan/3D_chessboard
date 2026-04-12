@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
-import { prisma, EngineStatus, ValidationStatus, SubmissionStatus, JobStatus, JobType } from "./db";
+import { prisma } from "./db";
 import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
@@ -140,7 +140,23 @@ app.get("/api/matches", async (req, res) => {
 });
 
 // 4. Get Match Details
-
+app.get("/api/matches/:id", async (req, res) => {
+  try {
+    const match = await prisma.match.findUnique({
+      where: { id: req.params.id },
+      include: {
+        challengerEngine: { include: { owner: { select: { username: true } } } },
+        defenderEngine: { include: { owner: { select: { username: true } } } },
+        games: { orderBy: { roundIndex: "asc" } }
+      }
+    });
+    if (!match) return res.status(404).json({ error: "Match not found" });
+    res.json(match);
+  } catch (error: any) {
+    console.error("Match fetch error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 // 4. Get Engines by Owner
 app.get("/api/engines/by-owner/:userId", async (req, res) => {
   try {
@@ -227,7 +243,7 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
         name: name.trim(),
         slug,
         ownerUserId,
-        status: EngineStatus.active, // Now that we have validation, we set this here or wait for handleValidation
+        status: "active", // Now that we have validation, we set this here or wait for handleValidation
       },
       update: { updatedAt: new Date() },
     });
@@ -265,7 +281,7 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
           sha256,
           fileSizeBytes: buffer.length,
           language: ext.slice(1),
-          validationStatus: ValidationStatus.pending,
+          validationStatus: "pending",
         },
       });
     } else {
@@ -278,20 +294,20 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       data: {
         engineVersionId: version.id,
         submittedByUserId: ownerUserId,
-        status: SubmissionStatus.uploaded,
+        status: "uploaded",
       },
     });
 
     // 4. Create Validation Job
     await prisma.job.create({
       data: {
-        jobType: JobType.submission_validate,
+        jobType: "submission_validate",
         payloadJson: {
           submissionId: submission.id,
           versionId: version.id,
           storageKey,
         },
-        status: JobStatus.pending,
+        status: "pending",
       },
     });
 

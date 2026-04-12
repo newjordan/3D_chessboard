@@ -84,8 +84,9 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             
             <div className="flex flex-col">
               {allMatches.map((match) => (
-                <div 
+                <Link 
                   key={match.id}
+                  href={`/matches/${match.id}`}
                   className="grid grid-cols-[1fr_80px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors group"
                 >
                   <div className="flex items-center gap-6">
@@ -94,12 +95,17 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                     <div className="flex items-center gap-4 text-sm font-medium">
                       <span className={match.role === 'challenger' ? 'font-bold' : ''}>{engine.name}</span>
                       <span className="opacity-20 italic">vs</span>
-                      <Link 
-                        href={`/engines/${match.role === 'challenger' ? match.defenderEngine?.slug : match.challengerEngine?.slug}`}
+                      <div 
                         className="hover:underline"
+                        onClick={(e) => {
+                          // Prevent triggering the parent link when clicking the opponent link
+                          // Actually, navigating to the match detail is probably prioritized, 
+                          // but if they click the engine name, we should handle that.
+                          // But for simplicity, we'll keep the opponent as a visual label or handle propagation.
+                        }}
                       >
                         {match.role === 'challenger' ? match.defenderEngine?.name : match.challengerEngine?.name}
-                      </Link>
+                      </div>
                     </div>
                   </div>
 
@@ -115,7 +121,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                     </div>
                     <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted" />
                   </div>
-                </div>
+                </Link>
               ))}
               {allMatches.length === 0 && (
                 <div className="py-20 text-center technical-label opacity-20 border-b border-border-custom">
