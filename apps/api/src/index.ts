@@ -527,6 +527,192 @@ app.delete("/api/engines/:id", async (req, res) => {
   }
 });
 
+// =============================================
+// ADMIN API ENDPOINTS
+// =============================================
+const ADMIN_API_SECRET = process.env.ADMIN_API_SECRET || "chess-agents-admin-secret-change-me";
+
+const requireAdmin = (req: any, res: any): boolean => {
+  const secret = req.headers['x-admin-secret'];
+  if (!secret || secret !== ADMIN_API_SECRET) {
+    res.status(403).json({ error: "Forbidden: Invalid admin credentials" });
+    return false;
+  }
+  return true;
+};
+
+// Admin: Platform Stats Overview
+app.get("/api/admin/stats", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const [
+      totalUsers, totalEngines, totalMatches, totalGames, totalJobs,
+      activeEngines, pendingJobs, failedJobs, runningMatches,
+      recentUsers, recentMatches, matchesByDay
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.engine.count(),
+      prisma.match.count(),
+      prisma.game.count(),
+      prisma.job.count(),
+      prisma.engine.count({ where: { status: "active" } }),
+      prisma.job.count({ where: { status: "pending" } }),
+      prisma.job.count({ where: { status: "failed" } }),
+      prisma.match.count({ where: { status: "running" } }),
+      prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, username: true, image: true, createdAt: true } }),
+      prisma.match.findMany({
+        orderBy: { createdAt: "desc" }, take: 10,
+        include: {
+          challengerEngine: { select: { name: true, slug: true } },
+          defenderEngine: { select: { name: true, slug: true } },
+        }
+      }),
+      // Matches created in the last 7 days
+      prisma.match.findMany({
+        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+        select: { createdAt: true },
+        orderBy: { createdAt: "asc" }
+      })
+
+    ]);
+
+    // Engine status distribution
+    const enginesByStatus = await prisma.engine.groupBy({
+      by: ['status'],
+      _count: { _all: true }
+    });
+
+    // Top rated engines
+    const topEngines = await prisma.engine.findMany({
+      orderBy: { currentRating: "desc" },
+      take: 5,
+      include: { owner: { select: { username: true } } }
+    });
+
+    // Group matches by date for the activity chart
+    const matchActivityMap: Record<string, number> = {};
+    (matchesByDay as any[]).forEach((m: any) => {
+      const date = new Date(m.createdAt).toISOString().split('T')[0];
+      matchActivityMap[date] = (matchActivityMap[date] || 0) + 1;
+    });
+    const matchActivity = Object.entries(matchActivityMap).map(([date, count]) => ({ date, count }));
+
+    res.json({
+      overview: {
+        totalUsers, totalEngines, totalMatches, totalGames, totalJobs,
+        activeEngines, pendingJobs, failedJobs, runningMatches,
+      },
+      enginesByStatus: enginesByStatus.map((s: any) => ({ status: s.status, count: s._count._all })),
+      topEngines,
+      recentUsers,
+      recentMatches,
+      matchesByDay: matchActivity,
+    });
+  } catch (error) {
+    console.error("Admin stats error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin: List All Users
+app.get("/api/admin/users", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { engines: true, submissions: true } }
+      }
+    });
+    res.json(users);
+  } catch (error) {
+    console.error("Admin users error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin: List All Engines
+app.get("/api/admin/engines", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const engines = await prisma.engine.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        owner: { select: { username: true, image: true } },
+        versions: { orderBy: { submittedAt: "desc" }, take: 1, select: { validationStatus: true, language: true, sha256: true } },
+        _count: { select: { matchesChallenged: true, matchesDefended: true } }
+      }
+    });
+    res.json(engines);
+  } catch (error) {
+    console.error("Admin engines error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin: Update Engine Status
+app.patch("/api/admin/engines/:id", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const validStatuses = ['pending', 'active', 'rejected', 'banned', 'disabled', 'disabled_by_owner'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+    const engine = await prisma.engine.update({
+      where: { id },
+      data: { status }
+    });
+    res.json(engine);
+  } catch (error) {
+    console.error("Admin engine update error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin: Delete Engine (force)
+app.delete("/api/admin/engines/:id", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    await prisma.engine.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Admin engine delete error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin: List Jobs
+app.get("/api/admin/jobs", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const jobs = await prisma.job.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    res.json(jobs);
+  } catch (error) {
+    console.error("Admin jobs error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Admin: Retry Failed Job
+app.patch("/api/admin/jobs/:id/retry", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const job = await prisma.job.update({
+      where: { id: req.params.id },
+      data: { status: "pending", attempts: 0, lastError: null, lockedAt: null, workerId: null }
+    });
+    res.json(job);
+  } catch (error) {
+    console.error("Admin job retry error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend API listening at http://localhost:${port}`);
 });

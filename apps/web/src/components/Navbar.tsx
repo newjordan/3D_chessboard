@@ -3,11 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { User, LogOut, ChevronRight, Menu, X } from "lucide-react";
+import { User, LogOut, ChevronRight, Menu, X, Shield } from "lucide-react";
+
+const ADMIN_ID = "45865838";
 
 export default function Navbar() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const userId = (session?.user as any)?.id;
+  const isAdmin = userId === ADMIN_ID;
 
   return (
     <>
@@ -66,6 +70,11 @@ export default function Navbar() {
                   </div>
                   <span>{session.user?.name?.split(' ')[0] || "Member"}</span>
                 </Link>
+                {isAdmin && (
+                  <Link href="/admin" className="flex items-center gap-1.5 text-[13px] font-medium text-red-500/60 hover:text-red-500 transition-colors">
+                    <Shield size={12} /> Admin
+                  </Link>
+                )}
                 <button 
                   onClick={() => signOut()}
                   className="text-[13px] font-medium text-muted hover:text-red-600 transition-colors"
@@ -164,6 +173,21 @@ export default function Navbar() {
                       <span className="text-[10px] technical-label opacity-40">Dashboard</span>
                     </div>
                   </Link>
+                  {isAdmin && (
+                    <Link 
+                      href="/admin" 
+                      className="flex items-center gap-3 py-3 px-4 hover:bg-red-500/5 rounded-lg transition-colors"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <div className="w-7 h-7 rounded-full bg-red-500/10 flex items-center justify-center">
+                        <Shield size={14} className="text-red-500" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-red-500/80">Admin Console</span>
+                        <span className="text-[10px] technical-label opacity-40">Platform Control</span>
+                      </div>
+                    </Link>
+                  )}
                   <button 
                     onClick={() => { signOut(); setMenuOpen(false); }}
                     className="py-2 px-4 text-sm text-muted hover:text-red-500 transition-colors text-left flex items-center gap-2"
