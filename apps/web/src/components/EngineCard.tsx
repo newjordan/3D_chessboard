@@ -38,11 +38,15 @@ export function EngineCard({ engine }: EngineCardProps) {
           </Link>
           <span className="technical-label opacity-40 text-[9px] lowercase">{engine.id.substring(0, 16)}</span>
         </div>
-        <span className={`technical-label px-2 py-0.5 border border-border-custom ${
-          engine.status === 'active' ? 'text-accent' : 'text-muted'
-        }`}>
-          {engine.status}
-        </span>
+        <div className="flex items-center gap-2">
+          {engine.status === 'pending' && <Loader2 size={10} className="animate-spin text-accent" />}
+          <span className={`technical-label px-2 py-0.5 border border-border-custom flex items-center gap-1.5 ${
+            engine.status === 'active' ? 'text-accent' : (engine.status === 'pending' ? 'text-accent/60' : 'text-muted')
+          }`}>
+            {engine.status === 'pending' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />}
+            {engine.status === 'pending' ? 'validating' : engine.status}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-y-6">
