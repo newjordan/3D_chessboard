@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession, signIn } from "next-auth/react";
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check, ChevronLeft, Upload } from "lucide-react";
 import Link from "next/link";
 import { submitEngine } from "./actions";
 
@@ -84,143 +84,158 @@ export default function SubmitPage() {
 
   if (!session) {
     return (
-      <div className="container mx-auto px-4 pt-20 flex flex-col items-center justify-center min-h-[60vh] text-center gap-6">
-        <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center">
-          <AlertCircle size={40} className="text-accent" />
+      <div className="container mx-auto px-6 py-20 max-w-2xl flex flex-col items-center justify-center min-h-[50vh] text-center gap-8">
+        <div className="w-12 h-12 rounded-full border border-border-custom flex items-center justify-center">
+          <AlertCircle size={20} className="text-muted" />
         </div>
-        <h1 className="text-4xl font-bold">Authentication Required</h1>
-        <p className="text-white/60 max-w-md">
-          You must be signed in to submit an engine to the ladder. 
-          We use GitHub for identity to track engine ownership.
-        </p>
+        <div className="flex flex-col gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Identity Required.</h1>
+          <p className="text-muted text-sm leading-relaxed">
+            Competition entries are tied to GitHub accounts to prevent floods and ensure verifiable ownership of the prize pool slots.
+          </p>
+        </div>
         <button
           onClick={() => signIn("github")}
-          className="px-8 py-3 rounded-full bg-accent text-background font-bold hover:scale-105 transition-transform"
+          className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all"
         >
-          Sign In with GitHub
+          Authenticate with GitHub
         </button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 max-w-4xl pt-10 pb-20">
-      <div className="flex flex-col gap-10">
-        <div>
-          <h1 className="text-4xl font-extrabold mb-4">Submit Your <span className="gold-gradient">Engine</span></h1>
-          <p className="text-white/60">Upload a single .js or .py agent file. Reads FEN from stdin, outputs a move. Max 1MB.</p>
-        </div>
+    <div className="container mx-auto px-6 py-16 max-w-4xl flex flex-col gap-16">
+      <div className="flex flex-col gap-6">
+        <div className="technical-label">V.03 / Registration</div>
+        <h1 className="text-5xl font-bold tracking-tight">Submit Agent</h1>
+        <p className="text-muted max-w-xl leading-relaxed">
+          Upload a stateless agent. It should analyze a single board position and return its best move in under 5 seconds.
+        </p>
+      </div>
 
-        {uploadStatus === "success" ? (
-          <div className="glass p-10 rounded-[2rem] border border-accent/20 flex flex-col items-center text-center gap-6 animate-in fade-in zoom-in duration-500">
-            <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center">
-              <CheckCircle2 size={48} className="text-accent" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <h2 className="text-2xl font-bold">Submission Received!</h2>
-              <p className="text-white/60">
-                Your engine <strong>{engineName}</strong> is now in the validation queue.
-                We&apos;ll run some smoke tests and notify you shortly.
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <Link href="/dashboard" className="px-6 py-2 rounded-full glass hover:bg-white/10 transition-colors text-sm font-bold">
-                My Dashboard
-              </Link>
-              <button
-                onClick={() => setUploadStatus("idle")}
-                className="px-6 py-2 rounded-full border border-accent/20 text-accent hover:bg-accent/5 transition-colors text-sm font-bold"
-              >
-                Submit Another
-              </button>
-            </div>
+      {uploadStatus === "success" ? (
+        <div className="border border-border-custom p-16 flex flex-col items-center text-center gap-8 soft-shadow bg-black/[0.01]">
+          <div className="w-12 h-12 rounded-full border border-accent flex items-center justify-center">
+            <CheckCircle2 size={24} className="text-accent" />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-            {/* Agent prompt — copy and give to your AI */}
-            <div className="glass rounded-2xl border border-white/10 overflow-hidden">
-              <div className="p-5 border-b border-white/5 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-lg">Build your agent</h3>
-                  <p className="text-sm text-white/40 mt-1">Copy this prompt and give it to your AI coding assistant</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={copyPrompt}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 border border-accent/20 text-accent text-sm font-bold transition-colors shrink-0"
-                >
-                  {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy prompt</>}
-                </button>
-              </div>
-              <pre className="p-5 text-sm font-mono text-white/50 overflow-x-auto leading-relaxed bg-black/20 whitespace-pre-wrap">{AGENT_PROMPT}</pre>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold uppercase tracking-widest text-white/40">Engine Name</label>
-              <input
-                type="text"
-                placeholder="e.g. MySuperChess v1.0"
-                value={engineName}
-                onChange={(e) => setEngineName(e.target.value)}
-                required
-                maxLength={64}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:outline-none focus:border-accent/40 transition-colors"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold uppercase tracking-widest text-white/40">Agent File (.js or .py)</label>
-              <div className="relative group">
+          <div className="flex flex-col gap-3">
+            <h2 className="text-3xl font-bold tracking-tight">Handshake Received.</h2>
+            <p className="text-muted text-sm max-w-md">
+              Agent <strong>{engineName}</strong> has been queued for validation. This normally takes 5-10 seconds of processing time.
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Link href="/dashboard" className="px-6 py-3 border border-border-custom font-bold text-xs uppercase tracking-tight hover:bg-black/[0.02] transition-all">
+              Track Progress
+            </Link>
+            <button
+              onClick={() => {
+                setUploadStatus("idle");
+                setFile(null);
+                setEngineName("");
+              }}
+              className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all"
+            >
+              Submit Another
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-[1fr_300px] gap-20">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-12">
+            <div className="flex flex-col gap-10">
+              <div className="flex flex-col gap-4">
+                <label className="technical-label">Engine Designation</label>
                 <input
-                  type="file"
-                  accept=".js,.py"
-                  onChange={handleFileChange}
+                  type="text"
+                  placeholder="e.g. Pawnstorm Alpha"
+                  value={engineName}
+                  onChange={(e) => setEngineName(e.target.value)}
                   required
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                  maxLength={64}
+                  className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors"
                 />
-                <div className={`w-full h-48 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-white/10 bg-white/5 group-hover:border-white/20'}`}>
-                  {file ? (
-                    <>
-                      <FileText size={48} className="text-accent" />
-                      <div className="text-center">
-                        <p className="font-bold">{file.name}</p>
-                        <p className="text-xs text-white/40">{(file.size / 1024).toFixed(1)} KB</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={48} className="text-white/20 group-hover:text-white/40 transition-colors" />
-                      <div className="text-center">
-                        <p className="font-bold">Drop your .js or .py file here</p>
-                        <p className="text-xs text-white/40">or click to browse</p>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
-              {errorMsg && <p className="text-red-400 text-sm flex items-center gap-1"><AlertCircle size={14} /> {errorMsg}</p>}
+
+              <div className="flex flex-col gap-4">
+                <label className="technical-label">Binary (.js or .py)</label>
+                <div className="relative group">
+                  <input
+                    type="file"
+                    accept=".js,.py"
+                    onChange={handleFileChange}
+                    required
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                  />
+                  <div className={`w-full min-h-[160px] border border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-border-custom bg-black/[0.01] hover:bg-black/[0.03]'}`}>
+                    {file ? (
+                      <>
+                        <FileText size={32} className="text-accent" />
+                        <div className="text-center">
+                          <p className="font-bold text-sm">{file.name}</p>
+                          <p className="technical-label text-[9px]">{(file.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={32} className="opacity-10" />
+                        <div className="text-center space-y-1">
+                          <p className="font-bold text-sm">Drop agent code here</p>
+                          <p className="technical-label text-[9px]">JS or Python / Max 1MB</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {errorMsg && <p className="mt-3 text-red-800 text-xs flex items-center gap-1 font-medium"><AlertCircle size={12} /> {errorMsg}</p>}
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={isUploading || !file || !engineName}
-              className="w-full py-5 rounded-2xl bg-accent text-background font-extrabold text-xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:scale-100 shadow-[0_0_40px_rgba(212,175,55,0.2)]"
+              className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-3 soft-shadow"
             >
               {isUploading ? (
                 <>
-                  <Loader2 size={24} className="animate-spin" />
-                  Uploading...
+                  <Loader2 size={16} className="animate-spin" />
+                  Processing...
                 </>
               ) : (
                 <>
-                  <CheckCircle2 size={24} />
+                  <CheckCircle2 size={16} />
                   Complete Submission
                 </>
               )}
             </button>
           </form>
-        )}
-      </div>
+
+          {/* Prompt Helper Section */}
+          <div className="flex flex-col gap-10">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center justify-between border-b border-border-custom pb-4">
+                <span className="technical-label">Technical Spec</span>
+                <button
+                  type="button"
+                  onClick={copyPrompt}
+                  className="technical-label flex items-center gap-1 hover:text-accent transition-colors"
+                >
+                  {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
+                </button>
+              </div>
+              <div className="bg-black/[0.02] border border-border-custom p-6">
+                <pre className="text-[11px] font-mono text-muted whitespace-pre-wrap leading-relaxed">
+                  {AGENT_PROMPT.substring(0, 300)}...
+                </pre>
+              </div>
+              <p className="text-[11px] leading-relaxed text-muted font-medium">
+                Standard tournament rules apply. Any attempt to access the filesystem or network will result in immediate rejection by the sandbox.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

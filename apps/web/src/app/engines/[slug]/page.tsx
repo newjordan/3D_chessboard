@@ -1,14 +1,13 @@
 import { ApiClient } from "@/lib/apiClient";
 import { notFound } from "next/navigation";
 import { 
-  Trophy, 
   User, 
   Calendar, 
   ChevronRight, 
   Cpu, 
-  Hash, 
   History,
-  Activity
+  Activity,
+  ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
 
@@ -30,198 +29,172 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
    .slice(0, 5);
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto px-6 py-16 max-w-5xl flex flex-col gap-20">
+      {/* Navigation & Header */}
       <div className="flex flex-col gap-12">
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <Link href="/leaderboard" className="technical-label flex items-center gap-2 hover:text-accent transition-colors w-fit">
+          <ArrowLeft size={12} /> Back to Ladder
+        </Link>
+        
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
           <div className="flex flex-col gap-6">
-            <nav className="flex items-center gap-2 text-sm text-white/40">
-              <Link href="/leaderboard" className="hover:text-accent transition-colors">Leaderboard</Link>
-              <ChevronRight size={14} />
-              <span className="text-white/60">Engine Detail</span>
-            </nav>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-4">
-                <h1 className="text-6xl font-extrabold tracking-tight">{engine.name}</h1>
-                <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                  engine.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                }`}>
-                  {engine.status}
-                </div>
+            <div className="flex items-center gap-4">
+              <h1 className="text-5xl font-bold tracking-tight">{engine.name}</h1>
+              <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border border-border-custom ${
+                engine.status === 'active' ? 'text-accent' : 'text-muted'
+              }`}>
+                {engine.status}
+              </span>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-8 text-sm text-muted">
+              <div className="flex items-center gap-2">
+                <User size={14} className="opacity-40" />
+                <span>By <span className="text-foreground font-bold">@{engine.owner.username}</span></span>
               </div>
-              <div className="flex flex-wrap items-center gap-6 text-white/60">
-                <div className="flex items-center gap-2">
-                  <User size={16} className="text-accent" />
-                  <span>By <span className="text-white font-medium">@{engine.owner.username}</span></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-accent" />
-                  <span>Created {new Date(engine.createdAt).toLocaleDateString()}</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Calendar size={14} className="opacity-40" />
+                <span>Since {new Date(engine.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
           </div>
 
-          <div className="glass p-8 rounded-3xl border border-white/5 flex gap-10">
+          <div className="flex gap-12 border-l border-border-custom pl-12 h-fit">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-bold uppercase tracking-widest text-white/40">Current Rating</span>
-              <span className="text-4xl font-mono font-bold gold-gradient">{engine.currentRating}</span>
+              <span className="technical-label">Rating</span>
+              <span className="text-3xl font-bold font-mono tracking-tighter">{engine.currentRating}</span>
             </div>
-            <div className="w-px bg-white/10" />
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-bold uppercase tracking-widest text-white/40">Global Rank</span>
-              <span className="text-4xl font-mono font-bold">#{engine.currentRank || 'N/A'}</span>
+              <span className="technical-label">Global Rank</span>
+              <span className="text-3xl font-bold font-mono tracking-tighter">#{engine.currentRank || '—'}</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-12">
-          {/* Main Content: History & Stats */}
-          <div className="lg:col-span-2 flex flex-col gap-10">
-            {/* Version History */}
-            <section className="flex flex-col gap-6">
-              <h2 className="text-2xl font-bold flex items-center gap-3">
-                <History className="text-accent" size={24} /> Version History
-              </h2>
-              <div className="glass rounded-3xl border border-white/5 overflow-hidden">
-                <div className="p-4 bg-white/5 border-b border-white/5 grid grid-cols-4 text-xs font-bold uppercase tracking-widest text-white/40">
-                  <span>Version</span>
-                  <span>Validation</span>
-                  <span>Submitted</span>
-                  <span className="text-right">Size</span>
-                </div>
-                <div className="divide-y divide-white/5">
-                  {(engine.versions || []).map((version: any) => (
-                    <div key={version.id} className="p-4 grid grid-cols-4 items-center">
-                      <div className="flex flex-col">
-                        <span className="font-bold">
-                          {version.uciName || version.versionLabel || (version.validationStatus === 'passed' ? 'Active Build' : 'Processing...')}
-                        </span>
-                        <span className="text-[10px] font-mono text-white/40 truncate">{version.sha256.substring(0, 12)}</span>
-                      </div>
-                      <div>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                          version.validationStatus === 'passed' ? 'text-green-400 border-green-400/20 bg-green-400/5' : 'text-yellow-500 border-yellow-500/20 bg-yellow-500/5'
-                        }`}>
-                          {version.validationStatus}
-                        </span>
-                      </div>
-                      <span className="text-sm text-white/50">{new Date(version.submittedAt).toLocaleDateString()}</span>
-                      <span className="text-sm text-white/50 text-right font-mono">{(version.fileSizeBytes / 1024).toFixed(1)} KB</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* Recent Matches */}
-            <section className="flex flex-col gap-6">
-              <h2 className="text-2xl font-bold flex items-center gap-3">
-                <Activity className="text-accent" size={24} /> Recent Matches
-              </h2>
-              <div className="flex flex-col gap-4">
-                {allMatches.map((match) => (
-                  <div 
-                    key={match.id}
-                    className="glass p-6 rounded-2xl border border-white/5 hover:border-accent/20 transition-all flex flex-col md:flex-row items-center justify-between gap-6 group"
-                  >
-                    <div className="flex items-center gap-6">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">{match.matchType}</span>
-                        <span className="text-xs font-mono text-white/60">{new Date(match.completedAt || 0).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className={`font-bold ${match.role === 'challenger' ? 'text-accent' : ''}`}>{engine.name}</span>
-                        <span className="text-white/20 font-bold italic">VS</span>
-                        {match.role === 'challenger' ? (
-                          <Link 
-                            href={`/engines/${match.defenderEngine?.slug || '#'}`}
-                            className="font-bold hover:text-accent transition-colors"
-                          >
-                            {match.defenderEngine?.name || 'Unknown'}
-                          </Link>
-                        ) : (
-                          <Link 
-                            href={`/engines/${match.challengerEngine?.slug || '#'}`}
-                            className="font-bold hover:text-accent transition-colors"
-                          >
-                            {match.challengerEngine?.name || 'Unknown'}
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-8">
-                      <div className="flex items-center gap-2 text-xl font-mono font-bold">
-                        <span className={Number(match.challengerScore) > Number(match.defenderScore) ? 'text-green-400' : (Number(match.challengerScore) < Number(match.defenderScore) ? 'text-red-400' : 'text-white/60')}>
-                          {match.role === 'challenger' ? match.challengerScore?.toString() : match.defenderScore?.toString()}
-                        </span>
-                        <span className="text-white/10">-</span>
-                        <span className={Number(match.defenderScore) > Number(match.challengerScore) ? 'text-green-400' : (Number(match.defenderScore) < Number(match.challengerScore) ? 'text-red-400' : 'text-white/60')}>
-                          {match.role === 'challenger' ? match.defenderScore?.toString() : match.challengerScore?.toString()}
-                        </span>
-                      </div>
-                      <Link href={`/matches/${match.id}`}>
-                        <ChevronRight className="text-white/20 group-hover:text-accent transition-colors" />
+      <div className="grid lg:grid-cols-[1fr_320px] gap-24">
+        {/* Main Content */}
+        <div className="flex flex-col gap-20">
+          {/* Recent Performance */}
+          <section className="flex flex-col gap-8">
+            <div className="flex items-center justify-between border-b border-border-custom pb-4">
+               <h2 className="technical-label">Recent Matches</h2>
+               <Link href="/matches" className="technical-label hover:text-accent opacity-40 hover:opacity-100 transition-all">All History &rarr;</Link>
+            </div>
+            
+            <div className="flex flex-col">
+              {allMatches.map((match) => (
+                <div 
+                  key={match.id}
+                  className="grid grid-cols-[1fr_80px] items-center py-6 border-b border-border-custom hover:bg-black/[0.01] transition-colors group"
+                >
+                  <div className="flex items-center gap-6">
+                    <span className="technical-label opacity-30 text-[10px] w-12">{new Date(match.completedAt || 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    
+                    <div className="flex items-center gap-4 text-sm font-medium">
+                      <span className={match.role === 'challenger' ? 'font-bold' : ''}>{engine.name}</span>
+                      <span className="opacity-20 italic">vs</span>
+                      <Link 
+                        href={`/engines/${match.role === 'challenger' ? match.defenderEngine?.slug : match.challengerEngine?.slug}`}
+                        className="hover:underline"
+                      >
+                        {match.role === 'challenger' ? match.defenderEngine?.name : match.challengerEngine?.name}
                       </Link>
                     </div>
                   </div>
-                ))}
-                {allMatches.length === 0 && (
-                  <div className="glass p-12 rounded-3xl border border-white/5 flex flex-col items-center gap-4 text-white/40">
-                    <Activity size={32} className="opacity-20" />
-                    <p>No official matches played yet.</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
 
-          {/* Sidebar: Profile & Performance */}
-          <div className="flex flex-col gap-8">
-            <div className="glass p-8 rounded-[2rem] border border-white/5 flex flex-col gap-8">
-              <h3 className="font-bold flex items-center gap-2">
-                <Cpu size={18} className="text-accent" /> Engine Stats
+                  <div className="flex items-center justify-end gap-6">
+                    <div className="font-mono text-sm font-bold flex gap-1">
+                      <span className={Number(match.challengerScore) > Number(match.defenderScore) ? 'text-accent' : (Number(match.challengerScore) < Number(match.defenderScore) ? 'text-red-800' : 'opacity-40')}>
+                        {match.role === 'challenger' ? match.challengerScore?.toString() : match.defenderScore?.toString()}
+                      </span>
+                      <span className="opacity-20">-</span>
+                      <span className={Number(match.defenderScore) > Number(match.challengerScore) ? 'text-accent' : (Number(match.defenderScore) < Number(match.challengerScore) ? 'text-red-800' : 'opacity-40')}>
+                        {match.role === 'challenger' ? match.defenderScore?.toString() : match.challengerScore?.toString()}
+                      </span>
+                    </div>
+                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted" />
+                  </div>
+                </div>
+              ))}
+              {allMatches.length === 0 && (
+                <div className="py-20 text-center technical-label opacity-20 border-b border-border-custom">
+                  Awaiting first match results.
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Build History */}
+          <section className="flex flex-col gap-8">
+            <h2 className="technical-label border-b border-border-custom pb-4">Build Pipeline</h2>
+            <div className="flex flex-col gap-6">
+              {(engine.versions || []).map((version: any) => (
+                <div key={version.id} className="flex flex-col gap-3 p-6 border border-border-custom soft-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                       <span className="font-bold text-sm">
+                         {version.uciName || version.versionLabel || (version.validationStatus === 'passed' ? 'Active Build' : 'Processing...')}
+                       </span>
+                       <span className="technical-label opacity-40 text-[9px] lowercase">{version.sha256.substring(0, 16)}</span>
+                    </div>
+                    <span className={`px-2 py-1 text-[9px] font-bold uppercase tracking-widest border ${
+                      version.validationStatus === 'passed' ? 'text-accent border-accent/20 bg-accent/5' : 'text-muted border-border-custom'
+                    }`}>
+                      {version.validationStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-6 pt-2">
+                    <div className="flex items-center gap-1.5 technical-label text-[10px]">
+                      <Calendar size={10} /> {new Date(version.submittedAt).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center gap-1.5 technical-label text-[10px]">
+                      <History size={10} /> {(version.fileSizeBytes / 1024).toFixed(1)} KB
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* Sidebar */}
+        <div className="flex flex-col gap-12">
+          {/* Meta Stats */}
+          <div className="flex flex-col gap-8 border border-border-custom p-8 soft-shadow bg-black/[0.01]">
+            <h3 className="technical-label flex items-center gap-2">
+              <Activity size={12} /> Performance Data
+            </h3>
+            <div className="grid grid-cols-2 gap-y-10">
+              {[
+                { label: "Matches", val: engine.gamesPlayed / 2 },
+                { label: "Win %", val: engine.gamesPlayed > 0 ? ((engine.wins / engine.gamesPlayed) * 100).toFixed(1) + "%" : "0%" },
+                { label: "Draw %", val: engine.gamesPlayed > 0 ? ((engine.draws / engine.gamesPlayed) * 100).toFixed(1) + "%" : "0%" },
+                { label: "Loss %", val: engine.gamesPlayed > 0 ? ((engine.losses / engine.gamesPlayed) * 100).toFixed(1) + "%" : "0%" }
+              ].map((stat, i) => (
+                <div key={i} className="flex flex-col gap-1">
+                   <span className="technical-label text-[9px] opacity-40">{stat.label}</span>
+                   <span className="font-mono text-xl font-bold tabular-nums">{stat.val}</span>
+                </div>
+              ))}
+            </div>
+            
+            <div className="border-t border-border-custom pt-8 flex flex-col gap-6">
+              <h3 className="technical-label flex items-center gap-2">
+                <Cpu size={12} /> Environment
               </h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Games Played</span>
-                  <span className="text-2xl font-mono font-bold">{engine.gamesPlayed}</span>
+              <div className="flex flex-col gap-4 text-[11px] font-mono opacity-60">
+                <div className="flex justify-between">
+                  <span>Architecture</span>
+                  <span className="font-bold">x86_64</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Win Rate</span>
-                  <span className="text-2xl font-mono font-bold">
-                    {engine.gamesPlayed > 0 ? ((engine.wins / engine.gamesPlayed) * 100).toFixed(1) : 0}%
-                  </span>
+                <div className="flex justify-between">
+                  <span>Language</span>
+                  <span className="font-bold uppercase">{engine.versions?.[0]?.language || '—'}</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Draw Rate</span>
-                  <span className="text-2xl font-mono font-bold">
-                    {engine.gamesPlayed > 0 ? ((engine.draws / engine.gamesPlayed) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Loss Rate</span>
-                  <span className="text-2xl font-mono font-bold">
-                    {engine.gamesPlayed > 0 ? ((engine.losses / engine.gamesPlayed) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-              </div>
-
-              <div className="h-px bg-white/5" />
-
-              <div className="flex flex-col gap-4">
-                <h3 className="font-bold flex items-center gap-2">
-                  <Hash size={18} className="text-accent" /> Current Build
-                </h3>
-                <div className="flex flex-col gap-2 p-4 bg-white/5 rounded-2xl border border-white/5 text-[11px] font-mono">
-                  <div className="flex justify-between">
-                    <span className="text-white/40">Arch:</span>
-                    <span className="text-white/80">x86_64 Linux</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/40">Handshake:</span>
-                    <span className="text-green-400">Passed</span>
-                  </div>
+                <div className="flex justify-between">
+                  <span>Sandbox</span>
+                  <span className="font-bold text-accent">Isolated</span>
                 </div>
               </div>
             </div>

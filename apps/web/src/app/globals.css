@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0A0A0B;
-  --foreground: #F8FAFC;
-  --accent: #3B82F6;
-  --accent-muted: rgba(59, 130, 246, 0.2);
-  --glass: rgba(30, 41, 59, 0.5);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --background: #FCFAF7;
+  --foreground: #1A1A1A;
+  --accent: #5F7056;
+  --accent-muted: rgba(95, 112, 86, 0.1);
+  --border: #E5E5E5;
+  --muted: #71717A;
 }
 
 @theme inline {
@@ -14,6 +14,7 @@
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
   --color-accent-muted: var(--accent-muted);
+  --color-border-custom: var(--border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -23,29 +24,28 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Inter, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.glass {
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* Minimal Utilities */
+.technical-label {
+  font-family: var(--font-geist-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.glass-bordered {
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
+.subtle-border {
+  border: 1px solid var(--border);
 }
 
-.chess-pattern {
-  background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
-  background-size: 32px 32px;
+.soft-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
 }
 
-.gold-gradient {
-  background: linear-gradient(135deg, #60A5FA 0%, #22D3EE 50%, #6366F1 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Remove glossy/SaaS artifacts */
+.glass, .glass-bordered, .gold-gradient {
+  display: none !important;
 }

@@ -1,6 +1,6 @@
 import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
-import { Trophy, Medal, ArrowUpRight, DollarSign } from "lucide-react";
+import { ChevronRight, Trophy, Wallet } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -8,101 +8,83 @@ export default async function LeaderboardPage() {
   const engines = await ApiClient.getLeaderboard().catch(() => []);
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="flex flex-col gap-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="flex flex-col gap-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-bold w-fit uppercase tracking-widest">
-              <Trophy size={14} /> Official Rankings
+    <div className="container mx-auto px-6 py-16 max-w-5xl">
+      <div className="flex flex-col gap-16">
+        {/* Header */}
+        <div className="flex flex-col gap-6">
+          <div className="technical-label">V.03 / Performance Proof</div>
+          <h1 className="text-5xl font-bold tracking-tight">Active Rankings</h1>
+          <p className="text-muted max-w-2xl leading-relaxed">
+            All positions are derived from automated match play. Rankings recalculate after every 10-minute cycle. Only passed agents are eligible.
+          </p>
+        </div>
+
+        {/* Prize Alert - Plain & Technical */}
+        <div className="border border-border-custom p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 soft-shadow">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center">
+              <Wallet size={18} className="text-accent" />
             </div>
-            <h1 className="text-5xl font-extrabold tracking-tight">
-              The <span className="gold-gradient">Grandmaster</span> Ladder
-            </h1>
-            <p className="text-white/60 max-w-2xl">
-              Real-time rankings based on thousands of automated engine matches. 
-              Only validated, UCI-compliant engines are eligible for placement.
-            </p>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold">Monthly Prize Disbursement</span>
+              <span className="technical-label text-[10px] opacity-60">Payout Cycle: Monthly / GMT-4</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="text-right">
+                <span className="font-mono text-sm font-bold">$150.00</span>
+                <span className="technical-label ml-1 block opacity-40">Total</span>
+             </div>
+             <Link href="/submit" className="px-4 py-2 bg-foreground text-background font-bold text-xs uppercase tracking-tight">
+                Claim a Slot
+             </Link>
           </div>
         </div>
 
-        <div className="glass rounded-2xl border border-accent/20 p-6 flex items-center gap-6">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-accent/10 shrink-0">
-            <DollarSign size={24} className="text-accent" />
+        {/* The Ledger / Table */}
+        <div className="flex flex-col">
+          <div className="grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center pb-4 border-b border-border-custom technical-label opacity-40 px-4">
+            <span>Rank</span>
+            <span>Agent</span>
+            <span>Owner</span>
+            <span className="text-right">Elo</span>
+            <span className="text-right">W/D/L</span>
+            <span></span>
           </div>
-          <div className="flex flex-col gap-1">
-            <h3 className="font-bold text-lg">Monthly Prizes</h3>
-            <p className="text-white/60 text-sm">
-              <span className="text-accent font-bold">$100</span> for 1st place &middot; <span className="text-accent font-bold">$25</span> for 2nd &middot; <span className="text-accent font-bold">$25</span> for 3rd &mdash; awarded at the end of each month.
-            </p>
-          </div>
-        </div>
 
-        <div className="glass rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5 bg-white/5">
-                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-white/40">Rank</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-white/40">Engine</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-white/40">Owner</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-white/40">Rating</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-white/40">Record (W/D/L)</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-white/40"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {(engines || []).map((engine, index) => (
-                <tr key={engine.id} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xl font-mono ${index < 3 ? 'text-accent font-bold' : 'text-white/40'}`}>
-                        {index + 1}
-                      </span>
-                      {index === 0 && <Medal size={18} className="text-accent" />}
-                    </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <Link href={`/engines/${engine.slug}`} className="font-bold text-lg hover:text-accent transition-colors flex items-center gap-2">
-                      {engine.name}
-                    </Link>
-                  </td>
-                  <td className="px-8 py-6 text-white/60">
-                    @{engine.owner.username}
-                  </td>
-                  <td className="px-8 py-6">
-                    <span className="font-mono text-xl">{engine.currentRating}</span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-2 font-mono text-sm">
-                      <span className="text-green-400">{engine.wins}W</span>
-                      <span className="text-white/40">{engine.draws}D</span>
-                      <span className="text-red-400">{engine.losses}L</span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <Link 
-                      href={`/engines/${engine.slug}`}
-                      className="inline-flex items-center justify-center p-2 rounded-full border border-white/10 hover:border-accent/40 group-hover:text-accent transition-all"
-                    >
-                      <ArrowUpRight size={20} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {engines.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center gap-4 text-white/40">
-                      <Trophy size={48} className="opacity-20" />
-                      <p>No engines have been placed yet. Be the first to submit!</p>
-                      <Link href="/submit" className="text-accent font-bold hover:underline">
-                        Submit Engine
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="flex flex-col">
+            {(engines || []).map((engine, i) => (
+              <div key={engine.id} className="grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center py-6 border-b border-border-custom hover:bg-black/[0.01] transition-colors group px-4">
+                <span className={`font-mono text-xs ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
+                  {i + 1 < 10 ? `0${i + 1}` : i + 1}
+                </span>
+                <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
+                  {engine.name}
+                </Link>
+                <span className="technical-label text-[10px] truncate pr-4 lowercase">@{engine.owner.username}</span>
+                <span className="text-right font-mono text-sm font-bold">{engine.currentRating}</span>
+                <div className="text-right font-mono text-[11px] flex gap-1 justify-end opacity-60">
+                   <span className="text-accent font-bold">{engine.wins}</span>
+                   <span>/</span>
+                   <span>{engine.draws}</span>
+                   <span>/</span>
+                   <span className="opacity-40">{engine.losses}</span>
+                </div>
+                <div className="flex justify-end pr-2">
+                   <Link href={`/engines/${engine.slug}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ChevronRight size={14} className="text-muted" />
+                   </Link>
+                </div>
+              </div>
+            ))}
+
+            {engines.length === 0 && (
+              <div className="py-32 text-center flex flex-col items-center gap-4 border-b border-border-custom">
+                <Trophy size={48} className="opacity-10" />
+                <p className="technical-label">No data synced for current cycle.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

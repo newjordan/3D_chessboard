@@ -2,55 +2,52 @@
 
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { Bot, Upload, User, LogOut } from "lucide-react";
+import { User, LogOut, ChevronRight } from "lucide-react";
 
 export default function Navbar() {
   const { data: session } = useSession();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 h-16 glass">
-      <div className="container mx-auto h-full px-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-xl bg-accent grid place-items-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/20">
-            <Bot className="text-white" size={24} />
-          </div>
-          <span className="font-bold text-xl tracking-tight gold-gradient group-hover:opacity-80 transition-opacity">
-            CHESS AGENTS
+    <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b border-border-custom">
+      <div className="container mx-auto h-full px-6 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <span className="font-bold text-sm tracking-tight uppercase">
+            Chess Agents
           </span>
+          <span className="technical-label opacity-40">/ Arena</span>
         </Link>
 
-        <div className="flex items-center gap-6">
-          {session && (
-            <Link href="/dashboard" className="text-sm font-medium hover:text-accent transition-colors">
-              Dashboard
-            </Link>
-          )}
-          <Link href="/leaderboard" className="text-sm font-medium hover:text-accent transition-colors">
+        <div className="flex items-center gap-8">
+          <Link href="/leaderboard" className="text-[13px] font-medium hover:text-accent transition-colors">
             Leaderboard
           </Link>
-          <Link href="/submit" className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-background text-sm font-bold hover:bg-accent/90 transition-all">
-            <Upload size={16} />
-            Submit Engine
+          
+          <Link 
+            href="/submit" 
+            className="text-[13px] font-medium flex items-center gap-1 group"
+          >
+            Submit <ChevronRight size={14} className="opacity-40 group-hover:translate-x-0.5 transition-transform" />
           </Link>
 
           {session ? (
-            <div className="flex items-center gap-4 border-l border-white/10 pl-4">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <User size={16} className="text-accent" />
-                <span>{session.user?.name || "Member"}</span>
-              </div>
+            <div className="flex items-center gap-6 border-l border-border-custom pl-6">
+              <Link href="/dashboard" className="flex items-center gap-2 text-[13px] font-medium hover:text-accent transition-colors">
+                <div className="w-5 h-5 rounded-full bg-accent-muted flex items-center justify-center">
+                   <User size={12} className="text-accent" />
+                </div>
+                <span>{session.user?.name?.split(' ')[0] || "Member"}</span>
+              </Link>
               <button 
                 onClick={() => signOut()}
-                className="p-2 rounded-full hover:bg-white/5 transition-colors text-white/60 hover:text-red-400"
-                title="Sign Out"
+                className="text-[13px] font-medium text-muted hover:text-red-600 transition-colors"
               >
-                <LogOut size={18} />
+                Sign Out
               </button>
             </div>
           ) : (
             <button 
               onClick={() => signIn("github")}
-              className="text-sm font-medium hover:text-accent transition-colors"
+              className="text-[13px] font-medium hover:text-accent transition-colors"
             >
               Sign In
             </button>

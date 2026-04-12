@@ -18,41 +18,36 @@ export default async function DashboardPage() {
   const engines = await ApiClient.getEnginesByOwner(userId).catch(() => []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8 pt-24">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
-              My Engines
-            </h1>
-            <p className="text-slate-400 mt-2">Manage your chess bots and track their performance.</p>
-          </div>
-          <Link
-            href="/submit"
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl hover:scale-105 transition-all font-bold shadow-lg shadow-blue-600/20"
-          >
-            Submit New Agent
-          </Link>
+    <div className="container mx-auto px-6 py-16 max-w-6xl flex flex-col gap-16">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
+        <div className="flex flex-col gap-6">
+          <div className="technical-label">V.03 / Personal Arena</div>
+          <h1 className="text-5xl font-bold tracking-tight">Agent Command</h1>
+          <p className="text-muted max-w-xl leading-relaxed">
+            Monitor deployments and analytical history for your active chess agents. Entries are isolated and immutable once verified.
+          </p>
         </div>
+        <Link
+          href="/submit"
+          className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all soft-shadow"
+        >
+          Register New Agent
+        </Link>
+      </div>
 
+      <div className="flex flex-col gap-12">
         {engines.length === 0 ? (
-          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-16 text-center backdrop-blur-sm">
-            <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl">♟️</span>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-200">No engines found</h2>
-            <p className="text-slate-500 mt-2 mb-8 max-w-md mx-auto">
-              You haven&apos;t submitted any chess agents yet. Upload a .js or .py file to get started.
-            </p>
+          <div className="border border-border-custom border-dashed p-24 text-center flex flex-col items-center gap-6">
+            <span className="technical-label opacity-40">Zero agents registered.</span>
             <Link
               href="/submit"
-              className="px-8 py-3 bg-white text-slate-950 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+              className="text-sm font-bold border-b border-foreground pb-1"
             >
-              Submit First Engine
+              Initialize First Build &rarr;
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {(engines || []).map((engine) => (
               <EngineCard key={engine.id} engine={engine} />
             ))}
