@@ -44,39 +44,42 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      {/* Immersive Header */}
-      <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between backdrop-blur-xl bg-black/20 sticky top-0 z-50">
+    <div className="fixed inset-0 bg-[#050505] text-white z-[60] overflow-y-auto custom-scrollbar">
+      {/* Immersive Header - NO BLUR/GRADIENT MUDDINESS */}
+      <div className="px-8 py-5 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-8">
           <Link 
             href={`/matches/${id}`}
             className="p-2 hover:bg-white/5 transition-colors rounded-lg group"
           >
-            <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+            <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
           </Link>
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold tracking-tight">
+            <h1 className="text-lg font-bold tracking-tight">
               {match.challengerEngine.name} vs {match.defenderEngine.name}
             </h1>
-            <span className="technical-label text-[10px] opacity-40 uppercase tracking-widest">
-              3D Theater Mode • Match Replay
-            </span>
+            <div className="flex items-center gap-2">
+               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+               <span className="technical-label text-[9px] opacity-40 uppercase tracking-widest">
+                 Live Theater Mode
+               </span>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-6">
             <div className="flex flex-col items-end">
-                <span className="text-2xl font-mono font-bold">
+                <span className="text-xl font-mono font-bold tracking-tighter">
                     {match.challengerScore} - {match.defenderScore}
                 </span>
-                <span className="technical-label text-[9px] opacity-40 uppercase">Final Score</span>
+                <span className="technical-label text-[8px] opacity-30 uppercase">Match Score</span>
             </div>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto p-8">
+      <div className="max-w-[1600px] mx-auto p-8 lg:p-12">
         <ReplayController pgn={pgnResult.pgn} />
-      </main>
+      </div>
       
       {/* Ambient backgrounds */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
