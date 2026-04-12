@@ -248,18 +248,13 @@ export function SubmitForm() {
 
             <button
               type="submit"
-              disabled={isUploading || !file || !engineName || (engineCount !== null && engineCount >= 3)}
+              disabled={isUploading || !file || !engineName}
               className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight border-2 border-transparent hover:opacity-90 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-neutral-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
             >
               {isUploading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
                   Processing...
-                </>
-              ) : (engineCount !== null && engineCount >= 3) ? (
-                <>
-                  <AlertCircle size={16} />
-                  Registration Capped (3/3)
                 </>
               ) : (
                 <>
