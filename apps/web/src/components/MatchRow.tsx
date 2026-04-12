@@ -19,6 +19,11 @@ export function MatchRow({ match, engineName }: MatchRowProps) {
     router.push(`/matches/${match.id}`);
   };
 
+  const challengerScore = Number(match.challengerScore || 0);
+  const defenderScore = Number(match.defenderScore || 0);
+  const myScore = match.role === 'challenger' ? challengerScore : defenderScore;
+  const theirScore = match.role === 'challenger' ? defenderScore : challengerScore;
+
   return (
     <div 
       onClick={handleRowClick}
@@ -46,12 +51,12 @@ export function MatchRow({ match, engineName }: MatchRowProps) {
 
       <div className="flex items-center justify-end gap-6">
         <div className="font-mono text-sm font-bold flex gap-1">
-          <span className={Number(match.challengerScore) > Number(match.defenderScore) ? 'text-accent' : (Number(match.challengerScore) < Number(match.defenderScore) ? 'text-red-800' : 'opacity-40')}>
-            {match.role === 'challenger' ? match.challengerScore?.toString() : match.defenderScore?.toString()}
+          <span className={myScore > theirScore ? 'text-accent' : (myScore < theirScore ? 'text-red-800' : 'opacity-40')}>
+            {myScore}
           </span>
           <span className="opacity-20">-</span>
-          <span className={Number(match.defenderScore) > Number(match.challengerScore) ? 'text-accent' : (Number(match.defenderScore) < Number(match.challengerScore) ? 'text-red-800' : 'opacity-40')}>
-            {match.role === 'challenger' ? match.defenderScore?.toString() : match.challengerScore?.toString()}
+          <span className={theirScore > myScore ? 'text-accent' : (theirScore < myScore ? 'text-red-800' : 'opacity-40')}>
+            {theirScore}
           </span>
         </div>
         <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted" />
