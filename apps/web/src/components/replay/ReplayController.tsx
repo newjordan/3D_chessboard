@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { Canvas } from '@react-three/fiber';
-import { Environment, ContactShadows, PresentationControls, PerspectiveCamera } from '@react-three/drei';
+import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import * as THREE from 'three';
 import { Board3D } from './Board3D';
 import { Piece3D } from './Piece3D';
 import { 
@@ -129,25 +130,45 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
         
         {/* Left Pane: Board & Primary Controls */}
         <div className="flex flex-col gap-4 min-h-0">
-          <div className="flex-1 min-h-0 relative bg-[#0a0a0a] border border-white/5 rounded-xl group overflow-hidden">
+          <div className="flex-1 min-h-0 relative bg-black border border-white/5 rounded-xl group overflow-hidden">
              <Canvas 
                 shadows
-                onCreated={({ gl }) => { gl.shadowMap.type = 1; }}
-                gl={{ antialias: true, alpha: true }}
+                onCreated={({ gl }) => { 
+                  gl.shadowMap.enabled = true;
+                  gl.shadowMap.type = THREE.PCFShadowMap; 
+                }}
+                gl={{ antialias: true, alpha: false, stencil: false }}
               >
-                <PerspectiveCamera makeDefault position={[0, 11, 8]} fov={35} />
-                <ambientLight intensity={1.5} />
-                <pointLight position={[10, 10, 10]} intensity={2.5} castShadow />
-                <spotLight position={[-10, 10, 10]} angle={0.2} penumbra={1} intensity={2.5} castShadow />
+                <PerspectiveCamera makeDefault position={[0, 8, 8]} fov={45} />
+                <OrbitControls 
+                  enablePan={false}
+                  maxPolarAngle={Math.PI / 2.1} 
+                  minDistance={5}
+                  maxDistance={15}
+                />
                 
-                <PresentationControls global rotation={[0, 0, 0]} polar={[-Math.PI / 10, Math.PI / 4]} azimuth={[-Math.PI / 4, Math.PI / 4]}>
-                  <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-                     <Board3D />
-                     {pieceComponents}
-                     <ContactShadows position={[0, -0.01, 0]} opacity={0.6} scale={10} blur={2} far={1} />
-                  </group>
-                </PresentationControls>
-                <Environment preset="studio" />
+                <ambientLight intensity={1.5} />
+                <directionalLight 
+                  position={[10, 10, 10]} 
+                  intensity={2} 
+                  castShadow 
+                  shadow-mapSize={[1024, 1024]}
+                />
+                <pointLight position={[-10, 5, -10]} intensity={1} color="#3b82f6" />
+                
+                <group position={[0, 0, 0]}>
+                   <Board3D />
+                   {pieceComponents}
+                   <ContactShadows 
+                     position={[0, -0.05, 0]} 
+                     opacity={0.4} 
+                     scale={12} 
+                     blur={1.5} 
+                     far={0.8} 
+                   />
+                </group>
+
+                <Environment preset="night" />
               </Canvas>
 
               <div className="absolute top-4 left-4 technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md rounded text-[9px] flex items-center gap-3">
