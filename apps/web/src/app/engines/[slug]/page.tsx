@@ -86,7 +86,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               {allMatches.map((match) => (
                 <div 
                   key={match.id}
-                  className="grid grid-cols-[1fr_80px] items-center py-6 border-b border-border-custom hover:bg-black/[0.01] transition-colors group"
+                  className="grid grid-cols-[1fr_80px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors group"
                 >
                   <div className="flex items-center gap-6">
                     <span className="technical-label opacity-30 text-[10px] w-12">{new Date(match.completedAt || 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
@@ -161,7 +161,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
         {/* Sidebar */}
         <div className="flex flex-col gap-12">
           {/* Meta Stats */}
-          <div className="flex flex-col gap-8 border border-border-custom p-8 soft-shadow bg-black/[0.01]">
+          <div className="flex flex-col gap-8 border border-border-custom p-8 soft-shadow bg-white/[0.01]">
             <h3 className="technical-label flex items-center gap-2">
               <Activity size={12} /> Performance Data
             </h3>

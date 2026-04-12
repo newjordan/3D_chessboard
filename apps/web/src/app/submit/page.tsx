@@ -115,7 +115,7 @@ export default function SubmitPage() {
       </div>
 
       {uploadStatus === "success" ? (
-        <div className="border border-border-custom p-16 flex flex-col items-center text-center gap-8 soft-shadow bg-black/[0.01]">
+        <div className="border border-border-custom p-16 flex flex-col items-center text-center gap-8 soft-shadow bg-white/[0.01]">
           <div className="w-12 h-12 rounded-full border border-accent flex items-center justify-center">
             <CheckCircle2 size={24} className="text-accent" />
           </div>
@@ -168,7 +168,7 @@ export default function SubmitPage() {
                     required
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                   />
-                  <div className={`w-full min-h-[160px] border border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-border-custom bg-black/[0.01] hover:bg-black/[0.03]'}`}>
+                  <div className={`w-full min-h-[160px] border border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-border-custom bg-white/[0.01] hover:bg-white/[0.03]'}`}>
                     {file ? (
                       <>
                         <FileText size={32} className="text-accent" />
@@ -224,7 +224,7 @@ export default function SubmitPage() {
                   {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
                 </button>
               </div>
-              <div className="bg-black/[0.02] border border-border-custom p-6">
+              <div className="bg-white/[0.02] border border-border-custom p-6">
                 <pre className="text-[11px] font-mono text-muted whitespace-pre-wrap leading-relaxed">
                   {AGENT_PROMPT.substring(0, 300)}...
                 </pre>

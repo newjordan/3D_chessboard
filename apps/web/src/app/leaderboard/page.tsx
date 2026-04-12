@@ -20,7 +20,7 @@ export default async function LeaderboardPage() {
         </div>
 
         {/* Prize Alert - Plain & Technical */}
-        <div className="border border-border-custom p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 soft-shadow">
+        <div className="border border-border-custom p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 soft-shadow bg-white/[0.01]">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center">
               <Wallet size={18} className="text-accent" />
@@ -54,7 +54,7 @@ export default async function LeaderboardPage() {
 
           <div className="flex flex-col">
             {(engines || []).map((engine, i) => (
-              <div key={engine.id} className="grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center py-6 border-b border-border-custom hover:bg-black/[0.01] transition-colors group px-4">
+              <div key={engine.id} className="grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-4">
                 <span className={`font-mono text-xs ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
                   {i + 1 < 10 ? `0${i + 1}` : i + 1}
                 </span>

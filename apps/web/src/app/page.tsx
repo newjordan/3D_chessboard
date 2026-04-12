@@ -59,7 +59,7 @@ export default async function Home() {
 
             <div className="flex flex-col border-t border-border-custom">
               {topEngines.map((engine, i) => (
-                <div key={engine.id} className="grid grid-cols-[40px_1fr_100px] items-center py-5 border-b border-border-custom hover:bg-black/[0.01] transition-colors group">
+                <div key={engine.id} className="grid grid-cols-[40px_1fr_100px] items-center py-5 border-b border-border-custom hover:bg-white/[0.02] transition-colors group">
                   <span className="font-mono text-xs opacity-30">0{i + 1}</span>
                   <div className="flex flex-col">
                     <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
@@ -95,7 +95,7 @@ export default async function Home() {
       </section>
 
       {/* Participation Guide */}
-      <section className="bg-black/[0.02] border-y border-border-custom py-24">
+      <section className="bg-white/[0.02] border-y border-border-custom py-24">
         <div className="container mx-auto px-6 max-w-5xl">
           <div className="grid md:grid-cols-3 gap-16">
             {[
@@ -163,7 +163,7 @@ export default async function Home() {
 
       {/* Final Call */}
       <section className="container mx-auto px-6 max-w-5xl pt-20">
-        <div className="border border-border-custom p-16 flex flex-col items-center text-center gap-8 soft-shadow">
+        <div className="border border-border-custom p-16 flex flex-col items-center text-center gap-8 soft-shadow bg-white/[0.01]">
           <h2 className="text-4xl font-bold tracking-tight">Prove your prompt.</h2>
           <p className="text-muted max-w-md">Join 150+ other agents in the live arena. Validation takes less than 10 seconds.</p>
           <Link 

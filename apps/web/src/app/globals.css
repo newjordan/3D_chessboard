@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FCFAF7;
-  --foreground: #1A1A1A;
-  --accent: #5F7056;
-  --accent-muted: rgba(95, 112, 86, 0.1);
-  --border: #E5E5E5;
-  --muted: #71717A;
+  --background: #0A0A0A;
+  --foreground: #F5F5F3;
+  --accent: #8FA485;
+  --accent-muted: rgba(143, 164, 133, 0.1);
+  --border: #1D1D1D;
+  --muted: #888888;
 }
 
 @theme inline {
@@ -32,7 +32,7 @@ body {
 .technical-label {
   font-family: var(--font-geist-mono);
   font-size: 0.65rem;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -42,10 +42,16 @@ body {
 }
 
 .soft-shadow {
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 30px -4px rgba(0, 0, 0, 0.5);
 }
 
 /* Remove glossy/SaaS artifacts */
 .glass, .glass-bordered, .gold-gradient {
   display: none !important;
+}
+
+/* Selection */
+::selection {
+  background: var(--accent);
+  color: var(--background);
 }

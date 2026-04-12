@@ -37,7 +37,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       </Link>
 
       {/* Match Scorecard */}
-      <section className="border border-border-custom p-12 md:p-20 soft-shadow flex flex-col gap-16 relative overflow-hidden">
+      <section className="border border-border-custom p-12 md:p-20 soft-shadow flex flex-col gap-16 relative overflow-hidden bg-white/[0.01]">
         <div className="technical-label text-[10px] text-center opacity-40">Verification Hash: {match.id}</div>
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-12 relative z-10">
@@ -85,7 +85,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           
           <div className="flex flex-col">
             {(match?.games || []).map((game: any, idx: number) => (
-              <div key={game.id} className="grid grid-cols-[80px_1fr_60px] items-center py-6 border-b border-border-custom">
+                <div key={game.id} className="grid grid-cols-[80px_1fr_60px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors">
                 <span className="technical-label opacity-30">Game {idx + 1}</span>
                 <div className="flex items-center gap-4 text-sm font-medium">
                   <span>{match.challengerEngine.name}</span>
@@ -106,7 +106,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
         {/* Sidebar Meta */}
         <div className="flex flex-col gap-12">
-          <section className="flex flex-col gap-8 border border-border-custom p-8 soft-shadow bg-black/[0.01]">
+          <section className="flex flex-col gap-8 border border-border-custom p-8 soft-shadow bg-white/[0.01]">
              <h3 className="technical-label flex items-center gap-2">
                 <FileText size={12} /> Metadata
              </h3>

@@ -27,7 +27,7 @@ export function EngineCard({ engine }: EngineCardProps) {
 
   return (
     <div
-      className={`border border-border-custom bg-black/[0.01] p-8 flex flex-col gap-8 transition-all relative ${
+      className={`border border-border-custom bg-white/[0.01] p-8 flex flex-col gap-8 transition-all relative hover:bg-white/[0.02] ${
         isPending ? "opacity-40 pointer-events-none" : ""
       }`}
     >

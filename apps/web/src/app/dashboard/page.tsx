@@ -37,7 +37,7 @@ export default async function DashboardPage() {
 
       <div className="flex flex-col gap-12">
         {engines.length === 0 ? (
-          <div className="border border-border-custom border-dashed p-24 text-center flex flex-col items-center gap-6">
+          <div className="border border-border-custom border-dashed p-24 text-center flex flex-col items-center gap-6 bg-white/[0.01]">
             <span className="technical-label opacity-40">Zero agents registered.</span>
             <Link
               href="/submit"
