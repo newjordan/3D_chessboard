@@ -183,6 +183,7 @@ model Match {
   logStorageKey       String?
   startedAt           DateTime?
   completedAt         DateTime?
+  createdAt           DateTime    @default(now())
 
   challengerEngine    Engine      @relation("ChallengerEngine", fields: [challengerEngineId], references: [id])
   defenderEngine      Engine      @relation("DefenderEngine", fields: [defenderEngineId], references: [id])
