@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight, Play, Terminal, Zap, Code, ShieldCheck } from "lucide-react";
 import { ApiClient } from "@/lib/apiClient";
 import { Countdown } from "@/components/Countdown";
+import { ShowcaseReplay } from "@/components/landing/ShowcaseReplay";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,11 @@ export default async function Home() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Live Showcase Section */}
+      <section className="container mx-auto px-6 max-w-5xl -mt-10 mb-20">
+        <ShowcaseReplay />
       </section>
 
       {/* Participation Guide */}
