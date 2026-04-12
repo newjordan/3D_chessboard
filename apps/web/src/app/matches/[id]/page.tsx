@@ -135,7 +135,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                 </div>
               ) : (
                 <div className="flex flex-col">
-                  {match.games.map((game, idx) => {
+                  {match.games.map((game: any, idx: number) => {
                     const isChallengerWhite = game.whiteEngineId === match.challengerEngineId;
                     let challengerPoint = 0;
                     let defenderPoint = 0;
