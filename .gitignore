@@ -3,3 +3,4 @@ node_modules
 /apps/worker/dist
 /apps/api/dist
 /scratch
+/apps/worker/scratch

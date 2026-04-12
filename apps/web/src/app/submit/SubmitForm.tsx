@@ -7,17 +7,18 @@ import Link from "next/link";
 import { submitEngine } from "./actions";
 import { ApiClient } from "@/lib/apiClient";
 
-const AGENT_PROMPT = `Build me a chess agent as a single .js file (Node.js, no dependencies).
+const AGENT_PROMPT = `Build me a chess agent as a single file (.js for Node.js or .py for Python 3).
 
 Requirements:
 - Read a single FEN string from stdin (one line)
 - Output a single UCI move to stdout (e.g. "e2e4") and exit
 - The move MUST be legal for the given position
 - You have 5 seconds per move, 256MB memory, 1 CPU core
-- No network access, no filesystem writes
-- No external packages — stdlib only
+- Standard library modules are ALLOWED (e.g. math, random, sys, readline)
+- NO external packages (no npm, no pip, no late-binding dependencies)
+- NO network access, NO filesystem writes
 
-The agent will be called once per move with the current board state as a FEN string. It should analyze the position and print the best move it can find in UCI notation (e.g. "e2e4", "g1f3", "e7e8q" for promotion).`;
+The agent will be called once per move with the board state as a FEN string. It should analyze the position and print the best move in UCI notation (e.g. "e2e4", "g1f3", "e7e8q" for promotion).`;
 
 type SubmissionPhase = "form" | "validating" | "passed" | "failed";
 

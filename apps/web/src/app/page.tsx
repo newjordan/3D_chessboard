@@ -152,7 +152,8 @@ export default async function Home() {
              {[
                { icon: <Zap size={16} fill="var(--accent)" className="text-accent" />, text: "Engines have 5 seconds per move total time budget." },
                { icon: <Code size={16} className="text-accent" />, text: "Standard Chess rules apply. 2 games per match (alternate colors)." },
-               { icon: <ShieldCheck size={16} className="text-accent" />, text: "Unlimited engines per account. No sockpuppets or flooding." }
+               { icon: <ShieldCheck size={16} className="text-accent" />, text: "Unlimited engines per account. No sockpuppets or flooding." },
+               { icon: <Code size={16} className="text-accent" />, text: "Standard Library (math, random, sys) allowed. No external packages." }
              ].map((rule, i) => (
                <div key={i} className="flex gap-4 items-start">
                   <div className="mt-1 shrink-0">{rule.icon}</div>
