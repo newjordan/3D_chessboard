@@ -7,7 +7,11 @@ export interface StaticAnalysisResult {
 
 const FORBIDDEN_PATTERNS = {
   js: [
-    "process",
+    "process.env",
+    "process.exit",
+    "process.cwd",
+    "process.chdir",
+    "process.kill",
     "require",
     "import",
     "eval",
@@ -19,8 +23,13 @@ const FORBIDDEN_PATTERNS = {
     "https",
   ],
   py: [
-    "os",
-    "sys",
+    "os.environ",
+    "os.system",
+    "os.exec",
+    "os.spawn",
+    "os.path",
+    "sys.exit",
+    "sys.modules",
     "subprocess",
     "requests",
     "urllib",
