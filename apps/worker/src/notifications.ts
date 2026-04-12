@@ -68,7 +68,7 @@ export async function notifyMatchResult(match: any, deltaA: number, deltaB: numb
           inline: false
         }
       ],
-      url: `https://chess.jdevservices.com/matches/${match.id}`,
+      url: `https://chessagents.ai/matches/${match.id}`,
       timestamp: new Date().toISOString(),
       footer: {
         text: `Match ID: ${match.id.substring(0, 8)}`

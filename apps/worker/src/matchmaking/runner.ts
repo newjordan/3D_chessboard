@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { Chess } from "chess.js";
 
 export interface MatchResult {
@@ -24,6 +24,107 @@ export interface AgentConfig {
 const MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
 const MAX_PLIES = 500;
 const MOVE_TIMEOUT_MS = 5000;
+
+/**
+ * Manages the lifecycle of an engine process during a game.
+ * Supports both legacy agents (exit after move) and persistent agents (stay alive).
+ */
+class EngineController {
+  private child: ChildProcess | null = null;
+  private config: AgentConfig;
+  private isDead = false;
+
+  constructor(config: AgentConfig) {
+    this.config = config;
+  }
+
+  private spawn() {
+    const runtime = this.config.language === "js" ? "node" : "python3";
+    this.child = spawn(runtime, [this.config.path], {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { PATH: process.env.PATH },
+    });
+
+    this.child.on("exit", () => {
+      this.isDead = true;
+      this.child = null;
+    });
+
+    this.child.stderr?.on("data", (data) => {
+      console.error(`[${this.config.name} STDERR]: ${data}`);
+    });
+  }
+
+  async getMove(fen: string): Promise<string> {
+    if (!this.child || this.isDead) {
+      this.isDead = false;
+      this.spawn();
+    }
+
+    const child = this.child!;
+    return new Promise((resolve, reject) => {
+      let completed = false;
+      let stdout = "";
+
+      const onData = (data: Buffer) => {
+        stdout += data.toString();
+        if (!completed && stdout.includes("\n")) {
+          completed = true;
+          cleanup();
+          resolve(stdout.split("\n")[0].trim());
+        }
+      };
+
+      const onExit = (code: number | null) => {
+        if (!completed) {
+          completed = true;
+          cleanup();
+          if (stdout.trim()) {
+            resolve(stdout.trim());
+          } else {
+            reject(new Error(`engine exited with code ${code} without output`));
+          }
+        }
+      };
+
+      const onError = (err: Error) => {
+        if (!completed) {
+          completed = true;
+          cleanup();
+          reject(new Error(`engine error: ${err.message}`));
+        }
+      };
+
+      const timeout = setTimeout(() => {
+        if (!completed) {
+          completed = true;
+          cleanup();
+          child.kill("SIGKILL");
+          reject(new Error("move timeout"));
+        }
+      }, MOVE_TIMEOUT_MS);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        child.stdout?.removeListener("data", onData);
+        child.removeListener("exit", onExit);
+        child.removeListener("error", onError);
+      };
+
+      child.stdout?.on("data", onData);
+      child.on("exit", onExit);
+      child.on("error", onError);
+
+      child.stdin?.write(fen + "\n");
+    });
+  }
+
+  stop() {
+    if (this.child && !this.isDead) {
+      this.child.kill();
+    }
+  }
+}
 
 /**
  * Runs a multi-game match between two agents.
@@ -64,139 +165,90 @@ async function runGame(
   const chess = new Chess();
   let termination = "normal";
 
-  while (!chess.isGameOver() && chess.moveNumber() <= MAX_PLIES) {
-    const currentAgent = chess.turn() === "w" ? white : black;
-    const fen = chess.fen();
+  const whiteController = new EngineController(white);
+  const blackController = new EngineController(black);
 
-    let move: string;
-    try {
-      move = await getAgentMove(currentAgent, fen);
-    } catch (err: any) {
-      const loserColor = chess.turn();
-      termination = err.message || "agent error";
-      return {
-        round,
-        white: white.name,
-        black: black.name,
-        result: loserColor === "w" ? "0-1" : "1-0",
-        termination,
-        pgn: buildPgn(chess, white.name, black.name, round, loserColor === "w" ? "0-1" : "1-0", termination),
-      };
+  try {
+    while (!chess.isGameOver() && chess.moveNumber() <= MAX_PLIES) {
+      const currentController = chess.turn() === "w" ? whiteController : blackController;
+      const fen = chess.fen();
+
+      let move: string;
+      try {
+        move = await currentController.getMove(fen);
+      } catch (err: any) {
+        const loserColor = chess.turn();
+        termination = err.message || "agent error";
+        return {
+          round,
+          white: white.name,
+          black: black.name,
+          result: loserColor === "w" ? "0-1" : "1-0",
+          termination,
+          pgn: buildPgn(chess, white.name, black.name, round, loserColor === "w" ? "0-1" : "1-0", termination),
+        };
+      }
+
+      if (!MOVE_REGEX.test(move)) {
+        const loserColor = chess.turn();
+        termination = `invalid move format: ${move}`;
+        return {
+          round,
+          white: white.name,
+          black: black.name,
+          result: loserColor === "w" ? "0-1" : "1-0",
+          termination,
+          pgn: buildPgn(chess, white.name, black.name, round, loserColor === "w" ? "0-1" : "1-0", termination),
+        };
+      }
+
+      const moveResult = chess.move({
+        from: move.slice(0, 2),
+        to: move.slice(2, 4),
+        promotion: (move[4] as any) || undefined,
+      });
+
+      if (!moveResult) {
+        const loserColor = chess.turn();
+        termination = `illegal move: ${move}`;
+        return {
+          round,
+          white: white.name,
+          black: black.name,
+          result: loserColor === "w" ? "0-1" : "1-0",
+          termination,
+          pgn: buildPgn(chess, white.name, black.name, round, loserColor === "w" ? "0-1" : "1-0", termination),
+        };
+      }
     }
 
-    if (!MOVE_REGEX.test(move)) {
-      const loserColor = chess.turn();
-      termination = `invalid move format: ${move}`;
-      return {
-        round,
-        white: white.name,
-        black: black.name,
-        result: loserColor === "w" ? "0-1" : "1-0",
-        termination,
-        pgn: buildPgn(chess, white.name, black.name, round, loserColor === "w" ? "0-1" : "1-0", termination),
-      };
+    let result: "1-0" | "0-1" | "1/2-1/2";
+    if (chess.isCheckmate()) {
+      result = chess.turn() === "w" ? "0-1" : "1-0";
+      termination = "checkmate";
+    } else if (chess.isDraw()) {
+      result = "1/2-1/2";
+      if (chess.isStalemate()) termination = "stalemate";
+      else if (chess.isThreefoldRepetition()) termination = "threefold repetition";
+      else if (chess.isInsufficientMaterial()) termination = "insufficient material";
+      else termination = "50-move rule";
+    } else {
+      result = "1/2-1/2";
+      termination = "max plies reached";
     }
 
-    const moveResult = chess.move({
-      from: move.slice(0, 2),
-      to: move.slice(2, 4),
-      promotion: (move[4] as any) || undefined,
-    });
-
-    if (!moveResult) {
-      const loserColor = chess.turn();
-      termination = `illegal move: ${move}`;
-      return {
-        round,
-        white: white.name,
-        black: black.name,
-        result: loserColor === "w" ? "0-1" : "1-0",
-        termination,
-        pgn: buildPgn(chess, white.name, black.name, round, loserColor === "w" ? "0-1" : "1-0", termination),
-      };
-    }
+    return {
+      round,
+      white: white.name,
+      black: black.name,
+      result,
+      termination,
+      pgn: buildPgn(chess, white.name, black.name, round, result, termination),
+    };
+  } finally {
+    whiteController.stop();
+    blackController.stop();
   }
-
-  let result: "1-0" | "0-1" | "1/2-1/2";
-  if (chess.isCheckmate()) {
-    result = chess.turn() === "w" ? "0-1" : "1-0";
-    termination = "checkmate";
-  } else if (chess.isDraw()) {
-    result = "1/2-1/2";
-    if (chess.isStalemate()) termination = "stalemate";
-    else if (chess.isThreefoldRepetition()) termination = "threefold repetition";
-    else if (chess.isInsufficientMaterial()) termination = "insufficient material";
-    else termination = "50-move rule";
-  } else {
-    result = "1/2-1/2";
-    termination = "max plies reached";
-  }
-
-  return {
-    round,
-    white: white.name,
-    black: black.name,
-    result,
-    termination,
-    pgn: buildPgn(chess, white.name, black.name, round, result, termination),
-  };
-}
-
-/**
- * Spawns an agent process, sends FEN, reads move.
- */
-function getAgentMove(agent: AgentConfig, fen: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let completed = false;
-    const runtime = agent.language === "js" ? "node" : "python3";
-
-    const child = spawn(runtime, [agent.path], {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { PATH: process.env.PATH }, // Ensure PATH is preserved for finding the runtime
-    });
-
-    const timeout = setTimeout(() => {
-      if (!completed) {
-        completed = true;
-        child.kill("SIGKILL");
-        reject(new Error("move timeout"));
-      }
-    }, MOVE_TIMEOUT_MS);
-
-    child.on("error", (err) => {
-      if (!completed) {
-        completed = true;
-        clearTimeout(timeout);
-        reject(new Error(`spawn error: ${err.message}`));
-      }
-    });
-
-    let stdout = "";
-    child.stdout.on("data", (data) => {
-      stdout += data.toString();
-      if (!completed && stdout.includes("\n")) {
-        completed = true;
-        clearTimeout(timeout);
-        child.kill();
-        resolve(stdout.split("\n")[0].trim());
-      }
-    });
-
-    child.on("exit", (code) => {
-      if (!completed) {
-        completed = true;
-        clearTimeout(timeout);
-        if (stdout.trim()) {
-          resolve(stdout.trim());
-        } else {
-          reject(new Error(`agent exited with code ${code} without output`));
-        }
-      }
-    });
-
-    child.stdin.write(fen + "\n");
-    child.stdin.end();
-  });
 }
 
 function buildPgn(

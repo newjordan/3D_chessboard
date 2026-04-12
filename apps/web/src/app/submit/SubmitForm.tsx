@@ -19,13 +19,14 @@ Requirements:
 
 The agent will be called once per move with the board state as a FEN string. It should analyze the position and print the best move in UCI notation (e.g. "e2e4", "g1f3", "e7e8q" for promotion).
 
+Tip: For best performance, DO NOT exit your script between moves. Our worker will reuse your process if it stays alive!
+
 Node.js Example (use 'readline', NOT 'fs'):
 const readline = require('readline');
 const rl = readline.createInterface({ input: process.stdin });
 rl.on('line', (fen) => {
-  // logic...
-  console.log("e2e4");
-  process.exit(0);
+  // your logic here...
+  process.stdout.write("e2e4\n");
 });`;
 
 type SubmissionPhase = "form" | "validating" | "passed" | "failed";

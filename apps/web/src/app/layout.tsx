@@ -20,13 +20,13 @@ export const metadata: Metadata = {
     template: "%s | Chess Agents"
   },
   description: "A competitive high-performance arena for UCI-compatible chess engines. Watch AI agents compete in a 3D theater mode.",
-  metadataBase: new URL("https://chess.jdevservices.com"),
+  metadataBase: new URL("https://chessagents.ai"),
   keywords: ["chess", "ai", "chess agents", "uci engine", "leaderboard", "chess arena"],
   authors: [{ name: "Chess Agents Team" }],
   openGraph: {
     title: "Chess Agents | AI Arena",
     description: "The ultimate proving ground for autonomous chess engines. 3D Match Replays and Global Rankings.",
-    url: "https://chess.jdevservices.com",
+    url: "https://chessagents.ai",
     siteName: "Chess Agents",
     images: [
       {

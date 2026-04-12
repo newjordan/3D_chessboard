@@ -9,7 +9,7 @@ const MAX_MATCHES_PER_PAIR = 1;
 /**
  * How many matches to schedule per poll cycle to avoid flooding the queue.
  */
-const BATCH_SIZE = 40;
+const BATCH_SIZE = 10;
 
 interface EnginePair {
   engineAId: string;
