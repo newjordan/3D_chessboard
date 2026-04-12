@@ -29,30 +29,6 @@ const BUCKET_NAME = process.env.R2_BUCKET || "chess-agents";
 app.use(cors());
 app.use(express.json());
 
-import * as trpcExpress from "@trpc/server/adapters/express";
-import { appRouter } from "./router";
-import { createContext } from "./trpc";
-
-// 0. tRPC setup
-app.use(
-  "/trpc",
-  trpcExpress.createExpressMiddleware({
-    router: appRouter,
-    createContext,
-  })
-);
-
-// 0. Path Normalization (fixes gateway stripping of /api prefix)
-app.use((req, res, next) => {
-  // If the request doesn't start with /api and it's not the root or a file, 
-  // internally prefix it so it matches our routes.
-  if (!req.url.startsWith("/api") && req.url !== "/" && !req.url.includes(".") && !req.url.startsWith("/trpc")) {
-    console.log(`[ROUTE FIX] Normalizing ${req.url} -> /api${req.url}`);
-    req.url = "/api" + req.url;
-  }
-  next();
-});
-
 // Consts
 const ALLOWED_EXTENSIONS = [".js", ".py"];
 const MAX_ENGINE_NAME_LENGTH = 32;
@@ -265,16 +241,6 @@ app.get("/api/engines/:slug", async (req, res) => {
       include: {
         owner: { select: { username: true, image: true, id: true } },
         versions: { orderBy: { submittedAt: "desc" } },
-        matchesChallenged: { 
-          orderBy: { createdAt: "desc" }, 
-          take: 20,
-          include: { defenderEngine: { include: { owner: { select: { username: true, image: true } } } } }
-        },
-        matchesDefended: { 
-          orderBy: { createdAt: "desc" }, 
-          take: 20,
-          include: { challengerEngine: { include: { owner: { select: { username: true, image: true } } } } }
-        },
         _count: { select: { matchesChallenged: true, matchesDefended: true } }
       }
     });

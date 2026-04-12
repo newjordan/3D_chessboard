@@ -148,15 +148,11 @@ async function runGame(
 function getAgentMove(agent: AgentConfig, fen: string): Promise<string> {
   return new Promise((resolve, reject) => {
     let completed = false;
-    const isWin = process.platform === "win32";
-    const runtime = agent.language === "js" ? process.execPath : (isWin ? "python" : "python3");
+    const runtime = agent.language === "js" ? "node" : "python3";
 
     const child = spawn(runtime, [agent.path], {
       stdio: ["pipe", "pipe", "pipe"],
-      env: {
-        ...process.env,
-        NODE_ENV: "production",
-      },
+      env: {}, // Completely isolated environment
     });
 
     const timeout = setTimeout(() => {

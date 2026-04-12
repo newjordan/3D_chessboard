@@ -24,13 +24,7 @@ export async function GET(req: NextRequest) {
   // Extract the sub-path: /admin/proxy/stats -> /stats
   const url = new URL(req.url);
   const subPath = url.pathname.replace("/admin/proxy", "");
-  
-  // De-duplicate /api prefix if API_BASE already includes it
-  let targetUrl = API_BASE.endsWith("/api") 
-    ? `${API_BASE}/admin${subPath}` 
-    : `${API_BASE}/api/admin${subPath}`;
-
-  console.log(`[PROXY] ${req.method} ${url.pathname} -> ${targetUrl}`);
+  const targetUrl = `${API_BASE}/api/admin${subPath}`;
 
   const res = await fetch(targetUrl, {
     headers: { "x-admin-secret": ADMIN_SECRET },
@@ -58,13 +52,7 @@ export async function PATCH(req: NextRequest) {
 
   const url = new URL(req.url);
   const subPath = url.pathname.replace("/admin/proxy", "");
-  
-  // De-duplicate /api prefix if API_BASE already includes it
-  let targetUrl = API_BASE.endsWith("/api") 
-    ? `${API_BASE}/admin${subPath}` 
-    : `${API_BASE}/api/admin${subPath}`;
-
-  console.log(`[PROXY] ${req.method} ${url.pathname} -> ${targetUrl}`);
+  const targetUrl = `${API_BASE}/api/admin${subPath}`;
   const body = await req.text();
 
   const res = await fetch(targetUrl, {
@@ -98,13 +86,7 @@ export async function DELETE(req: NextRequest) {
 
   const url = new URL(req.url);
   const subPath = url.pathname.replace("/admin/proxy", "");
-  
-  // De-duplicate /api prefix if API_BASE already includes it
-  let targetUrl = API_BASE.endsWith("/api") 
-    ? `${API_BASE}/admin${subPath}` 
-    : `${API_BASE}/api/admin${subPath}`;
-
-  console.log(`[PROXY] ${req.method} ${url.pathname} -> ${targetUrl}`);
+  const targetUrl = `${API_BASE}/api/admin${subPath}`;
 
   const res = await fetch(targetUrl, {
     method: "DELETE",
@@ -133,13 +115,7 @@ export async function POST(req: NextRequest) {
 
   const url = new URL(req.url);
   const subPath = url.pathname.replace("/admin/proxy", "");
-  
-  // De-duplicate /api prefix if API_BASE already includes it
-  let targetUrl = API_BASE.endsWith("/api") 
-    ? `${API_BASE}/admin${subPath}` 
-    : `${API_BASE}/api/admin${subPath}`;
-
-  console.log(`[PROXY] ${req.method} ${url.pathname} -> ${targetUrl}`);
+  const targetUrl = `${API_BASE}/api/admin${subPath}`;
   
   // Read body as text and forward (if present)
   let body = undefined;
