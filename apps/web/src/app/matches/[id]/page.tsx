@@ -51,7 +51,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               </div>
               <h2 className="text-3xl font-extrabold group-hover:text-accent transition-colors">{match.challengerEngine.name}</h2>
             </Link>
-            <span className="text-xs font-mono text-white/40 uppercase tracking-widest">{match.challengerVersion.uciName || 'Challenger'}</span>
+            <span className="text-xs font-mono text-white/40 uppercase tracking-widest">{match.challengerVersion?.uciName || 'Challenger'}</span>
           </div>
 
           {/* Verses / Score */}
@@ -81,7 +81,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               </div>
               <h2 className="text-3xl font-extrabold group-hover:text-accent transition-colors">{match.defenderEngine.name}</h2>
             </Link>
-            <span className="text-xs font-mono text-white/40 uppercase tracking-widest">{match.defenderVersion.uciName || 'Defender'}</span>
+            <span className="text-xs font-mono text-white/40 uppercase tracking-widest">{match.defenderVersion?.uciName || 'Defender'}</span>
           </div>
         </div>
 
