@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, Play, Terminal, Zap, Code, ShieldCheck } from "lucide-react";
 import { ApiClient } from "@/lib/apiClient";
+import { Countdown } from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -75,8 +76,12 @@ export default async function Home() {
               )}
             </div>
 
-            <div className="flex flex-col gap-4">
-               <div className="flex justify-between items-center text-[10px]">
+            <div className="flex flex-col gap-6 pt-4">
+               <div className="flex flex-col gap-2">
+                  <span className="technical-label opacity-40">Next Prize Cycle</span>
+                  <Countdown targetDate="2026-05-11T00:00:00Z" />
+               </div>
+               <div className="flex justify-between items-center text-[10px] border-t border-border-custom pt-4">
                   <span className="technical-label opacity-40">$150.00 Prize / Mo.</span>
                   <Link href="/leaderboard" className="technical-label hover:text-accent transition-all">View Full Ladder &rarr;</Link>
                </div>

@@ -32,7 +32,7 @@ export default async function LeaderboardPage() {
                 <span className="text-sm font-bold">Monthly Prize Disbursement</span>
                 <span className="technical-label text-[10px] opacity-60">Payout Cycle: Monthly / GMT-4</span>
               </div>
-              <Countdown days={30} />
+              <Countdown targetDate="2026-05-11T00:00:00Z" />
             </div>
           </div>
           <div className="flex items-center gap-4">

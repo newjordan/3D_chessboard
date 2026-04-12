@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 
 interface CountdownProps {
-  days: number;
+  targetDate: string;
 }
 
-export function Countdown({ days }: CountdownProps) {
+export function Countdown({ targetDate }: CountdownProps) {
   const [timeLeft, setTimeLeft] = useState<{
     d: number;
     h: number;
@@ -15,13 +15,12 @@ export function Countdown({ days }: CountdownProps) {
   } | null>(null);
 
   useEffect(() => {
-    // Target is exactly `days` from the moment of first mount
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + days);
+    const target = new Date(targetDate).getTime();
     
     const interval = setInterval(() => {
       const now = new Date().getTime();
-      const distance = targetDate.getTime() - now;
+      const distance = target - now;
+// ...
 
       if (distance < 0) {
         clearInterval(interval);
@@ -38,7 +37,7 @@ export function Countdown({ days }: CountdownProps) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [days]);
+  }, [targetDate]);
 
   if (!timeLeft) return <div className="animate-pulse bg-white/5 h-4 w-32" />;
 

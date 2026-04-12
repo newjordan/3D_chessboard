@@ -101,12 +101,12 @@ app.get("/api/engines/:slug", async (req, res) => {
           take: 1
         },
         matchesChallenged: {
-          include: { defenderEngine: { select: { name: true } } },
+          include: { defenderEngine: { select: { name: true, slug: true } } },
           orderBy: { completedAt: 'desc' },
           take: 10,
         },
         matchesDefended: {
-          include: { challengerEngine: { select: { name: true } } },
+          include: { challengerEngine: { select: { name: true, slug: true } } },
           orderBy: { completedAt: 'desc' },
           take: 10,
         },

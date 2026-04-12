@@ -95,17 +95,15 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                     <div className="flex items-center gap-4 text-sm font-medium">
                       <span className={match.role === 'challenger' ? 'font-bold' : ''}>{engine.name}</span>
                       <span className="opacity-20 italic">vs</span>
-                      <div 
-                        className="hover:underline"
+                      <Link 
+                        href={`/engines/${match.role === 'challenger' ? match.defenderEngine?.slug : match.challengerEngine?.slug}`}
+                        className="hover:underline text-accent/80 hover:text-accent transition-colors relative z-10"
                         onClick={(e) => {
-                          // Prevent triggering the parent link when clicking the opponent link
-                          // Actually, navigating to the match detail is probably prioritized, 
-                          // but if they click the engine name, we should handle that.
-                          // But for simplicity, we'll keep the opponent as a visual label or handle propagation.
+                          e.stopPropagation(); // Go to engine, not match detail
                         }}
                       >
                         {match.role === 'challenger' ? match.defenderEngine?.name : match.challengerEngine?.name}
-                      </div>
+                      </Link>
                     </div>
                   </div>
 
