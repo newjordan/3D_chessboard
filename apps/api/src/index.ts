@@ -70,7 +70,10 @@ const MAX_ENGINE_NAME_LENGTH = 64;
 app.get("/api/leaderboard", async (req, res) => {
   try {
     const engines = await prisma.engine.findMany({
-      where: { status: EngineStatus.active },
+      where: { 
+        status: "active",
+        gamesPlayed: { gt: 0 }
+      },
       orderBy: [
         { currentRating: "desc" },
         { currentRank: "asc" },
@@ -117,24 +120,26 @@ app.get("/api/engines/:slug", async (req, res) => {
   }
 });
 
-// 3. Get Match Details
-app.get("/api/matches/:id", async (req, res) => {
+// 3. Get Recent Matches (Global)
+app.get("/api/matches", async (req, res) => {
   try {
-    const match = await prisma.match.findUnique({
-      where: { id: req.params.id },
+    const matches = await prisma.match.findMany({
+      where: { status: "completed" },
+      orderBy: { completedAt: "desc" },
+      take: 50,
       include: {
-        challengerEngine: true,
-        defenderEngine: true,
-        games: { orderBy: { roundIndex: "asc" } }
+        challengerEngine: { select: { name: true, slug: true } },
+        defenderEngine: { select: { name: true, slug: true } },
       }
     });
-    if (!match) return res.status(404).json({ error: "Match not found" });
-    res.json(match);
+    res.json(matches);
   } catch (error: any) {
-    console.error("Match fetch error:", error);
+    console.error("Matches history error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// 4. Get Match Details
 
 // 4. Get Engines by Owner
 app.get("/api/engines/by-owner/:userId", async (req, res) => {

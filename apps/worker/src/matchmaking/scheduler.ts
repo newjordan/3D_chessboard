@@ -101,6 +101,7 @@ export async function scheduleMatches(): Promise<number> {
     const engineB = activeEngines.find((e) => e.id === pair.engineBId);
 
     if (!engineA?.versions[0] || !engineB?.versions[0]) {
+      console.log(`[Scheduler] Skipping pair ${engineA?.name} vs ${engineB?.name} - missing passed version`);
       continue;
     }
 

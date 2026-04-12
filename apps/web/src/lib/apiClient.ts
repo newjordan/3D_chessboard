@@ -26,6 +26,10 @@ export class ApiClient {
     return this.request<any[]>("/api/leaderboard");
   }
 
+  static async getMatches() {
+    return this.request<any[]>("/api/matches");
+  }
+
   static async getEngine(slug: string) {
     return this.request<any>(`/api/engines/${slug}`);
   }
