@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 const ADMIN_ID = "45865838";
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/+$/, "");
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/+$/, "");
 const ADMIN_SECRET = process.env.ADMIN_API_SECRET || "chess-agents-admin-secret-change-me";
 
 async function requireAdmin() {
