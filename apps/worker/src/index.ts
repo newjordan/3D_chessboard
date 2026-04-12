@@ -279,14 +279,6 @@ async function handleMatchRun(payload: any) {
       ContentType: "application/x-chess-pgn",
     }));
 
-    const winnerEngineId = challengerWins > defenderWins 
-      ? match.challengerEngineId 
-      : (defenderWins > challengerWins ? match.defenderEngineId : null);
-    
-    const winnerUserId = challengerWins > defenderWins 
-      ? match.challengerEngine.ownerUserId 
-      : (defenderWins > challengerWins ? match.defenderEngine.ownerUserId : null);
-
     // 5. Update Match results
     await prisma.$transaction([
       prisma.match.update({
@@ -296,7 +288,6 @@ async function handleMatchRun(payload: any) {
           completedAt: new Date(),
           challengerScore,
           defenderScore,
-          winnerEngineId,
           pgnStorageKey: pgnKey,
         }
       }),
@@ -314,16 +305,6 @@ async function handleMatchRun(payload: any) {
           }
         });
       }),
-      ...(winnerUserId ? [
-        prisma.payout.create({
-          data: {
-            userId: winnerUserId,
-            matchId: match.id,
-            amount: 5.00,
-            type: "WIN",
-          }
-        })
-      ] : []),
       prisma.job.create({
         data: {
           jobType: JobType.rating_apply,

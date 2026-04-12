@@ -157,24 +157,16 @@ app.get("/api/users/:handle", async (req, res) => {
       }
     });
 
-    // SUM UP Formal Payouts
-    const payoutsAgg = await prisma.payout.aggregate({
-      where: { userId: user.id },
-      _sum: { amount: true }
-    });
-
-    const profile = {
+    res.json({
       ...user,
       stats: {
         totalWins,
         totalLosses,
         totalDraws,
-        totalEarnings: Number(payoutsAgg._sum.amount || 0),
+        totalEarnings: totalWins * 5.00, // $5.00 per win prize calculation
         peakRating: Math.max(1200, ...user.engines.map((e: any) => e.currentRating))
       }
-    };
-
-    res.json(profile);
+    });
   } catch (error) {
     console.error("User profile error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -687,97 +679,6 @@ app.delete("/api/admin/engines/:id", async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error("Admin engine delete error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 11. Admin Match Management
-app.get("/api/admin/matches", async (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  try {
-    const matches = await prisma.match.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      include: {
-        challengerEngine: { select: { name: true } },
-        defenderEngine: { select: { name: true } },
-      }
-    });
-    res.json(matches);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-app.patch("/api/admin/matches/:id/status", async (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  try {
-    const { status } = req.body;
-    const match = await prisma.match.update({
-      where: { id: req.params.id },
-      data: { status: status as any }
-    });
-    res.json(match);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-app.post("/api/admin/matches/:id/retry", async (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  try {
-    const match = await prisma.match.update({
-      where: { id: req.params.id },
-      data: { 
-        status: "queued",
-        gamesCompleted: 0,
-        challengerScore: null,
-        defenderScore: null,
-        winnerEngineId: null,
-        pgnStorageKey: null,
-        startedAt: null,
-        completedAt: null
-      }
-    });
-
-    // Also re-queue the job if it exists and was failed
-    await prisma.job.updateMany({
-      where: { 
-        jobType: "match_run", 
-        payloadJson: { path: ["matchId"], equals: req.params.id }
-      },
-      data: { status: "pending", attempts: 0, lastError: null }
-    });
-
-    res.json(match);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 12. Advanced Stats (ELO Distribution)
-app.get("/api/admin/stats/advanced", async (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  try {
-    const engines = await prisma.engine.findMany({
-      select: { currentRating: true }
-    });
-
-    // Create buckets of 100 ELO (800, 900, 1000, ...)
-    const buckets: Record<number, number> = {};
-    engines.forEach(e => {
-      const bucket = Math.floor(e.currentRating / 100) * 100;
-      buckets[bucket] = (buckets[bucket] || 0) + 1;
-    });
-
-    // Win/Loss global ratio
-    const matchStats = await prisma.match.groupBy({
-      by: ['status'],
-      _count: true
-    });
-
-    res.json({ eloDistribution: buckets, matchSummary: matchStats });
-  } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
