@@ -13,83 +13,74 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col gap-32 pb-32">
-      {/* Hero Section */}
+      {/* Hero Section with Side-by-Side Ledger */}
       <section className="container mx-auto px-6 pt-20 max-w-5xl">
-        <div className="flex flex-col gap-10">
-          <div className="technical-label">V.03 / Open Competition</div>
-          
-          <div className="flex flex-col gap-6">
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight max-w-3xl leading-[1.05]">
-              Make an engine with AI.<br />
-              Enter it. See how it ranks.
-            </h1>
-            <p className="text-lg text-muted max-w-xl leading-relaxed">
-              Submit simple Python or JavaScript chess agents. They play 24/7 in an automated arena. Proof of work is determined by result, not theory.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-6 pt-4">
-            <Link 
-              href="/submit" 
-              className="px-6 py-3 bg-foreground text-background font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
-            >
-              Enter Competition <Play size={14} fill="currentColor" />
-            </Link>
-            <Link 
-              href="/leaderboard" 
-              className="technical-label hover:text-accent transition-colors flex items-center gap-1 group"
-            >
-              Live Standings <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Proof of Life / Ledger */}
-      <section className="container mx-auto px-6 max-w-5xl">
-        <div className="grid lg:grid-cols-[1fr_350px] gap-20">
-          <div className="flex flex-col gap-12">
-            <div className="flex flex-col gap-4">
-              <span className="technical-label">Active Ledger</span>
-              <h2 className="text-3xl font-bold tracking-tight">Real-time performance proof.</h2>
-              <p className="text-muted text-sm max-w-md">
-                This isn't a leaderboard; it's a verifiable history of match outcomes. Ratings are calculated in real-time as games finish.
+        <div className="grid lg:grid-cols-[1fr_380px] gap-24 items-start">
+          {/* Left: Content */}
+          <div className="flex flex-col gap-10">
+            <div className="technical-label">V.03 / Open Competition</div>
+            
+            <div className="flex flex-col gap-6">
+              <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.05]">
+                Make an engine with AI.<br />
+                Enter it. See how it ranks.
+              </h1>
+              <p className="text-lg text-muted max-w-xl leading-relaxed">
+                Submit simple Python or JavaScript chess agents. They play 24/7 in an automated arena. Proof of work is determined by result, not theory.
               </p>
             </div>
 
-            <div className="flex flex-col border-t border-border-custom">
-              {topEngines.map((engine, i) => (
-                <div key={engine.id} className="grid grid-cols-[40px_1fr_100px] items-center py-5 border-b border-border-custom hover:bg-white/[0.02] transition-colors group">
-                  <span className="font-mono text-xs opacity-30">0{i + 1}</span>
-                  <div className="flex flex-col">
-                    <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
-                      {engine.name}
-                    </Link>
-                    <span className="technical-label text-[10px] lowercase opacity-60">@{engine.owner.username}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-mono text-sm font-bold tracking-tight">{engine.currentRating}</span>
-                    <span className="technical-label ml-1 block opacity-40">Elo</span>
-                  </div>
-                </div>
-              ))}
-              <Link href="/leaderboard" className="py-6 technical-label text-center hover:text-accent transition-colors">
-                View Full Ladder &rarr;
+            <div className="flex items-center gap-6 pt-4">
+              <Link 
+                href="/submit" 
+                className="px-6 py-3 bg-foreground text-background font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
+              >
+                Enter Competition <Play size={11} fill="currentColor" />
+              </Link>
+              <Link 
+                href="/leaderboard" 
+                className="technical-label hover:text-accent transition-colors flex items-center gap-1 group"
+              >
+                Live Standings <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </div>
 
-          <div className="flex flex-col gap-12 lg:pt-20">
-             <div className="flex flex-col gap-8">
-               <div className="flex flex-col gap-2">
-                 <span className="technical-label">The Prize Pool</span>
-                 <p className="text-4xl font-bold tracking-tighter">$150.00 <span className="text-base font-medium text-muted">/ Mo.</span></p>
+          {/* Right: Condensed Ledger */}
+          <div className="flex flex-col gap-8 lg:pt-2">
+            <div className="flex flex-col gap-2 border-b border-border-custom pb-4">
+              <span className="technical-label">Live Standings</span>
+              <span className="text-xs text-muted opacity-60 font-mono italic">Real-time Proof of Results</span>
+            </div>
+
+            <div className="flex flex-col border-b border-border-custom bg-white/[0.01]">
+              {topEngines.map((engine, i) => (
+                <div key={engine.id} className="grid grid-cols-[30px_1fr_60px] items-center py-4 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-2 last:border-0">
+                  <span className="font-mono text-[9px] opacity-20">0{i + 1}</span>
+                  <div className="flex flex-col">
+                    <Link href={`/engines/${engine.slug}`} className="font-bold text-[13px] group-hover:underline truncate pr-2">
+                      {engine.name}
+                    </Link>
+                    <span className="technical-label text-[9px] lowercase opacity-40 pr-2 truncate">@{engine.owner.username}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono text-sm font-bold tracking-tight">{engine.currentRating}</span>
+                  </div>
+                </div>
+              ))}
+              {topEngines.length === 0 && (
+                <div className="py-12 text-center text-[10px] technical-label opacity-20 italic">
+                  Awaiting matches...
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-4">
+               <div className="flex justify-between items-center text-[10px]">
+                  <span className="technical-label opacity-40">$150.00 Prize / Mo.</span>
+                  <Link href="/leaderboard" className="technical-label hover:text-accent transition-all">View Full Ladder &rarr;</Link>
                </div>
-               <div className="text-[13px] text-muted space-y-4">
-                  <p>Competition is split monthly. 1st takes $100, 2nd and 3rd take $25 each.</p>
-                  <p>Payments are issued at precisely midnight on the 1st of every month to the verified owner.</p>
-               </div>
-             </div>
+            </div>
           </div>
         </div>
       </section>
@@ -139,7 +130,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Rules Section */}
+      {/* Constraints / Rules */}
       <section className="container mx-auto px-6 max-w-5xl">
         <div className="grid md:grid-cols-2 gap-20">
           <div className="flex flex-col gap-8">
