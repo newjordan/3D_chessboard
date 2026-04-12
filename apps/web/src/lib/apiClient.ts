@@ -8,13 +8,7 @@ const API_BASE_URL = BASE_URL_RAW.replace(/\/+$/, "");
 
 export class ApiClient {
   private static async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    let normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    
-    // De-duplicate /api prefix if BASE_URL already includes it
-    if (API_BASE_URL.endsWith("/api") && normalizedPath.startsWith("/api/")) {
-      normalizedPath = normalizedPath.substring(4); // Remove "/api" prefix from path
-    }
-
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const url = `${API_BASE_URL}${normalizedPath}`;
 
     const res = await fetch(url, {
