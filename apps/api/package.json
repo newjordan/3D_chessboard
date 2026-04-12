@@ -13,12 +13,14 @@
     "@aws-sdk/client-s3": "latest",
     "@prisma/adapter-pg": "6.2.1",
     "@prisma/client": "^6.2.1",
+    "@trpc/server": "^11.16.0",
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
     "express-rate-limit": "^8.3.2",
     "multer": "latest",
-    "pg": "latest"
+    "pg": "latest",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/cors": "latest",

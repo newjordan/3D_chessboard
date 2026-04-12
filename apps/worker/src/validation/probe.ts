@@ -20,11 +20,15 @@ export async function probeAgent(
   return new Promise((resolve) => {
     let completed = false;
 
-    const runtime = language === "js" ? "node" : "python3";
+    const isWin = process.platform === "win32";
+    const runtime = language === "js" ? process.execPath : (isWin ? "python" : "python3");
 
     const child = spawn(runtime, [filePath], {
       stdio: ["pipe", "pipe", "pipe"],
-      env: {}, // Completely isolated environment
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+      },
     });
 
     const timeout = setTimeout(() => {

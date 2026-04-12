@@ -1,78 +1,61 @@
-const isServer = typeof window === "undefined";
-const BASE_URL_RAW = isServer
-  ? (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001")
-  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
-
-// Standardize: No trailing slash
-const API_BASE_URL = BASE_URL_RAW.replace(/\/+$/, "");
+import { trpc } from "./trpc";
 
 export class ApiClient {
-  private static async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    let normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    
-    // De-duplicate /api prefix if BASE_URL already includes it
-    if (API_BASE_URL.endsWith("/api") && normalizedPath.startsWith("/api/")) {
-      normalizedPath = normalizedPath.substring(4); // Remove "/api" prefix from path
-    }
-
-    const url = `${API_BASE_URL}${normalizedPath}`;
-
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-      next: { revalidate: 0 } // No cache for MVP consistency
-    });
-
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: "Unknown error" }));
-      throw new Error(error.error || `HTTP error ${res.status}`);
-    }
-
-    return res.json();
-  }
-
   static async getLeaderboard() {
-    return this.request<any[]>("/api/leaderboard");
+    return trpc.engines.getLeaderboard.query();
   }
 
   static async getMatches(engine?: string) {
-    const url = engine ? `/api/matches?engine=${engine}` : "/api/matches";
-    return this.request<any[]>(url);
+    return trpc.matches.getList.query({ engine });
   }
 
   static async getRandomMatch() {
-    return this.request<any>("/api/matches/random");
+    return trpc.matches.getRandom.query();
   }
 
   static async getEngine(slug: string) {
-    return this.request<any>(`/api/engines/${slug}`);
+    return trpc.engines.getBySlug.query(slug);
   }
 
   static async getMatch(id: string) {
-    return this.request<any>(`/api/matches/${id}`);
+    return trpc.matches.getById.query(id);
   }
 
   static async getMatchPgn(id: string) {
-    const res = await fetch(`${API_BASE_URL}/api/matches/${id}/pgn`);
-    if (!res.ok) throw new Error("Could not fetch PGN");
-    return res.text();
+    return trpc.matches.getPgn.query(id);
   }
 
   static async getEnginesByOwner(userId: string) {
-    return this.request<any[]>(`/api/engines/by-owner/${userId}`);
+    return trpc.engines.getByOwner.query(userId);
   }
 
-  static async getUserProfile(handle: string) {
-    return this.request<any>(`/api/users/${handle}`);
+  // Admin endpoints — now securely routed via tRPC
+  static async getAdminStats() {
+    return trpc.admin.getStats.query();
   }
 
+  static async getAdminAdvancedStats() {
+    return trpc.admin.getAdvancedStats.query();
+  }
+
+  static async getAdminUsers() {
+    return trpc.admin.getUsers.query();
+  }
+
+  static async getAdminJobs() {
+    return trpc.admin.getJobs.query();
+  }
+
+  static async retryJob(id: string) {
+    return trpc.admin.retryJob.mutate(id);
+  }
+
+  // Temporary REST logic for file uploads and specific deletions
   static async submitEngine(form: FormData) {
+    const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/+$/, "");
     const res = await fetch(`${API_BASE_URL}/api/engines/submit`, {
       method: "POST",
-      body: form, // Fetch handles FormData content type
+      body: form,
     });
 
     if (!res.ok) {
@@ -84,79 +67,16 @@ export class ApiClient {
   }
 
   static async deleteEngine(id: string, userId: string) {
-    return this.request<{ success: boolean; message: string }>(`/api/engines/${id}?userId=${userId}`, {
+    const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/+$/, "");
+    const res = await fetch(`${API_BASE_URL}/api/engines/${id}?userId=${userId}`, {
       method: "DELETE",
     });
-  }
 
-  // Admin endpoints — routed through secure server-side proxy
-  static async getAdminStats() {
-    return this.proxyRequest<any>('/admin/proxy/stats');
-  }
-
-  static async getAdminUsers() {
-    return this.proxyRequest<any[]>('/admin/proxy/users');
-  }
-
-  static async getAdminEngines() {
-    return this.proxyRequest<any[]>('/admin/proxy/engines');
-  }
-
-  static async updateEngineStatus(engineId: string, status: string) {
-    return this.proxyRequest<any>(`/admin/proxy/engines/${engineId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-  }
-
-  static async adminDeleteEngine(engineId: string) {
-    return this.proxyRequest<any>(`/admin/proxy/engines/${engineId}`, {
-      method: "DELETE",
-    });
-  }
-
-  static async getAdminJobs() {
-    return this.proxyRequest<any[]>('/admin/proxy/jobs');
-  }
-
-  static async retryJob(jobId: string) {
-    return this.proxyRequest<any>(`/admin/proxy/jobs/${jobId}/retry`, {
-      method: "PATCH",
-    });
-  }
-
-  static async getAdminMatches() {
-    return this.proxyRequest<any[]>('/admin/proxy/matches');
-  }
-
-  static async updateMatchStatus(matchId: string, status: string) {
-    return this.proxyRequest<any>(`/admin/proxy/matches/${matchId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-  }
-
-  static async retryMatch(matchId: string) {
-    return this.proxyRequest<any>(`/admin/proxy/matches/${matchId}/retry`, {
-      method: "POST",
-    });
-  }
-
-  static async getAdvancedStats() {
-    return this.proxyRequest<any>('/admin/proxy/stats/advanced');
-  }
-
-  // Proxy requests go to the Next.js server (same origin), not the Express API
-  private static async proxyRequest<T>(path: string, options?: RequestInit): Promise<T> {
-    const res = await fetch(path, {
-      ...options,
-      credentials: 'include', // send session cookies
-    });
     if (!res.ok) {
-      throw new Error(`Admin proxy error: ${res.status}`);
+      const error = await res.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error(error.error || `HTTP error ${res.status}`);
     }
+
     return res.json();
   }
 }
