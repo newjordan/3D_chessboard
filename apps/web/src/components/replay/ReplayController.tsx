@@ -22,9 +22,11 @@ import {
 
 interface ReplayControllerProps {
   pgn: string;
+  whiteName?: string;
+  blackName?: string;
 }
 
-export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
+export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn, whiteName, blackName }) => {
   const [selectedGameIndex, setSelectedGameIndex] = useState(0);
   const [currentPly, setCurrentPly] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -120,13 +122,11 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
   }, [boardState, viewMode]);
 
   const playerNames = useMemo(() => {
-    const whiteMatch = currentGamePgn.match(/\[White "([^"]+)"\]/);
-    const blackMatch = currentGamePgn.match(/\[Black "([^"]+)"\]/);
     return {
-      white: whiteMatch ? whiteMatch[1] : 'White AI',
-      black: blackMatch ? blackMatch[1] : 'Black AI'
+      white: whiteName || 'White AI',
+      black: blackName || 'Black AI'
     };
-  }, [currentGamePgn]);
+  }, [whiteName, blackName]);
 
   return (
     <div className="flex flex-col gap-4 w-full h-full max-w-[1400px] mx-auto overflow-hidden">

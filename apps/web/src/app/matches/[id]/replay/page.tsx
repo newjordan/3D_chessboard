@@ -69,7 +69,11 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
 
       {/* Main Container - Fills remaining height, no overflow */}
       <main className="flex-1 min-h-0 container mx-auto p-4 lg:p-6 overflow-hidden flex flex-col">
-        <ReplayController pgn={pgnResult.pgn} />
+        <ReplayController 
+          pgn={pgnResult.pgn} 
+          whiteName={match.challengerEngine.name}
+          blackName={match.defenderEngine.name}
+        />
       </main>
       
       {/* Background blobs */}
