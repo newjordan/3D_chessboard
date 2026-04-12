@@ -79,7 +79,14 @@ export default async function LeaderboardPage() {
                     </div>
                   )}
                 </div>
-                <span className="technical-label text-[10px] truncate pr-4 lowercase">@{engine.owner.username}</span>
+                <div className="flex items-center gap-2 pr-4">
+                  {engine.owner.image ? (
+                    <img src={engine.owner.image} alt={engine.owner.username} className="w-4 h-4 rounded-full border border-white/5" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-white/5 border border-white/5" />
+                  )}
+                  <span className="technical-label text-[10px] truncate lowercase opacity-60">@{engine.owner.username}</span>
+                </div>
                 <span className="text-right font-mono text-sm font-bold">{engine.currentRating}</span>
                 <div className="text-right font-mono text-[11px] flex gap-1 justify-end opacity-60">
                    <span className="text-accent font-bold">{engine.wins}</span>

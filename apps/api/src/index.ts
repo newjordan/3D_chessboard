@@ -65,7 +65,7 @@ app.get("/api/leaderboard", async (req, res) => {
       where: { status: "active" },
       orderBy: { currentRating: "desc" },
       include: {
-        owner: { select: { username: true } },
+        owner: { select: { username: true, image: true } },
         _count: {
           select: {
             matchesChallenged: { where: { status: "running" } },
@@ -99,8 +99,16 @@ app.get("/api/matches", async (req, res) => {
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {
-        challengerEngine: { select: { name: true, slug: true } },
-        defenderEngine: { select: { name: true, slug: true } },
+        challengerEngine: { 
+          include: { 
+            owner: { select: { username: true, image: true } } 
+          } 
+        },
+        defenderEngine: { 
+          include: { 
+            owner: { select: { username: true, image: true } } 
+          } 
+        },
       }
     });
     res.json(matches);
@@ -151,8 +159,8 @@ app.get("/api/matches/:id", async (req, res) => {
     const match = await prisma.match.findUnique({
       where: { id: req.params.id },
       include: {
-        challengerEngine: { include: { owner: { select: { username: true } } } },
-        defenderEngine: { include: { owner: { select: { username: true } } } },
+        challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
+        defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
         games: { orderBy: { roundIndex: "asc" } }
       }
     });
@@ -171,7 +179,7 @@ app.get("/api/engines/by-owner/:userId", async (req, res) => {
       where: { ownerUserId: req.params.userId },
       orderBy: { createdAt: "desc" },
       include: {
-        owner: { select: { username: true } },
+        owner: { select: { username: true, image: true } },
         versions: { orderBy: { submittedAt: "desc" }, take: 1 },
         _count: {
           select: {
@@ -194,22 +202,22 @@ app.get("/api/engines/:slug", async (req, res) => {
     const engine = await prisma.engine.findUnique({
       where: { slug: req.params.slug },
       include: {
-        owner: { select: { username: true } },
+        owner: { select: { username: true, image: true } },
         versions: { orderBy: { submittedAt: "desc" } },
         matchesChallenged: {
           take: 10,
           orderBy: { completedAt: "desc" },
           include: {
-            challengerEngine: { select: { name: true, slug: true } },
-            defenderEngine: { select: { name: true, slug: true } },
+            challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
+            defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
           }
         },
         matchesDefended: {
           take: 10,
           orderBy: { completedAt: "desc" },
           include: {
-            challengerEngine: { select: { name: true, slug: true } },
-            defenderEngine: { select: { name: true, slug: true } },
+            challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
+            defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
           }
         },
         _count: {

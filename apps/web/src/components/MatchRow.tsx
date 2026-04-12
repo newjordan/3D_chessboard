@@ -37,15 +37,22 @@ export function MatchRow({ match, engineName }: MatchRowProps) {
         <div className="flex items-center gap-4 text-sm font-medium">
           <span className={match.role === 'challenger' ? 'font-bold' : ''}>{engineName}</span>
           <span className="opacity-20 italic">vs</span>
-          <Link 
-            href={`/engines/${opponentSlug}`}
-            className="hover:underline text-accent/80 hover:text-accent transition-colors relative z-10"
-            onClick={(e) => {
-              e.stopPropagation(); // Stay on engine profile
-            }}
-          >
-            {opponentName}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link 
+              href={`/engines/${opponentSlug}`}
+              className="hover:underline text-accent/80 hover:text-accent transition-colors relative z-10 flex items-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation(); // Stay on engine profile
+              }}
+            >
+              {match.role === 'challenger' ? (
+                match.defenderEngine?.owner?.image && <img src={match.defenderEngine.owner.image} alt="" className="w-3.5 h-3.5 rounded-full border border-white/5" />
+              ) : (
+                match.challengerEngine?.owner?.image && <img src={match.challengerEngine.owner.image} alt="" className="w-3.5 h-3.5 rounded-full border border-white/5" />
+              )}
+              {opponentName}
+            </Link>
+          </div>
         </div>
       </div>
 

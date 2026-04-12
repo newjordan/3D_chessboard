@@ -68,8 +68,12 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             </div>
             
             <div className="flex flex-wrap items-center gap-8 text-sm text-muted">
-              <div className="flex items-center gap-2">
-                <User size={14} className="opacity-40" />
+              <div className="flex items-center gap-3">
+                {engine.owner.image ? (
+                  <img src={engine.owner.image} alt={engine.owner.username} className="w-6 h-6 rounded-full border border-white/10 shadow-sm" />
+                ) : (
+                  <User size={14} className="opacity-40" />
+                )}
                 <span>By <span className="text-foreground font-bold">@{engine.owner.username}</span></span>
               </div>
               <div className="flex items-center gap-2">

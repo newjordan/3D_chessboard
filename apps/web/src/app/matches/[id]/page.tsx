@@ -8,7 +8,9 @@ import {
   Calendar, 
   Activity,
   ArrowLeft,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { ReplayButton } from "@/components/replay/ReplayButton";
@@ -43,166 +45,186 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       : null;
 
   return (
-    <div className="container mx-auto px-6 py-16 max-w-5xl flex flex-col gap-20">
-      {/* Navigation */}
-      <Link href="/leaderboard" className="technical-label flex items-center gap-2 hover:text-accent transition-colors w-fit">
-        <ArrowLeft size={12} /> Back to Ladder
-      </Link>
-
-      {/* Match Scorecard */}
-      <section className="border border-border-custom p-12 md:p-20 soft-shadow flex flex-col gap-16 relative overflow-hidden bg-white/[0.01]">
-        <div className="technical-label text-[10px] text-center opacity-40">Verification Hash: {match.id}</div>
-        
-        <div className="flex flex-col md:flex-row items-center justify-between gap-12 relative z-10">
-          {/* Challenger */}
-          <div className="flex flex-col items-center text-center gap-6 flex-1">
-            <Link href={`/engines/${match.challengerEngine.slug}`} className="group flex flex-col items-center gap-4">
-              <h2 className="text-3xl font-bold tracking-tight group-hover:underline">{match.challengerEngine.name}</h2>
-              <span className="technical-label opacity-40 whitespace-nowrap">@{match.challengerEngine.owner.username}</span>
+    <div className="h-[calc(100vh-theme(spacing.16))] flex flex-col overflow-hidden bg-background">
+      {/* 1. Ultra-Compact Scorecard Header */}
+      <div className="flex-none p-6 border-b border-border-custom bg-white/[0.01]">
+        <div className="container mx-auto max-w-7xl flex items-center justify-between gap-8">
+          <div className="flex items-center gap-6">
+            <Link href="/leaderboard" className="p-2 hover:bg-white/5 transition-colors rounded-lg group">
+              <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform opacity-40 hover:opacity-100" />
             </Link>
-          </div>
-
-          {/* VS / Score */}
-          <div className="flex flex-col items-center gap-8">
-            <div className="flex items-center gap-12">
-              <span className="text-7xl font-bold font-mono tracking-tighter">{match.challengerScore?.toString()}</span>
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-px h-8 bg-border-custom" />
-                <span className="technical-label opacity-20">VS</span>
-                <div className="w-px h-8 bg-border-custom" />
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="technical-label text-[10px] opacity-40">Match Ledger</span>
+                <span className="w-1 h-1 rounded-full bg-border-custom" />
+                <span className="technical-label text-[10px] text-accent font-bold uppercase tracking-widest">{match.status}</span>
               </div>
-              <span className="text-7xl font-bold font-mono tracking-tighter opacity-40">{match.defenderScore?.toString()}</span>
+              <h1 className="text-xl font-bold tracking-tight opacity-90">Transaction {match.id.substring(0, 8)}</h1>
             </div>
-            <span className="technical-label px-3 py-1 border border-accent/20 text-accent bg-accent/5">
-              {match.status}
-            </span>
           </div>
 
-          {/* Defender */}
-          <div className="flex flex-col items-center text-center gap-6 flex-1">
-            <Link href={`/engines/${match.defenderEngine.slug}`} className="group flex flex-col items-center gap-4">
-              <h2 className="text-3xl font-bold tracking-tight group-hover:underline">{match.defenderEngine.name}</h2>
-              <span className="technical-label opacity-40 whitespace-nowrap">@{match.defenderEngine.owner.username}</span>
-            </Link>
+          <div className="flex items-center gap-12">
+            <div className="flex flex-col items-end gap-1">
+              <Link href={`/engines/${match.challengerEngine.slug}`} className="text-lg font-bold hover:text-accent transition-colors leading-none">
+                {match.challengerEngine.name}
+              </Link>
+              <div className="flex items-center gap-1.5 justify-end">
+                <span className="technical-label text-[9px] opacity-40">@{match.challengerEngine.owner.username}</span>
+                {match.challengerEngine.owner.image ? (
+                  <img src={match.challengerEngine.owner.image} alt={match.challengerEngine.owner.username} className="w-3.5 h-3.5 rounded-full border border-white/5" />
+                ) : (
+                  <span className="w-3.5 h-3.5 rounded-full bg-white/5 border border-white/5" />
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 px-8 py-3 bg-white/[0.03] border border-white/10 rounded-xl shadow-inner">
+               <span className={`text-4xl font-mono font-bold ${Number(match.challengerScore) > Number(match.defenderScore) ? 'text-accent' : 'opacity-80'}`}>
+                 {match.challengerScore?.toString()}
+               </span>
+               <div className="flex flex-col items-center gap-2">
+                  <div className="w-px h-4 bg-white/10" />
+                  <span className="text-[10px] technical-label opacity-20 italic">VS</span>
+                  <div className="w-px h-4 bg-white/10" />
+               </div>
+               <span className={`text-4xl font-mono font-bold ${Number(match.defenderScore) > Number(match.challengerScore) ? 'text-accent' : 'opacity-80'}`}>
+                 {match.defenderScore?.toString()}
+               </span>
+            </div>
+
+            <div className="flex flex-col items-start gap-1">
+              <Link href={`/engines/${match.defenderEngine.slug}`} className="text-lg font-bold hover:text-accent transition-colors leading-none">
+                {match.defenderEngine.name}
+              </Link>
+              <div className="flex items-center gap-1.5">
+                {match.defenderEngine.owner.image ? (
+                  <img src={match.defenderEngine.owner.image} alt={match.defenderEngine.owner.username} className="w-3.5 h-3.5 rounded-full border border-white/5" />
+                ) : (
+                  <span className="w-3.5 h-3.5 rounded-full bg-white/5 border border-white/5" />
+                )}
+                <span className="technical-label text-[9px] opacity-40">@{match.defenderEngine.owner.username}</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <div className="grid lg:grid-cols-[1fr_300px] gap-20">
-        {/* Game List */}
-        <div className="flex flex-col gap-10">
-          <div className="flex items-center justify-between border-b border-border-custom pb-4">
-            <h2 className="technical-label">Detailed Games</h2>
-            <span className="technical-label opacity-40">{match.games.length} / {match.gamesPlanned} Recorded</span>
-          </div>
-          
-          <div className="flex flex-col">
-            {(match?.games || []).map((game: any, idx: number) => {
-              const isChallengerWhite = game.whiteEngineId === match.challengerEngineId;
-              
-              // Calculate points relative to the Match Header order (Challenger vs Defender)
-              let challengerPoint = 0;
-              let defenderPoint = 0;
-              if (game.result === '1-0') {
-                if (isChallengerWhite) challengerPoint = 1;
-                else defenderPoint = 1;
-              } else if (game.result === '0-1') {
-                if (isChallengerWhite) defenderPoint = 1;
-                else challengerPoint = 1;
-              } else {
-                challengerPoint = 0.5;
-                defenderPoint = 0.5;
-              }
-
-              return (
-                <div key={game.id} className="grid grid-cols-[80px_1fr_120px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors">
-                  <span className="technical-label opacity-30">Game {idx + 1}</span>
-                  <div className="flex items-center gap-6 text-[13px] font-medium">
-                    {/* Challenger Column */}
-                    <div className="flex items-center gap-3 min-w-[170px]">
-                      <div className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold border ${
-                        isChallengerWhite ? 'bg-white text-black border-white' : 'bg-neutral-900 text-white border-white/10'
-                      }`} title={isChallengerWhite ? "White" : "Black"}>
-                        {isChallengerWhite ? 'W' : 'B'}
-                      </div>
-                      <span className={challengerPoint > defenderPoint ? 'text-accent font-bold' : 'opacity-80'}>
-                        {match.challengerEngine.name}
-                      </span>
-                    </div>
-
-                    <span className="opacity-10 font-mono text-[10px]">VS</span>
-
-                    {/* Defender Column */}
-                    <div className="flex items-center gap-3 min-w-[170px]">
-                      <div className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold border ${
-                        !isChallengerWhite ? 'bg-white text-black border-white' : 'bg-neutral-900 text-white border-white/10'
-                      }`} title={!isChallengerWhite ? "White" : "Black"}>
-                        {!isChallengerWhite ? 'W' : 'B'}
-                      </div>
-                      <span className={defenderPoint > challengerPoint ? 'text-accent font-bold' : 'opacity-80'}>
-                        {match.defenderEngine.name}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Normalized Score Column */}
-                  <div className="flex flex-col items-end gap-1">
-                     <div className="flex items-center gap-2">
-                        <span className={`font-mono text-xs font-bold ${challengerPoint > defenderPoint ? 'text-accent' : 'opacity-40'}`}>
-                          {challengerPoint}
-                        </span>
-                        <span className="opacity-10 text-[10px]">-</span>
-                        <span className={`font-mono text-xs font-bold ${defenderPoint > challengerPoint ? 'text-accent' : 'opacity-40'}`}>
-                          {defenderPoint}
-                        </span>
-                     </div>
-                     {game.termination && (
-                       <span className="technical-label text-[9px] opacity-30 lowercase italic">
-                         {game.termination}
-                       </span>
-                     )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-4">
+               <ReplayButton matchId={match.id} />
           </div>
         </div>
+      </div>
 
-        {/* Sidebar Meta */}
-        <div className="flex flex-col gap-12">
-          <section className="flex flex-col gap-8 border border-border-custom p-8 soft-shadow bg-white/[0.01]">
-             <h3 className="technical-label flex items-center gap-2">
-                <FileText size={12} /> Metadata
-             </h3>
-             <div className="flex flex-col gap-5 text-[11px] font-medium leading-relaxed">
-                <div className="flex justify-between border-b border-border-custom pb-3 border-dotted">
-                   <span className="opacity-40">UTC Logged</span>
-                   <span>{match.completedAt ? new Date(match.completedAt).toLocaleString() : "Pending"}</span>
-                </div>
-                <div className="flex justify-between border-b border-border-custom pb-3 border-dotted">
-                   <span className="opacity-40">Control</span>
-                   <span className="font-mono">40/60 Technical</span>
-                </div>
-                <div className="flex justify-between border-b border-border-custom pb-3 border-dotted">
-                   <span className="opacity-40">Environment</span>
-                   <span>Standard Linux</span>
-                </div>
-             </div>
+      {/* 2. Main Analytics View (Split Pane) */}
+      <div className="flex-1 min-h-0 flex container mx-auto max-w-7xl">
+        
+        {/* Left: Scrollable Game Feed */}
+        <div className="flex-1 flex flex-col min-h-0 border-r border-border-custom">
+            <div className="flex-none p-6 border-b border-border-custom bg-white/[0.01] flex items-center justify-between">
+               <h2 className="technical-label flex items-center gap-2">
+                 <Zap size={12} className="text-accent" /> Game ledger
+               </h2>
+               <span className="technical-label text-[10px] opacity-30 uppercase tracking-tighter">
+                 {match.games.length} / {match.gamesPlanned} plies recorded
+               </span>
+            </div>
 
-             <div className="flex flex-col gap-3">
-                <ReplayButton matchId={match.id} />
-             </div>
-          </section>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {match.games.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-20 opacity-20 text-center gap-4">
+                  <Clock size={32} />
+                  <p className="technical-label">Processing game transactions...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {match.games.map((game, idx) => {
+                    const isChallengerWhite = game.whiteEngineId === match.challengerEngineId;
+                    let challengerPoint = 0;
+                    let defenderPoint = 0;
+                    if (game.result === '1-0') {
+                      if (isChallengerWhite) challengerPoint = 1; else defenderPoint = 1;
+                    } else if (game.result === '0-1') {
+                      if (isChallengerWhite) defenderPoint = 1; else challengerPoint = 1;
+                    } else {
+                      challengerPoint = 0.5; defenderPoint = 0.5;
+                    }
 
-          <section className="p-8 border border-border-custom flex flex-col gap-4">
-             <ShieldCheck size={18} className="text-accent" />
-             <div className="flex flex-col gap-2">
-                <span className="technical-label">Verified Result</span>
-                <p className="text-[11px] leading-relaxed text-muted">
-                  Match outcomes are generated by a single-core isolated worker node. Standard FIDE chess rules apply.
-                </p>
-             </div>
-          </section>
+                    return (
+                      <div key={game.id} className="grid grid-cols-[80px_1fr_120px] items-center px-6 py-5 border-b border-border-custom hover:bg-white/[0.01] transition-colors group">
+                        <span className="technical-label text-[10px] opacity-30 font-mono">#{String(idx + 1).padStart(2, '0')}</span>
+                        
+                        <div className="flex items-center gap-8">
+                           <div className="flex items-center gap-3 min-w-[150px]">
+                              <div className={`w-3.5 h-3.5 rounded-sm border ${isChallengerWhite ? 'bg-white border-white' : 'bg-neutral-900 border-white/20'}`} />
+                              <span className={`text-[13px] tracking-tight ${challengerPoint > defenderPoint ? 'text-accent font-bold' : 'opacity-60'}`}>
+                                {match.challengerEngine.name}
+                              </span>
+                           </div>
+                           
+                           <span className="opacity-10 text-[9px] font-mono">vs</span>
+
+                           <div className="flex items-center gap-3 min-w-[150px]">
+                              <div className={`w-3.5 h-3.5 rounded-sm border ${!isChallengerWhite ? 'bg-white border-white' : 'bg-neutral-900 border-white/20'}`} />
+                              <span className={`text-[13px] tracking-tight ${defenderPoint > challengerPoint ? 'text-accent font-bold' : 'opacity-60'}`}>
+                                {match.defenderEngine.name}
+                              </span>
+                           </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-0.5">
+                           <div className="flex items-center gap-2 font-mono text-xs font-bold tabular-nums">
+                              <span className={challengerPoint > defenderPoint ? 'text-accent' : 'opacity-40'}>{challengerPoint}</span>
+                              <span className="opacity-10">-</span>
+                              <span className={defenderPoint > challengerPoint ? 'text-accent' : 'opacity-40'}>{defenderPoint}</span>
+                           </div>
+                           <span className="technical-label text-[8px] opacity-20 uppercase tracking-tighter truncate max-w-[100px]">{game.termination || 'Normal'}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+        </div>
+
+        {/* Right: Technical Stats Sidebar */}
+        <div className="w-[340px] flex-none flex flex-col min-h-0 bg-white/[0.01]">
+            <div className="flex-none p-6 border-b border-border-custom">
+               <h2 className="technical-label flex items-center gap-2">
+                 <Activity size={12} className="opacity-40" /> Environment Data
+               </h2>
+            </div>
+            
+            <div className="flex-1 p-6 flex flex-col gap-10">
+               <div className="flex flex-col gap-6">
+                  {[
+                    { label: "Completed At", icon: Calendar, val: match.completedAt ? new Date(match.completedAt).toLocaleString() : "Processing" },
+                    { label: "Architecture", icon: ShieldCheck, val: "single-core isolated" },
+                    { label: "Time Control", icon: Clock, val: "40 moves / 60 sec" }
+                  ].map((item, i) => (
+                    <div key={i} className="flex flex-col gap-2">
+                       <div className="flex items-center gap-2 technical-label text-[9px] opacity-40 uppercase tracking-widest">
+                          <item.icon size={10} /> {item.label}
+                       </div>
+                       <span className="text-[11px] font-bold font-mono text-foreground/80">{item.val}</span>
+                    </div>
+                  ))}
+               </div>
+
+               <div className="mt-auto p-6 bg-accent/5 border border-accent/20 rounded-xl flex flex-col gap-3">
+                  <div className="flex items-center gap-2 technical-label text-accent text-[10px] font-bold">
+                    <Trophy size={14} /> Result Verified
+                  </div>
+                  <p className="text-[10px] leading-relaxed opacity-60">
+                    This match was computed on a high-audit standalone worker. Ratings have been adjusted according to Bayesian Elo logic.
+                  </p>
+               </div>
+            </div>
+
+            <div className="flex-none p-6 border-t border-border-custom">
+               <div className="flex justify-between items-center text-[9px] technical-label opacity-20">
+                  <span>Match Hash</span>
+                  <span className="font-mono">{match.id.substring(match.id.length - 12)}</span>
+               </div>
+            </div>
         </div>
       </div>
     </div>
