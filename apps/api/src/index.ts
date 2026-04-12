@@ -453,9 +453,9 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
 
     const buffer = file.buffer;
     const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
-    const slug = slugify(name);
+    const { engineId } = req.body;
 
-    // Upsert owner
+    // 0. Resolve/Sync User
     await prisma.user.upsert({
       where: { id: ownerUserId },
       create: { 
@@ -473,10 +473,7 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       },
     });
 
-    // Check if this engine slug already exists (for upsert logic below)
-    const existingEngine = await prisma.engine.findUnique({ where: { slug } });
-
-    // 2. Plagiarism Check
+    // 0.1 Plagiarism Check
     const duplicateCode = await prisma.engineVersion.findFirst({
       where: {
         sha256,
@@ -490,17 +487,42 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       });
     }
 
-    // 3. Upsert Engine
-    const engine = await prisma.engine.upsert({
-      where: { slug },
-      create: {
-        name: name.trim(),
-        slug,
-        ownerUserId,
-        status: "active",
-      },
-      update: { updatedAt: new Date() },
-    });
+    // 1. Resolve Engine
+    let engine;
+    if (engineId) {
+      // UPGRADE FLOW
+      engine = await prisma.engine.findUnique({ where: { id: engineId } });
+      if (!engine) return res.status(404).json({ error: "Engine not found" });
+      if (engine.ownerUserId !== ownerUserId) {
+        return res.status(403).json({ error: "You do not have permission to update this engine" });
+      }
+      
+      // Update engine timestamp
+      await prisma.engine.update({
+        where: { id: engineId },
+        data: { updatedAt: new Date() }
+      });
+    } else {
+      // NEW ENGINE FLOW
+      const slug = slugify(name);
+      
+      // Check if this engine slug already exists
+      const existingEngine = await prisma.engine.findUnique({ where: { slug } });
+      if (existingEngine) {
+        return res.status(400).json({ 
+          error: "An engine with this name already exists. If you own it, please use the update flow." 
+        });
+      }
+
+      engine = await prisma.engine.create({
+        data: {
+          name: name.trim(),
+          slug,
+          ownerUserId,
+          status: "active",
+        },
+      });
+    }
 
     // 4. Create new Version
     const version = await prisma.engineVersion.create({

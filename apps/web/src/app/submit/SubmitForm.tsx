@@ -41,6 +41,10 @@ export function SubmitForm() {
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const [submissionType, setSubmissionType] = useState<"new" | "update">("new");
+  const [userEngines, setUserEngines] = useState<any[]>([]);
+  const [selectedEngineId, setSelectedEngineId] = useState("");
+
   const [validation, setValidation] = useState<ValidationState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -54,6 +58,16 @@ export function SubmitForm() {
     "Muse Spark",
     "Other"
   ];
+
+  // Fetch user's engines for update flow
+  useEffect(() => {
+    if (session?.user) {
+      const userId = (session.user as any).id;
+      ApiClient.getEnginesByOwner(userId)
+        .then(engines => setUserEngines(engines || []))
+        .catch(() => setUserEngines([]));
+    }
+  }, [session]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -142,6 +156,9 @@ export function SubmitForm() {
       formData.append("file", file);
       formData.append("name", engineName);
       formData.append("generationModel", finalModel);
+      if (submissionType === "update" && selectedEngineId) {
+        formData.append("engineId", selectedEngineId);
+      }
 
       const result = await submitEngine(formData);
 
@@ -383,6 +400,56 @@ export function SubmitForm() {
       <div className="grid lg:grid-cols-[1fr_300px] gap-20">
         <form onSubmit={handleSubmit} className="flex flex-col gap-12">
           <div className="flex flex-col gap-10">
+            {/* Submission Type Toggle */}
+            {userEngines.length > 0 && (
+              <div className="flex flex-col gap-4">
+                <label className="technical-label text-white/40">Submission Type</label>
+                <div className="grid grid-cols-2 border border-border-custom p-1 bg-white/[0.02]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubmissionType("new");
+                      setEngineName("");
+                      setSelectedEngineId("");
+                    }}
+                    className={`py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${submissionType === 'new' ? 'bg-foreground text-background' : 'hover:bg-white/5 opacity-40'}`}
+                  >
+                    New Engine
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubmissionType("update")}
+                    className={`py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${submissionType === 'update' ? 'bg-foreground text-background' : 'hover:bg-white/5 opacity-40'}`}
+                  >
+                    Update Existing
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Engine Selector (Update Mode) */}
+            {submissionType === "update" && (
+              <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
+                <label className="technical-label text-white/40">Select Agent to Update</label>
+                <select
+                  value={selectedEngineId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedEngineId(id);
+                    const engine = userEngines.find(eng => eng.id === id);
+                    if (engine) setEngineName(engine.name);
+                  }}
+                  required
+                  className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors appearance-none cursor-pointer text-white"
+                >
+                  <option value="" disabled className="bg-black">Choose an engine...</option>
+                  {userEngines.map((eng) => (
+                    <option key={eng.id} value={eng.id} className="bg-black">{eng.name} (Elo: {eng.currentRating})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="flex flex-col gap-4">
               <label className="technical-label text-white/40">Engine Designation</label>
               <input
@@ -391,9 +458,13 @@ export function SubmitForm() {
                 value={engineName}
                 onChange={(e) => setEngineName(e.target.value)}
                 required
+                disabled={submissionType === "update"}
                 maxLength={64}
-                className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors text-white"
+                className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
+              {submissionType === "update" && (
+                <p className="text-[10px] opacity-40 italic mt-1 font-medium">Designation is locked for updates to maintain the engine handle.</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-4">
