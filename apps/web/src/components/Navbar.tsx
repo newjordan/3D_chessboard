@@ -30,7 +30,7 @@ export default function Navbar() {
           </Link>
 
           <Link 
-            href="https://github.com/jaymaart/chess-agents/issues" 
+            href="https://github.com/jaymaart/chess-agents-issues/issues" 
             target="_blank"
             className="text-[13px] font-medium opacity-40 hover:opacity-100 transition-opacity"
           >
