@@ -13,15 +13,12 @@ export const Board3D: React.FC = () => {
           key={`${r}-${c}`} 
           args={[1, 0.1, 1]} 
           position={[c - 3.5, -0.05, r - 3.5]}
+          receiveShadow
         >
-          <meshPhysicalMaterial 
-            color={isBlack ? "#111111" : "#ffffff"}
-            transmission={0.8}
-            thickness={0.2}
-            roughness={0.1}
-            ior={1.45}
-            opacity={0.6}
-            transparent
+          <meshStandardMaterial 
+            color={isBlack ? "#222222" : "#e0e0e0"}
+            roughness={0.2}
+            metalness={0.1}
           />
         </Box>
       );
@@ -30,20 +27,15 @@ export const Board3D: React.FC = () => {
 
   return (
     <group>
-      {/* Base thickness for the whole board */}
-      <Box args={[8.5, 0.2, 8.5]} position={[0, -0.2, 0]}>
-        <meshPhysicalMaterial 
-          color="#333333"
-          transmission={1}
-          thickness={1}
-          roughness={0.01}
-          opacity={0.3}
-          transparent
+      {/* Outer Frame / Base */}
+      <Box args={[8.6, 0.25, 8.6]} position={[0, -0.15, 0]} receiveShadow>
+        <meshStandardMaterial 
+          color="#0a0a0a"
+          roughness={0.1}
+          metalness={0.5}
         />
       </Box>
       {squares}
-      
-      {/* Move Highlighters or Coordinates could be added here */}
     </group>
   );
 };
