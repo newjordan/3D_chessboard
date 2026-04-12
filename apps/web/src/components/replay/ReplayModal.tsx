@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { ReplayController } from './ReplayController';
-import { ApiClient } from '@/lib/apiClient';
+import { getMatchPgnAction } from "@/app/matches/[id]/actions";
 
 interface ReplayModalProps {
   matchId: string;
@@ -19,8 +19,14 @@ export const ReplayModal: React.FC<ReplayModalProps> = ({ matchId, isOpen, onClo
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      ApiClient.getMatchPgn(matchId)
-        .then(setPgn)
+      getMatchPgnAction(matchId)
+        .then(res => {
+          if (res.success && res.pgn) {
+            setPgn(res.pgn);
+          } else {
+            setError(res.error || "Failed to load match history.");
+          }
+        })
         .catch(err => {
           console.error(err);
           setError("Failed to load match history.");
