@@ -12,16 +12,18 @@ interface PieceProps {
 
 const GlassMaterial = ({ color }: { color: 'w' | 'b' }) => (
   <meshPhysicalMaterial
-    transmission={1}
+    transmission={0.9}
     thickness={0.5}
-    roughness={0.05}
-    ior={1.5}
-    clearcoat={1}
-    attenuationColor={color === 'w' ? '#ffffff' : '#444444'}
-    attenuationDistance={1}
+    roughness={0.1}
+    ior={1.4}
+    clearcoat={0.5}
+    attenuationColor={color === 'w' ? '#ffffff' : '#000000'}
+    attenuationDistance={0.5}
     color={color === 'w' ? '#ffffff' : '#222222'}
-    emissive={color === 'w' ? '#ffffff' : '#000000'}
-    emissiveIntensity={color === 'w' ? 0.05 : 0}
+    emissive={color === 'w' ? '#ffffff' : '#444444'}
+    emissiveIntensity={color === 'w' ? 0.1 : 0.05}
+    transparent
+    opacity={0.9}
   />
 );
 
