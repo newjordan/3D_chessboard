@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Chess, Square } from 'chess.js';
 import { Canvas } from '@react-three/fiber';
 import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Board3D } from './Board3D';
 import { Piece3D } from './Piece3D';
 import { Board2D } from './Board2D';
