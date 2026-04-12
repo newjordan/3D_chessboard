@@ -84,28 +84,44 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </div>
           
           <div className="flex flex-col">
-            {(match?.games || []).map((game: any, idx: number) => (
-                <div key={game.id} className="grid grid-cols-[80px_1fr_60px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors">
-                <span className="technical-label opacity-30">Game {idx + 1}</span>
-                <div className="flex items-center gap-4 text-sm font-medium">
-                  <span>{match.challengerEngine.name}</span>
-                  <span className="opacity-20 font-mono">VS</span>
-                  <span>{match.defenderEngine.name}</span>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                   <span className={`font-mono text-sm font-bold ${
-                     game.result === '1-0' ? 'text-accent' : game.result === '0-1' ? 'text-red-800' : 'opacity-40'
-                   }`}>
-                     {game.result}
-                   </span>
-                   {game.termination && (
-                     <span className="technical-label text-[9px] opacity-40 lowercase italic">
-                       {game.termination}
+            {(match?.games || []).map((game: any, idx: number) => {
+              const isChallengerWhite = game.whiteEngineId === match.challengerEngineId;
+              const whiteEngine = isChallengerWhite ? match.challengerEngine : match.defenderEngine;
+              const blackEngine = isChallengerWhite ? match.defenderEngine : match.challengerEngine;
+              
+              return (
+                <div key={game.id} className="grid grid-cols-[80px_1fr_100px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors">
+                  <span className="technical-label opacity-30">Game {idx + 1}</span>
+                  <div className="flex items-center gap-6 text-[13px] font-medium">
+                    <div className="flex items-center gap-3 min-w-[160px]">
+                      <div className="w-2 h-2 rounded-full bg-white border border-white/20" title="White" />
+                      <span className={game.result === '1-0' ? 'text-accent font-bold' : 'opacity-80'}>
+                        {whiteEngine.name}
+                      </span>
+                    </div>
+                    <span className="opacity-10 font-mono text-[10px]">VS</span>
+                    <div className="flex items-center gap-3 min-w-[160px]">
+                      <div className="w-2 h-2 rounded-full bg-neutral-800 border border-white/10" title="Black" />
+                      <span className={game.result === '0-1' ? 'text-accent font-bold' : 'opacity-80'}>
+                        {blackEngine.name}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                     <span className={`font-mono text-xs font-bold ${
+                       game.result === '1/2-1/2' ? 'opacity-40' : 'text-foreground'
+                     }`}>
+                       {game.result}
                      </span>
-                   )}
+                     {game.termination && (
+                       <span className="technical-label text-[9px] opacity-30 lowercase italic">
+                         {game.termination}
+                       </span>
+                     )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
