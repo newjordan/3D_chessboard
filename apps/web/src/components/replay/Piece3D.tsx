@@ -11,9 +11,13 @@ interface PieceProps {
 
 const RobustMaterial = ({ color }: { color: 'w' | 'b' }) => (
   <meshStandardMaterial
-    color={color === 'w' ? '#f0f0f0' : '#1a1a1a'}
-    roughness={0.1}
-    metalness={color === 'w' ? 0.3 : 0.6}
+    // Slightly lighter than pure black to prevent merging with background
+    color={color === 'w' ? '#ffffff' : '#111111'} 
+    roughness={0.2}
+    metalness={color === 'w' ? 0.3 : 0.8}
+    // Rim lighting / Glow effect for black pieces
+    emissive={color === 'b' ? '#222222' : '#000000'}
+    emissiveIntensity={color === 'b' ? 0.5 : 0}
   />
 );
 

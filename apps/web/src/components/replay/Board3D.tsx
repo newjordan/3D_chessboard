@@ -16,9 +16,12 @@ export const Board3D: React.FC = () => {
           receiveShadow
         >
           <meshStandardMaterial 
-            color={isBlack ? "#222222" : "#e0e0e0"}
-            roughness={0.2}
-            metalness={0.1}
+            color={isBlack ? "#111111" : "#d0d0d0"}
+            roughness={0.1}
+            metalness={0.2}
+            // Add a very subtle emissive glow to the board cells to help depth perception
+            emissive={isBlack ? "#1a1a1a" : "#444444"}
+            emissiveIntensity={0.2}
           />
         </Box>
       );
@@ -30,9 +33,9 @@ export const Board3D: React.FC = () => {
       {/* Outer Frame / Base */}
       <Box args={[8.6, 0.25, 8.6]} position={[0, -0.15, 0]} receiveShadow>
         <meshStandardMaterial 
-          color="#0a0a0a"
-          roughness={0.1}
-          metalness={0.5}
+          color="#050505"
+          roughness={0.05}
+          metalness={0.8}
         />
       </Box>
       {squares}
