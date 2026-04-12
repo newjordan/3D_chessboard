@@ -4,8 +4,17 @@ import { ChevronRight, ArrowLeft, History } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function MatchesPage() {
-  const matches = await ApiClient.getMatches().catch(() => []);
+export default async function MatchesPage({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ engine?: string }> 
+}) {
+  const { engine } = await searchParams;
+  const matches = await ApiClient.getMatches(engine).catch(() => []);
+  
+  const filteredEngine = engine && matches.length > 0 
+    ? (matches[0].challengerEngine.slug === engine ? matches[0].challengerEngine.name : matches[0].defenderEngine.name)
+    : (engine ? engine : null);
 
   return (
     <div className="container mx-auto px-6 py-16 max-w-5xl flex flex-col gap-12">
@@ -13,14 +22,25 @@ export default async function MatchesPage() {
         <Link href="/leaderboard" className="technical-label flex items-center gap-2 hover:text-accent transition-colors w-fit">
           <ArrowLeft size={12} /> Back to Ladder
         </Link>
-        <div className="flex items-center gap-4">
-          <div className="p-2 border border-border-custom bg-white/[0.02]">
-            <History size={20} className="opacity-40" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-2 border border-border-custom bg-white/[0.02]">
+              <History size={20} className="opacity-40" />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-4xl font-bold tracking-tight">
+                {filteredEngine ? `History: ${filteredEngine}` : "Global History"}
+              </h1>
+              <span className="technical-label opacity-40">
+                {filteredEngine ? `Filtered Match Ledger for ${filteredEngine}` : "V.03 / Recent Match Ledger"}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-4xl font-bold tracking-tight">Global History</h1>
-            <span className="technical-label opacity-40">V.03 / Recent Match Ledger</span>
-          </div>
+          {filteredEngine && (
+            <Link href="/matches" className="text-[10px] technical-label text-accent/60 hover:text-accent transition-colors flex items-center gap-1">
+              &times; Clear Filter
+            </Link>
+          )}
         </div>
       </div>
 

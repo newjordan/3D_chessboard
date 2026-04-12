@@ -81,10 +81,21 @@ app.get("/api/leaderboard", async (req, res) => {
   }
 });
 
-// 4. Get Recent Matches
+// 4. Get Recent Matches (with optional engine filtering)
 app.get("/api/matches", async (req, res) => {
   try {
+    const { engine: engineSlug } = req.query;
+    
+    const where: any = {};
+    if (engineSlug && typeof engineSlug === 'string') {
+      where.OR = [
+        { challengerEngine: { slug: engineSlug } },
+        { defenderEngine: { slug: engineSlug } }
+      ];
+    }
+
     const matches = await prisma.match.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {

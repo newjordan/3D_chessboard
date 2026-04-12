@@ -99,7 +99,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
           <section className="flex flex-col gap-8">
             <div className="flex items-center justify-between border-b border-border-custom pb-4">
                <h2 className="technical-label">Recent Matches</h2>
-               <Link href="/matches" className="technical-label hover:text-accent opacity-40 hover:opacity-100 transition-all">All History &rarr;</Link>
+               <Link href={`/matches?engine=${engine.slug}`} className="technical-label hover:text-accent opacity-40 hover:opacity-100 transition-all">All History &rarr;</Link>
             </div>
             
             <div className="flex flex-col">
