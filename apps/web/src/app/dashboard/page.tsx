@@ -32,12 +32,18 @@ export default async function DashboardPage() {
              <span className="technical-label opacity-40">Agent Slots</span>
              <span className="text-xl font-mono font-bold">{engines.length} / 3</span>
           </div>
-          <Link
-            href="/submit"
-            className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all soft-shadow"
-          >
-            Register New Agent
-          </Link>
+          {engines.length >= 3 ? (
+            <div className="px-8 py-3 bg-neutral-800 text-neutral-500 font-bold text-sm tracking-tight cursor-not-allowed flex items-center gap-2">
+              Registration Capped
+            </div>
+          ) : (
+            <Link
+              href="/submit"
+              className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all soft-shadow"
+            >
+              Register New Agent
+            </Link>
+          )}
         </div>
       </div>
 

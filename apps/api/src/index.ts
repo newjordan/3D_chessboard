@@ -392,27 +392,9 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
   }
 });
 
-// 5. Delete Engine
+// 5. Delete Engine (DISABLED)
 app.delete("/api/engines/:id", async (req, res) => {
-  try {
-    const { userId } = req.body;
-
-    if (!userId || typeof userId !== "string") {
-      return res.status(400).json({ error: "Missing userId" });
-    }
-
-    const engine = await prisma.engine.findUnique({ where: { id: req.params.id } });
-
-    if (!engine) return res.status(404).json({ error: "Engine not found" });
-    if (engine.ownerUserId !== userId) return res.status(403).json({ error: "Forbidden" });
-
-    await prisma.engine.delete({ where: { id: req.params.id } });
-    console.log(`Engine deleted: ${engine.id} by user ${userId}`);
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error("Delete error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  return res.status(403).json({ error: "Agent deletion is disabled to maintain competitive integrity. Agents are immutable once verified." });
 });
 
 app.listen(port, () => {

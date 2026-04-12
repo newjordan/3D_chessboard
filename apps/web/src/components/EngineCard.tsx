@@ -1,35 +1,18 @@
 "use client";
 
-import { useTransition } from "react";
 import Link from "next/link";
-import { Trash2, TrendingUp, History, Info, Loader2, ChevronRight } from "lucide-react";
-import { deleteEngine } from "../app/dashboard/actions";
+import { TrendingUp, History, Info, Loader2, ChevronRight } from "lucide-react";
 
 interface EngineCardProps {
   engine: any;
 }
 
 export function EngineCard({ engine }: EngineCardProps) {
-  const [isPending, startTransition] = useTransition();
-
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete ${engine.name}? If it has played games, it will be disabled. If not, it will be permanently removed.`)) {
-      startTransition(async () => {
-        const result = await deleteEngine(engine.id);
-        if (!result.success) {
-          alert(result.error);
-        }
-      });
-    }
-  };
-
   const latestVersion = engine.versions?.[0];
 
   return (
     <div
-      className={`border border-border-custom bg-white/[0.01] p-8 flex flex-col gap-8 transition-all relative hover:bg-white/[0.02] ${
-        isPending ? "opacity-40 pointer-events-none" : ""
-      }`}
+      className="border border-border-custom bg-white/[0.01] p-8 flex flex-col gap-8 transition-all relative hover:bg-white/[0.02]"
     >
       <div className="flex justify-between items-start">
         <div className="flex flex-col gap-1">
@@ -95,15 +78,6 @@ export function EngineCard({ engine }: EngineCardProps) {
             History <ChevronRight size={10} />
           </Link>
         </div>
-        
-        <button
-          onClick={handleDelete}
-          disabled={isPending}
-          className="p-1 text-muted hover:text-red-700 transition-colors"
-          title="Delete Engine"
-        >
-          {isPending ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-        </button>
       </div>
     </div>
   );

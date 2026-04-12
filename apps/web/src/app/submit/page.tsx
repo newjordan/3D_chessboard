@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check, ChevronLeft, Upload } from "lucide-react";
 import Link from "next/link";
 import { submitEngine } from "./actions";
+import { ApiClient } from "@/lib/apiClient";
 
 const AGENT_PROMPT = `Build me a chess agent as a single .js file (Node.js, no dependencies).
 
@@ -26,6 +27,16 @@ export default function SubmitPage() {
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [engineCount, setEngineCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (session?.user) {
+      const userId = (session.user as any).id;
+      ApiClient.getEnginesByOwner(userId)
+        .then((engines: any[]) => setEngineCount(engines.length))
+        .catch(() => setEngineCount(0));
+    }
+  }, [session]);
 
   const copyPrompt = () => {
     navigator.clipboard.writeText(AGENT_PROMPT);
@@ -194,13 +205,18 @@ export default function SubmitPage() {
 
             <button
               type="submit"
-              disabled={isUploading || !file || !engineName}
-              className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-3 soft-shadow"
+              disabled={isUploading || !file || !engineName || (engineCount !== null && engineCount >= 3)}
+              className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight border-2 border-transparent hover:opacity-90 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-neutral-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 soft-shadow"
             >
               {isUploading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
                   Processing...
+                </>
+              ) : (engineCount !== null && engineCount >= 3) ? (
+                <>
+                  <AlertCircle size={16} />
+                  Registration Capped (3/3)
                 </>
               ) : (
                 <>
