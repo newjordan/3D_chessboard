@@ -15,21 +15,21 @@ export default async function LeaderboardPage() {
   const engines = await ApiClient.getLeaderboard().catch(() => []);
 
   return (
-    <div className="container mx-auto px-6 py-16 max-w-5xl">
-      <div className="flex flex-col gap-16">
+    <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-5xl">
+      <div className="flex flex-col gap-10 sm:gap-16">
         {/* Header */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           <div className="technical-label">V.03 / Performance Proof</div>
-          <h1 className="text-5xl font-bold tracking-tight">Active Rankings</h1>
-          <p className="text-muted max-w-2xl leading-relaxed">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight">Active Rankings</h1>
+          <p className="text-muted max-w-2xl leading-relaxed text-sm sm:text-base">
             All positions are derived from automated match play. Rankings recalculate after every 10-minute cycle. Only passed agents are eligible.
           </p>
         </div>
 
-        {/* Prize Alert - Plain & Technical */}
-        <div className="border border-border-custom p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 soft-shadow bg-white/[0.01]">
+        {/* Prize Alert */}
+        <div className="border border-border-custom p-5 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 soft-shadow bg-white/[0.01]">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
               <Wallet size={18} className="text-accent" />
             </div>
             <div className="flex flex-col gap-2">
@@ -45,7 +45,7 @@ export default async function LeaderboardPage() {
                 <span className="font-mono text-sm font-bold">$150.00</span>
                 <span className="technical-label ml-1 block opacity-40">Total</span>
              </div>
-             <Link href="/submit" className="px-4 py-2 bg-foreground text-background font-bold text-xs uppercase tracking-tight">
+             <Link href="/submit" className="px-4 py-2 bg-foreground text-background font-bold text-xs uppercase tracking-tight whitespace-nowrap">
                 Claim a Slot
              </Link>
           </div>
@@ -53,7 +53,8 @@ export default async function LeaderboardPage() {
 
         {/* The Ledger / Table */}
         <div className="flex flex-col">
-          <div className="grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center pb-4 border-b border-border-custom technical-label opacity-40 px-4">
+          {/* Desktop Header - hidden on mobile */}
+          <div className="hidden md:grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center pb-4 border-b border-border-custom technical-label opacity-40 px-4">
             <span>Rank</span>
             <span>Agent</span>
             <span>Owner</span>
@@ -64,50 +65,86 @@ export default async function LeaderboardPage() {
 
           <div className="flex flex-col">
             {(engines || []).map((engine, i) => (
-              <div key={engine.id} className="grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-4">
-                <span className={`font-mono text-xs ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
-                  {i + 1 < 10 ? `0${i + 1}` : i + 1}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
-                    {engine.name}
+              <div key={engine.id}>
+                {/* Desktop Row */}
+                <div className="hidden md:grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-4">
+                  <span className={`font-mono text-xs ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
+                    {i + 1 < 10 ? `0${i + 1}` : i + 1}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
+                      {engine.name}
+                    </Link>
+                    {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
+                      <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-accent/10 border border-accent/20 rounded text-[8px] font-bold text-accent uppercase tracking-tighter">
+                        <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
+                        Live
+                      </div>
+                    )}
+                  </div>
+                  <Link 
+                    href={`/users/${engine.owner.username}`}
+                    className="flex items-center gap-2 pr-4 hover:opacity-100 transition-opacity group/owner"
+                  >
+                    {engine.owner.image ? (
+                      <img src={engine.owner.image} alt={engine.owner.username} className="w-4 h-4 rounded-full border border-white/5 group-hover/owner:border-accent/40 transition-colors" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full bg-white/5 border border-white/5 group-hover/owner:border-accent/40" />
+                    )}
+                    <span className="technical-label text-[10px] truncate lowercase opacity-60 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all">@{engine.owner.username}</span>
                   </Link>
-                  {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
-                    <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-accent/10 border border-accent/20 rounded text-[8px] font-bold text-accent uppercase tracking-tighter">
-                      <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
-                      Live
-                    </div>
-                  )}
+                  <span className="text-right font-mono text-sm font-bold">{engine.currentRating}</span>
+                  <div className="text-right font-mono text-[11px] flex gap-1 justify-end opacity-60">
+                     <span className="text-accent font-bold">{engine.wins}</span>
+                     <span>/</span>
+                     <span>{engine.draws}</span>
+                     <span>/</span>
+                     <span className="opacity-40">{engine.losses}</span>
+                  </div>
+                  <div className="flex justify-end pr-2">
+                     <Link href={`/engines/${engine.slug}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChevronRight size={14} className="text-muted" />
+                     </Link>
+                  </div>
                 </div>
+
+                {/* Mobile Card */}
                 <Link 
-                  href={`/users/${engine.owner.username}`}
-                  className="flex items-center gap-2 pr-4 hover:opacity-100 transition-opacity group/owner"
+                  href={`/engines/${engine.slug}`}
+                  className="md:hidden flex items-center gap-4 py-4 px-3 border-b border-border-custom hover:bg-white/[0.02] transition-colors active:bg-white/[0.04]"
                 >
-                  {engine.owner.image ? (
-                    <img src={engine.owner.image} alt={engine.owner.username} className="w-4 h-4 rounded-full border border-white/5 group-hover/owner:border-accent/40 transition-colors" />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full bg-white/5 border border-white/5 group-hover/owner:border-accent/40" />
-                  )}
-                  <span className="technical-label text-[10px] truncate lowercase opacity-60 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all">@{engine.owner.username}</span>
+                  <span className={`font-mono text-xs w-8 shrink-0 ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
+                    {i + 1 < 10 ? `0${i + 1}` : i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-sm truncate">{engine.name}</span>
+                      {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-accent/10 border border-accent/20 rounded text-[7px] font-bold text-accent uppercase tracking-tighter shrink-0">
+                          <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
+                          Live
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] technical-label opacity-50">
+                      <span className="lowercase">@{engine.owner.username}</span>
+                      <span className="opacity-30">•</span>
+                      <span className="font-mono">
+                        <span className="text-accent">{engine.wins}W</span> {engine.draws}D <span className="opacity-40">{engine.losses}L</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="font-mono text-sm font-bold">{engine.currentRating}</span>
+                    <span className="text-[9px] technical-label opacity-30">ELO</span>
+                  </div>
+                  <ChevronRight size={14} className="text-muted opacity-30 shrink-0" />
                 </Link>
-                <span className="text-right font-mono text-sm font-bold">{engine.currentRating}</span>
-                <div className="text-right font-mono text-[11px] flex gap-1 justify-end opacity-60">
-                   <span className="text-accent font-bold">{engine.wins}</span>
-                   <span>/</span>
-                   <span>{engine.draws}</span>
-                   <span>/</span>
-                   <span className="opacity-40">{engine.losses}</span>
-                </div>
-                <div className="flex justify-end pr-2">
-                   <Link href={`/engines/${engine.slug}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ChevronRight size={14} className="text-muted" />
-                   </Link>
-                </div>
               </div>
             ))}
 
             {engines.length === 0 && (
-              <div className="py-32 text-center flex flex-col items-center gap-4 border-b border-border-custom">
+              <div className="py-24 sm:py-32 text-center flex flex-col items-center gap-4 border-b border-border-custom">
                 <Trophy size={48} className="opacity-10" />
                 <p className="technical-label">No data synced for current cycle.</p>
               </div>

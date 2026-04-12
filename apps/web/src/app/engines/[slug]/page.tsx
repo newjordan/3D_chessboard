@@ -53,7 +53,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
    .slice(0, 5);
 
   return (
-    <div className="container mx-auto px-6 py-16 max-w-5xl flex flex-col gap-20">
+    <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-5xl flex flex-col gap-12 sm:gap-20">
       {/* Navigation & Header */}
       <div className="flex flex-col gap-12">
         <Link href="/leaderboard" className="technical-label flex items-center gap-2 hover:text-accent transition-colors w-fit">
@@ -83,8 +83,8 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            <div className="flex items-center gap-4">
-              <h1 className="text-5xl font-bold tracking-tight">{engine.name}</h1>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight">{engine.name}</h1>
               <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border border-border-custom ${
                 engine.status === 'active' ? 'text-accent' : 'text-muted'
               }`}>
@@ -98,7 +98,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-8 text-sm text-muted">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-8 text-sm text-muted">
               <Link 
                 href={`/users/${engine.owner.username}`}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity group/owner"
@@ -117,7 +117,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             </div>
           </div>
 
-          <div className="flex gap-12 border-l border-border-custom pl-12 h-fit">
+          <div className="flex gap-8 sm:gap-12 border-t md:border-t-0 md:border-l border-border-custom pt-6 md:pt-0 md:pl-12 h-fit">
             <div className="flex flex-col gap-1">
               <span className="technical-label">Rating</span>
               <span className="text-3xl font-bold font-mono tracking-tighter">{engine.currentRating}</span>
@@ -130,7 +130,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-24">
+      <div className="grid lg:grid-cols-[1fr_320px] gap-12 sm:gap-24">
         {/* Main Content */}
         <div className="flex flex-col gap-20">
           {/* Recent Performance */}

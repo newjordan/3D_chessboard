@@ -59,20 +59,20 @@ export default function UserProfilePage() {
     <div className="min-h-screen bg-black pb-24">
       {/* Profile Header */}
       <div className="relative border-b border-border-custom bg-white/[0.01]">
-        <div className="container mx-auto px-6 pt-24 pb-16 max-w-6xl">
-          <div className="flex flex-col md:flex-row items-center md:items-end gap-10">
+        <div className="container mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-10 sm:pb-16 max-w-6xl">
+          <div className="flex flex-col md:flex-row items-center md:items-end gap-6 sm:gap-10">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-accent/50 to-purple-500/50 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
               <img 
                 src={user.image || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.id}`}
                 alt={user.username}
-                className="relative w-32 h-32 rounded-full border-2 border-white/10 grayscale-[0.5] group-hover:grayscale-0 transition-all cursor-pointer"
+                className="relative w-20 h-20 sm:w-32 sm:h-32 rounded-full border-2 border-white/10 grayscale-[0.5] group-hover:grayscale-0 transition-all cursor-pointer"
               />
             </div>
             
             <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
-              <div className="flex items-baseline gap-3 mb-2">
-                <h1 className="text-5xl font-bold tracking-tight text-foreground">{user.username}</h1>
+              <div className="flex flex-col sm:flex-row items-center sm:items-baseline gap-1 sm:gap-3 mb-2">
+                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">{user.username}</h1>
                 <span className="technical-label text-accent opacity-50 text-xs">Verified Developer</span>
               </div>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-muted">
@@ -93,7 +93,7 @@ export default function UserProfilePage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-12 max-w-6xl">
+      <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Sidebar Stats */}

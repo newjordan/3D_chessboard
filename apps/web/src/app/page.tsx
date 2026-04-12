@@ -14,16 +14,16 @@ export default async function Home() {
   const topEngines = (engines || []).slice(0, 5);
 
   return (
-    <div className="flex flex-col gap-32 pb-32">
+    <div className="flex flex-col gap-16 sm:gap-32 pb-16 sm:pb-32">
       {/* Hero Section with Side-by-Side Ledger */}
-      <section className="container mx-auto px-6 pt-20 max-w-5xl">
-        <div className="grid lg:grid-cols-[1fr_380px] gap-24 items-start">
+      <section className="container mx-auto px-4 sm:px-6 pt-12 sm:pt-20 max-w-5xl">
+        <div className="grid lg:grid-cols-[1fr_380px] gap-12 lg:gap-24 items-start">
           {/* Left: Content */}
           <div className="flex flex-col gap-10">
             <div className="technical-label">V.03 / Open Competition</div>
             
             <div className="flex flex-col gap-6">
-              <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-[1.05]">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.05]">
                 Make an engine with AI.<br />
                 Enter it. See how it ranks.
               </h1>
@@ -32,7 +32,7 @@ export default async function Home() {
               </p>
             </div>
 
-            <div className="flex items-center gap-6 pt-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pt-4">
               <Link 
                 href="/submit" 
                 className="px-6 py-3 bg-foreground text-background font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
@@ -57,7 +57,7 @@ export default async function Home() {
 
             <div className="flex flex-col border-b border-border-custom bg-white/[0.01]">
               {topEngines.map((engine, i) => (
-                <div key={engine.id} className="grid grid-cols-[30px_1fr_60px] items-center py-4 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-2 last:border-0">
+                <div key={engine.id} className="grid grid-cols-[30px_1fr_50px] items-center py-4 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-2 last:border-0">
                   <span className="font-mono text-[9px] opacity-20">0{i + 1}</span>
                     <div className="flex items-center gap-2">
                       <Link href={`/engines/${engine.slug}`} className="font-bold text-[13px] group-hover:underline truncate pr-2">
@@ -95,14 +95,14 @@ export default async function Home() {
       </section>
 
       {/* Live Showcase Section */}
-      <section className="container mx-auto px-6 max-w-5xl -mt-10 mb-20">
+      <section className="container mx-auto px-4 sm:px-6 max-w-5xl -mt-4 sm:-mt-10 mb-10 sm:mb-20">
         <ShowcaseReplay />
       </section>
 
       {/* Participation Guide */}
-      <section className="bg-white/[0.02] border-y border-border-custom py-24">
-        <div className="container mx-auto px-6 max-w-5xl">
-          <div className="grid md:grid-cols-3 gap-16">
+      <section className="bg-white/[0.02] border-y border-border-custom py-12 sm:py-24">
+        <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
+          <div className="grid md:grid-cols-3 gap-10 sm:gap-16">
             {[
               {
                 icon: <Terminal size={18} />,
@@ -145,8 +145,8 @@ export default async function Home() {
       </section>
 
       {/* Constraints / Rules */}
-      <section className="container mx-auto px-6 max-w-5xl">
-        <div className="grid md:grid-cols-2 gap-20">
+      <section className="container mx-auto px-4 sm:px-6 max-w-5xl">
+        <div className="grid md:grid-cols-2 gap-10 sm:gap-20">
           <div className="flex flex-col gap-8">
             <span className="technical-label">Legality & Terms</span>
             <h2 className="text-3xl font-bold tracking-tight">The Constraints.</h2>
@@ -167,9 +167,9 @@ export default async function Home() {
       </section>
 
       {/* Final Call */}
-      <section className="container mx-auto px-6 max-w-5xl pt-20">
-        <div className="border border-border-custom p-16 flex flex-col items-center text-center gap-8 soft-shadow bg-white/[0.01]">
-          <h2 className="text-4xl font-bold tracking-tight">Prove your prompt.</h2>
+      <section className="container mx-auto px-4 sm:px-6 max-w-5xl pt-10 sm:pt-20">
+        <div className="border border-border-custom p-8 sm:p-16 flex flex-col items-center text-center gap-6 sm:gap-8 soft-shadow bg-white/[0.01]">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Prove your prompt.</h2>
           <p className="text-muted max-w-md">Join 150+ other agents in the live arena. Validation takes less than 10 seconds.</p>
           <Link 
             href="/submit" 

@@ -52,32 +52,34 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const draws = match.games.filter((g: any) => g.result === '1/2-1/2').length;
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.16))] flex flex-col bg-background overflow-hidden overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
       
       {/* 1. Large "Arena" Scorecard Header */}
       <div className="flex-none border-b border-border-custom bg-white/[0.01] relative">
-        <div className="container mx-auto max-w-7xl px-6 py-10">
-          <div className="flex flex-col gap-8">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
+          <div className="flex flex-col gap-6 sm:gap-8">
             
             {/* Top Bar: Nav & Meta */}
             <div className="flex items-center justify-between">
               <Link href="/leaderboard" className="technical-label flex items-center gap-2 hover:text-accent transition-colors">
                 <ArrowLeft size={12} /> Back to Ladder
               </Link>
-              <div className="flex items-center gap-6 technical-label text-[10px] opacity-40 uppercase tracking-widest">
+              <div className="hidden sm:flex items-center gap-6 technical-label text-[10px] opacity-40 uppercase tracking-widest">
                 <span className="flex items-center gap-1.5"><Calendar size={10} /> {match.completedAt ? new Date(match.completedAt).toLocaleDateString() : 'Live'}</span>
                 <span className="flex items-center gap-1.5"><Clock size={10} /> Blitz · 40/60s</span>
                 <span className="flex items-center gap-1.5 text-accent font-bold italic"><Activity size={10} /> {match.status}</span>
               </div>
+              {/* Mobile-only status badge */}
+              <span className="sm:hidden technical-label text-[10px] text-accent font-bold italic uppercase">{match.status}</span>
             </div>
 
             {/* Main Score Block */}
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-12 lg:gap-24">
+            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_1fr] items-center gap-6 sm:gap-12 lg:gap-24">
               
               {/* Challenger */}
-              <div className="flex flex-col items-end gap-4">
-                <div className="flex flex-col items-end">
-                  <Link href={`/engines/${match.challengerEngine.slug}`} className="text-4xl lg:text-5xl font-bold tracking-tighter hover:text-accent transition-colors text-right">
+              <div className="flex flex-col items-center sm:items-end gap-2 sm:gap-4 w-full">
+                <div className="flex flex-col items-center sm:items-end">
+                  <Link href={`/engines/${match.challengerEngine.slug}`} className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tighter hover:text-accent transition-colors text-center sm:text-right">
                     {match.challengerEngine.name}
                   </Link>
                   <Link 
@@ -90,24 +92,24 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                     )}
                   </Link>
                 </div>
-                <div className="flex gap-2 font-mono text-[10px] opacity-40">
+                <div className="hidden sm:flex gap-2 font-mono text-[10px] opacity-40">
                   <span>ELO {match.challengerEngine.currentRating}</span>
                 </div>
               </div>
 
               {/* The Score */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-10 px-10 py-6 bg-white/[0.03] border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
+              <div className="flex flex-col items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-6 sm:gap-10 px-6 sm:px-10 py-4 sm:py-6 bg-white/[0.03] border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
-                   <span className={`text-6xl lg:text-7xl font-mono font-black tracking-tighter ${Number(match.challengerScore) > Number(match.defenderScore) ? 'text-accent' : 'opacity-80'}`}>
+                   <span className={`text-5xl sm:text-6xl lg:text-7xl font-mono font-black tracking-tighter ${Number(match.challengerScore) > Number(match.defenderScore) ? 'text-accent' : 'opacity-80'}`}>
                      {match.challengerScore?.toString()}
                    </span>
                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-px h-6 bg-white/10" />
-                      <Swords size={20} className="opacity-20 translate-y-0.5" />
-                      <div className="w-px h-6 bg-white/10" />
+                      <div className="w-px h-4 sm:h-6 bg-white/10" />
+                      <Swords size={16} className="opacity-20 translate-y-0.5 sm:w-5 sm:h-5" />
+                      <div className="w-px h-4 sm:h-6 bg-white/10" />
                    </div>
-                   <span className={`text-6xl lg:text-7xl font-mono font-black tracking-tighter ${Number(match.defenderScore) > Number(match.challengerScore) ? 'text-accent' : 'opacity-80'}`}>
+                   <span className={`text-5xl sm:text-6xl lg:text-7xl font-mono font-black tracking-tighter ${Number(match.defenderScore) > Number(match.challengerScore) ? 'text-accent' : 'opacity-80'}`}>
                      {match.defenderScore?.toString()}
                    </span>
                 </div>
@@ -119,9 +121,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               </div>
 
               {/* Defender */}
-              <div className="flex flex-col items-start gap-4">
-                <div className="flex flex-col items-start">
-                  <Link href={`/engines/${match.defenderEngine.slug}`} className="text-4xl lg:text-5xl font-bold tracking-tighter hover:text-accent transition-colors">
+              <div className="flex flex-col items-center sm:items-start gap-2 sm:gap-4 w-full">
+                <div className="flex flex-col items-center sm:items-start">
+                  <Link href={`/engines/${match.defenderEngine.slug}`} className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tighter hover:text-accent transition-colors text-center sm:text-left">
                     {match.defenderEngine.name}
                   </Link>
                   <Link 
@@ -134,7 +136,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                     <span className="technical-label text-xs opacity-40 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all font-bold">@{match.defenderEngine.owner.username}</span>
                   </Link>
                 </div>
-                <div className="flex gap-2 font-mono text-[10px] opacity-40">
+                <div className="hidden sm:flex gap-2 font-mono text-[10px] opacity-40">
                   <span>ELO {match.defenderEngine.currentRating}</span>
                 </div>
               </div>
@@ -146,14 +148,14 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
       {/* 2. Scrollable Game Feed Area */}
       <div className="flex-1 flex flex-col min-h-0 bg-black/20">
-        <div className="container mx-auto max-w-7xl px-6 flex flex-col h-full">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 flex flex-col h-full">
           
-          <div className="flex items-center justify-between py-6 border-b border-border-custom">
+          <div className="flex items-center justify-between py-4 sm:py-6 border-b border-border-custom">
             <h2 className="technical-label flex items-center gap-2 opacity-60">
               <Zap size={14} className="text-accent" /> Match Transactions ({match.games.length})
             </h2>
-            <div className="flex items-center gap-8">
-               <div className="flex items-center gap-6 technical-label text-[10px] opacity-20 mr-6">
+            <div className="flex items-center gap-4 sm:gap-8">
+               <div className="hidden md:flex items-center gap-6 technical-label text-[10px] opacity-20 mr-6">
                   <span className="flex items-center gap-2"><ShieldCheck size={12} /> SHA-256 Validated</span>
                   <span className="flex items-center gap-2"><FileText size={12} /> PGN Logs Ready</span>
                </div>
@@ -163,7 +165,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pb-20">
             {match.games.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center p-20 opacity-20 text-center gap-4">
+              <div className="h-full flex flex-col items-center justify-center p-10 sm:p-20 opacity-20 text-center gap-4">
                 <Clock size={48} className="animate-pulse" />
                 <p className="technical-label text-sm">Synchronizing game plies...</p>
               </div>
@@ -182,29 +184,29 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   }
 
                   return (
-                    <div key={game.id} className="grid grid-cols-[80px_1fr_120px] items-center py-6 border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors group px-4">
-                      <span className="font-mono text-xs opacity-20">#{String(idx + 1).padStart(2, '0')}</span>
+                    <div key={game.id} className="flex items-center justify-between py-4 sm:py-6 border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors group px-2 sm:px-4 gap-3">
+                      <span className="font-mono text-xs opacity-20 shrink-0 w-8">#{String(idx + 1).padStart(2, '0')}</span>
                       
-                      <div className="flex items-center gap-12">
-                         <div className="flex items-center gap-4 min-w-[200px]">
-                            <div className={`w-3 h-3 rounded-full ${isChallengerWhite ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'bg-neutral-800'}`} />
-                            <span className={`text-sm font-medium tracking-tight ${challengerPoint > defenderPoint ? 'text-accent' : 'opacity-60'}`}>
+                      <div className="flex-1 flex items-center gap-3 sm:gap-6 min-w-0">
+                         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                            <div className={`w-3 h-3 rounded-full shrink-0 ${isChallengerWhite ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'bg-neutral-800'}`} />
+                            <span className={`text-xs sm:text-sm font-medium tracking-tight truncate ${challengerPoint > defenderPoint ? 'text-accent' : 'opacity-60'}`}>
                               {match.challengerEngine.name}
                             </span>
                          </div>
                          
-                         <span className="opacity-10 technical-label text-[9px] italic">vs</span>
+                         <span className="opacity-10 technical-label text-[9px] italic shrink-0">vs</span>
 
-                         <div className="flex items-center gap-4 min-w-[200px]">
-                            <div className={`w-3 h-3 rounded-full ${!isChallengerWhite ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'bg-neutral-800'}`} />
-                            <span className={`text-sm font-medium tracking-tight ${defenderPoint > challengerPoint ? 'text-accent' : 'opacity-60'}`}>
+                         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                            <div className={`w-3 h-3 rounded-full shrink-0 ${!isChallengerWhite ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'bg-neutral-800'}`} />
+                            <span className={`text-xs sm:text-sm font-medium tracking-tight truncate ${defenderPoint > challengerPoint ? 'text-accent' : 'opacity-60'}`}>
                               {match.defenderEngine.name}
                             </span>
                          </div>
                       </div>
 
-                      <div className="flex flex-col items-end">
-                         <div className="flex items-center gap-3 font-mono text-sm font-black tabular-nums">
+                      <div className="flex flex-col items-end shrink-0">
+                         <div className="flex items-center gap-2 sm:gap-3 font-mono text-sm font-black tabular-nums">
                             <span className={challengerPoint > defenderPoint ? 'text-accent' : (challengerPoint < defenderPoint ? 'text-red-900' : 'opacity-40')}>{challengerPoint}</span>
                             <span className="opacity-10">-</span>
                             <span className={defenderPoint > challengerPoint ? 'text-accent' : (defenderPoint < challengerPoint ? 'text-red-900' : 'opacity-40')}>{defenderPoint}</span>
