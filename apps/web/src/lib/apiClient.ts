@@ -1,7 +1,7 @@
 const isServer = typeof window === "undefined";
 const BASE_URL_RAW = isServer
   ? (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001")
-  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
+  : (process.env.NEXT_PUBLIC_API_URL || ""); // Use relative path in browser if no URL provided
 
 // Standardize: No trailing slash
 const API_BASE_URL = BASE_URL_RAW.replace(/\/+$/, "");

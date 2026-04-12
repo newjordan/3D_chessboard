@@ -1,28 +1,34 @@
 import { prisma, MatchType, MatchStatus, JobType, JobStatus, EngineStatus } from "../db";
 
 /**
- * Maximum number of matches any engine pair is allowed to play.
- * This should equal the initial placement match count (1 match = 2 games).
+ * Rematch cooldown in milliseconds (12 hours).
+ * Engines can play each other again after this period.
  */
-const MAX_MATCHES_PER_PAIR = 1;
+const REMATCH_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
 /**
  * How many matches to schedule per poll cycle to avoid flooding the queue.
  */
 const BATCH_SIZE = 10;
 
-interface EnginePair {
-  engineAId: string;
-  engineBId: string;
+/**
+ * Maximum Elo distance for a "competitive" match.
+ * If no engines are within this range, it will broaden the search.
+ */
+const ELO_PROXIMITY_WINDOW = 400;
+
+interface EnginePairCandidate {
+  engineA: any;
+  engineB: any;
+  score: number; // Higher is better for priority
 }
 
 /**
- * Actively polls for unplayed engine pairings and schedules rating matches.
- * Ensures no pair plays more than MAX_MATCHES_PER_PAIR times.
- *
- * Input: none (reads from DB)
- * Output: number of matches scheduled
- * Side effects: creates Match and Job rows in the database
+ * Actively schedules competitive rating matches.
+ * Prioritizes:
+ * 1. New engines (< 20 games) to get them ranked quickly.
+ * 2. Engines close in Elo rating for meaningful progression.
+ * 3. Enforces a cooldown to prevent redundant matches.
  */
 export async function scheduleMatches(): Promise<number> {
   const activeEngines = await prisma.engine.findMany({
@@ -42,22 +48,9 @@ export async function scheduleMatches(): Promise<number> {
     },
   });
 
-  if (activeEngines.length < 2) {
-    return 0;
-  }
+  if (activeEngines.length < 2) return 0;
 
-  // Build all unique pairs
-  const pairs: EnginePair[] = [];
-  for (let i = 0; i < activeEngines.length; i++) {
-    for (let j = i + 1; j < activeEngines.length; j++) {
-      pairs.push({
-        engineAId: activeEngines[i].id,
-        engineBId: activeEngines[j].id,
-      });
-    }
-  }
-
-  // Check how many pending/running match_run jobs exist to avoid overloading
+  // Check how many pending/processing jobs exist
   const activeJobs = await prisma.job.count({
     where: {
       jobType: JobType.match_run,
@@ -66,58 +59,70 @@ export async function scheduleMatches(): Promise<number> {
   });
 
   const availableSlots = Math.max(0, BATCH_SIZE - activeJobs);
-  if (availableSlots === 0) {
-    return 0;
+  if (availableSlots === 0) return 0;
+
+  const candidates: EnginePairCandidate[] = [];
+
+  // 1. Generate all technically valid pairs
+  for (let i = 0; i < activeEngines.length; i++) {
+    for (let j = i + 1; j < activeEngines.length; j++) {
+      const a = activeEngines[i];
+      const b = activeEngines[j];
+
+      // Anti-win-trading
+      if (a.ownerUserId === b.ownerUserId) continue;
+
+      const eloDiff = Math.abs(a.currentRating - b.currentRating);
+      
+      // Calculate a "Priority Score"
+      // - Bonus for new engines (under 20 games played)
+      // - Penalty for Elo distance
+      let score = 1000 - eloDiff;
+      if (a.gamesPlayed < 20) score += 500;
+      if (b.gamesPlayed < 20) score += 500;
+
+      candidates.push({ engineA: a, engineB: b, score });
+    }
   }
 
-  let scheduled = 0;
+  // 2. Sort by score descending
+  candidates.sort((a, b) => b.score - a.score);
 
-  for (const pair of pairs) {
+  let scheduled = 0;
+  const processedEngines = new Set<string>();
+
+  for (const candidate of candidates) {
     if (scheduled >= availableSlots) break;
 
-    // Count existing matches between this pair (in either direction)
-    const existingCount = await prisma.match.count({
+    // Avoid scheduling the same engine twice in the same burst for better spread
+    if (processedEngines.has(candidate.engineA.id) || processedEngines.has(candidate.engineB.id)) {
+      continue;
+    }
+
+    // 3. Cooldown Verification (Expensive DB check, only done for top candidates)
+    const lastMatch = await prisma.match.findFirst({
       where: {
         OR: [
-          {
-            challengerEngineId: pair.engineAId,
-            defenderEngineId: pair.engineBId,
-          },
-          {
-            challengerEngineId: pair.engineBId,
-            defenderEngineId: pair.engineAId,
-          },
+          { challengerEngineId: candidate.engineA.id, defenderEngineId: candidate.engineB.id },
+          { challengerEngineId: candidate.engineB.id, defenderEngineId: candidate.engineA.id },
         ],
         status: { not: MatchStatus.canceled },
       },
+      orderBy: { createdAt: "desc" },
     });
 
-    if (existingCount >= MAX_MATCHES_PER_PAIR) {
+    if (lastMatch && lastMatch.createdAt.getTime() > Date.now() - REMATCH_COOLDOWN_MS) {
       continue;
     }
 
-    // Get latest passed version for each engine
-    const engineA = activeEngines.find((e) => e.id === pair.engineAId);
-    const engineB = activeEngines.find((e) => e.id === pair.engineBId);
-
-    if (!engineA?.versions[0] || !engineB?.versions[0]) {
-      console.log(`[Scheduler] Skipping pair ${engineA?.name} vs ${engineB?.name} - missing passed version`);
-      continue;
-    }
-
-    // Anti-win-trading check
-    if (engineA.ownerUserId === engineB.ownerUserId) {
-      continue;
-    }
-
-    // Create match + job in a single transaction
+    // 4. Schedule the Match
     await prisma.$transaction(async (tx) => {
       const match = await tx.match.create({
         data: {
-          challengerEngineId: pair.engineAId,
-          defenderEngineId: pair.engineBId,
-          challengerVersionId: engineA.versions[0].id,
-          defenderVersionId: engineB.versions[0].id,
+          challengerEngineId: candidate.engineA.id,
+          defenderEngineId: candidate.engineB.id,
+          challengerVersionId: candidate.engineA.versions[0].id,
+          defenderVersionId: candidate.engineB.versions[0].id,
           matchType: MatchType.rating,
           gamesPlanned: 2,
           timeControl: "40/60",
@@ -133,11 +138,11 @@ export async function scheduleMatches(): Promise<number> {
         },
       });
 
-      console.log(
-        `[Scheduler] Queued rating match: ${engineA.name} vs ${engineB.name} (${match.id})`
-      );
+      console.log(`[Scheduler] Queued competitive match: ${candidate.engineA.name} (${candidate.engineA.currentRating}) vs ${candidate.engineB.name} (${candidate.engineB.currentRating})`);
     });
 
+    processedEngines.add(candidate.engineA.id);
+    processedEngines.add(candidate.engineB.id);
     scheduled++;
   }
 
