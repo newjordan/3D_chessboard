@@ -55,9 +55,9 @@ export async function analyzeStatic(
     const patterns = FORBIDDEN_PATTERNS[language] || [];
 
     for (const pattern of patterns) {
-      // Use word boundaries to avoid false positives on legitimate variable names
-      // e.g. "chess_process" should be allowed, but "process" should not.
-      const regex = new RegExp(`\\b${pattern}\\b`, "g");
+      // Escape special regex characters in the pattern (e.g. dots)
+      const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`\\b${escapedPattern}\\b`, "g");
       if (regex.test(content)) {
         return {
           isValid: false,

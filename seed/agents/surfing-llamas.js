@@ -536,7 +536,7 @@ function recordKiller(killerTable, ply, uci) {
 }
 
 // Capture-only quiescence search. Resolves tactical sequences at leaf
-// nodes so the static eval isn't applied in the middle of an exchange.
+// nodes so the static evaluation isn't applied in the middle of an exchange.
 function quiescence(pos, alpha, beta, ply, deadline) {
   if (Date.now() >= deadline) return ABORT;
   const standPat = evaluate(pos) * (pos.side === 'w' ? 1 : -1);
