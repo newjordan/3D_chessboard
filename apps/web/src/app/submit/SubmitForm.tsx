@@ -175,6 +175,7 @@ export function SubmitForm() {
   };
 
   const handleReupload = () => {
+    // Preserve all state (engineName, model, ids) except for the file itself
     setFile(null);
     setErrorMsg("");
     if (pollRef.current) clearInterval(pollRef.current);
@@ -359,9 +360,9 @@ export function SubmitForm() {
             <>
               <button
                 onClick={handleReupload}
-                className="flex-1 py-4 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-4 bg-transparent border border-red-500/30 text-red-100 font-bold text-[11px] tracking-widest uppercase hover:bg-red-500/10 transition-all flex items-center justify-center gap-2 group"
               >
-                <RefreshCw size={14} /> Re-upload Code for "{engineName}"
+                Modify Code & Re-upload <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button
                 onClick={handleNewSubmission}
