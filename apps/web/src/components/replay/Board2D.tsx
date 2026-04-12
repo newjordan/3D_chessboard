@@ -59,8 +59,7 @@ export const Board2D: React.FC<Board2DProps> = ({ board, lastMove }) => {
                 <AnimatePresence mode="popLayout">
                   {square && (
                     <motion.div
-                      key={`${square.type}-${square.color}`}
-                      layoutId={`${square.type}-${square.color}`}
+                      key={`${square.type}-${square.color}-${squareId}`}
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0.8, opacity: 0 }}
