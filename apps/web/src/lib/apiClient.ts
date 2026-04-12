@@ -120,6 +120,28 @@ export class ApiClient {
     });
   }
 
+  static async getAdminMatches() {
+    return this.proxyRequest<any[]>('/api/admin/proxy/matches');
+  }
+
+  static async updateMatchStatus(matchId: string, status: string) {
+    return this.proxyRequest<any>(`/api/admin/proxy/matches/${matchId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  static async retryMatch(matchId: string) {
+    return this.proxyRequest<any>(`/api/admin/proxy/matches/${matchId}/retry`, {
+      method: "POST",
+    });
+  }
+
+  static async getAdvancedStats() {
+    return this.proxyRequest<any>('/api/admin/proxy/stats/advanced');
+  }
+
   // Proxy requests go to the Next.js server (same origin), not the Express API
   private static async proxyRequest<T>(path: string, options?: RequestInit): Promise<T> {
     const res = await fetch(path, {

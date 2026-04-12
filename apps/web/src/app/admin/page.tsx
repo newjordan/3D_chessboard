@@ -13,7 +13,7 @@ import {
 
 const ADMIN_ID = "45865838";
 
-type Tab = 'overview' | 'users' | 'engines' | 'jobs';
+type Tab = 'overview' | 'users' | 'engines' | 'jobs' | 'matches' | 'analytics';
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -22,6 +22,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [engines, setEngines] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [advancedStats, setAdvancedStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -32,16 +34,20 @@ export default function AdminPage() {
     if (!isAdmin) return;
     setLoading(true);
     try {
-      const [statsData, usersData, enginesData, jobsData] = await Promise.all([
+      const [statsData, usersData, enginesData, jobsData, matchesData, advData] = await Promise.all([
         ApiClient.getAdminStats().catch(() => null),
         ApiClient.getAdminUsers().catch(() => []),
         ApiClient.getAdminEngines().catch(() => []),
         ApiClient.getAdminJobs().catch(() => []),
+        ApiClient.getAdminMatches().catch(() => []),
+        ApiClient.getAdvancedStats().catch(() => null),
       ]);
       setStats(statsData);
       setUsers(usersData || []);
       setEngines(enginesData || []);
       setJobs(jobsData || []);
+      setMatches(matchesData || []);
+      setAdvancedStats(advData);
     } catch (e) {
       console.error("Admin fetch error:", e);
     } finally {
@@ -110,11 +116,37 @@ export default function AdminPage() {
     }
   };
 
+  const handleMatchStatus = async (matchId: string, status: string) => {
+    setActionLoading(matchId);
+    try {
+      await ApiClient.updateMatchStatus(matchId, status);
+      await fetchData();
+    } catch (e) {
+      console.error("Match status update failed:", e);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRetryMatch = async (matchId: string) => {
+    setActionLoading(matchId);
+    try {
+      await ApiClient.retryMatch(matchId);
+      await fetchData();
+    } catch (e) {
+      console.error("Match retry failed:", e);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <BarChart3 size={14} /> },
     { id: 'users', label: 'Users', icon: <Users size={14} /> },
     { id: 'engines', label: 'Engines', icon: <Cpu size={14} /> },
+    { id: 'matches', label: 'Matches', icon: <Swords size={14} /> },
     { id: 'jobs', label: 'Jobs', icon: <Wrench size={14} /> },
+    { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={14} /> },
   ];
 
   return (
@@ -183,6 +215,17 @@ export default function AdminPage() {
                 onRetry={handleRetryJob} 
                 actionLoading={actionLoading} 
               />
+            )}
+            {activeTab === 'matches' && (
+              <MatchesTab 
+                matches={matches} 
+                onStatusChange={handleMatchStatus} 
+                onRetry={handleRetryMatch} 
+                actionLoading={actionLoading} 
+              />
+            )}
+            {activeTab === 'analytics' && (
+              <AnalyticsTab stats={advancedStats} />
             )}
           </>
         )}
@@ -525,6 +568,172 @@ function JobsTab({ jobs, onRetry, actionLoading }: {
         {jobs.length === 0 && (
           <div className="py-16 text-center text-sm text-muted opacity-40">No jobs recorded.</div>
         )}
+      </div>
+    </div>
+  );
+}
+// ============================================================
+// TAB: Matches
+// ============================================================
+function MatchesTab({ matches, onStatusChange, onRetry, actionLoading }: { 
+  matches: any[]; 
+  onStatusChange: (id: string, status: string) => void;
+  onRetry: (id: string) => void;
+  actionLoading: string | null;
+}) {
+  const statusOptions = ['queued', 'running', 'completed', 'failed', 'canceled'];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold flex items-center gap-3"><Swords size={18} className="text-orange-400" /> Match Pipeline</h2>
+        <span className="technical-label opacity-40">{matches.length} recent</span>
+      </div>
+
+      <div className="bg-white/[0.02] border border-border-custom rounded-xl overflow-hidden">
+        {/* Desktop Header */}
+        <div className="hidden sm:grid grid-cols-[1fr_120px_100px_180px] gap-4 px-6 py-3 border-b border-border-custom technical-label text-[10px] opacity-40 uppercase">
+          <span>Match Description</span>
+          <span>Status</span>
+          <span>Games</span>
+          <span className="text-right">Actions</span>
+        </div>
+
+        {matches.map(match => (
+          <div key={match.id} className="grid grid-cols-1 sm:grid-cols-[1fr_120px_100px_180px] gap-3 sm:gap-4 px-4 sm:px-6 py-4 border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors items-center">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Link href={`/matches/${match.id}`} className="text-sm font-bold truncate hover:text-accent transition-colors">
+                  {match.challengerEngine?.name} vs {match.defenderEngine?.name}
+                </Link>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] technical-label opacity-30">
+                <span className="uppercase tracking-tighter">{match.matchType}</span>
+                <span>•</span>
+                <span>ID: {match.id.substring(0, 8)}</span>
+                <span>•</span>
+                <span>{new Date(match.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+
+            <div>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                match.status === 'completed' ? 'text-accent border-accent/20 bg-accent/5' :
+                match.status === 'running' ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/5' :
+                match.status === 'failed' ? 'text-red-500 border-red-500/20 bg-red-500/5' :
+                match.status === 'canceled' ? 'text-white/20 border-white/10' :
+                'text-cyan-400 border-cyan-500/20'
+              }`}>{match.status}</span>
+            </div>
+
+            <div className="font-mono text-xs opacity-60">
+              {match.gamesCompleted} / {match.gamesPlanned}
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <select
+                value={match.status}
+                onChange={(e) => onStatusChange(match.id, e.target.value)}
+                disabled={actionLoading === match.id}
+                className="bg-white/5 border border-white/10 text-[10px] px-2 py-1 rounded-md text-white/60 appearance-none cursor-pointer hover:bg-white/10 transition-colors"
+                title="Force status"
+              >
+                {statusOptions.map(o => <option key={o} value={o} className="bg-neutral-900">{o}</option>)}
+              </select>
+              
+              <button
+                onClick={() => onRetry(match.id)}
+                disabled={actionLoading === match.id || match.status === 'running'}
+                className="p-1.5 text-white/30 hover:text-accent hover:bg-accent/10 rounded-md transition-all disabled:opacity-0"
+                title="Restart match"
+              >
+                <RefreshCw size={12} className={actionLoading === match.id ? 'animate-spin' : ''} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TAB: Analytics
+// ============================================================
+function AnalyticsTab({ stats }: { stats: any }) {
+  if (!stats) return <div className="text-muted text-sm">Loading advanced metrics...</div>;
+
+  const { eloDistribution, matchSummary } = stats;
+  
+  // Format elo distribution for chart
+  const buckets = Object.keys(eloDistribution)
+    .map(Number)
+    .sort((a, b) => a - b);
+  const maxCount = Math.max(...Object.values(eloDistribution) as number[]);
+
+  return (
+    <div className="flex flex-col gap-10">
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* ELO Distribution Chart */}
+        <div className="lg:col-span-2 bg-white/[0.02] border border-border-custom rounded-2xl p-8 flex flex-col gap-8">
+          <div>
+            <h3 className="text-lg font-bold mb-1">ELO Skill Distribution</h3>
+            <p className="text-xs text-muted">Population density across the rating spectrum.</p>
+          </div>
+          
+          <div className="flex items-end gap-2 h-64 border-b border-l border-white/5 pb-4 pl-4 relative">
+            {/* Grid Lines */}
+            <div className="absolute left-0 right-0 top-0 bottom-4 flex flex-col justify-between pointer-events-none opacity-5">
+              {[0, 1, 2, 3].map(i => <div key={i} className="border-t border-white w-full" />)}
+            </div>
+
+            {buckets.map(bucket => {
+              const count = eloDistribution[bucket];
+              const height = (count / maxCount) * 100;
+              return (
+                <div key={bucket} className="flex-1 flex flex-col items-center gap-3 group relative">
+                  <div className="absolute -top-8 px-2 py-1 bg-white/10 rounded text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                    {count} agents
+                  </div>
+                  <div 
+                    className="w-full bg-accent/20 rounded-t-lg group-hover:bg-accent/40 transition-all border-x border-t border-accent/30 min-h-[4px]"
+                    style={{ height: `${Math.max(height, 5)}%` }}
+                  />
+                  <div className="text-[10px] font-mono opacity-30 transform -rotate-45 sm:rotate-0 tracking-tighter">
+                    {bucket}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Global Match Health */}
+        <div className="bg-white/[0.02] border border-border-custom rounded-2xl p-8 flex flex-col gap-6">
+          <h3 className="text-lg font-bold">Queue Health</h3>
+          <div className="flex flex-col gap-4">
+            {matchSummary.map((s: any) => {
+              const colors: Record<string, string> = {
+                completed: 'bg-accent',
+                failed: 'bg-red-500',
+                running: 'bg-yellow-400',
+                queued: 'bg-cyan-400',
+                canceled: 'bg-white/20'
+              };
+              return (
+                <div key={s.status} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="capitalize opacity-60">{s.status}</span>
+                    <span className="font-mono font-bold">{s._count}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className={`h-full ${colors[s.status] || 'bg-white/10'}`} style={{ width: `${(s._count / (matchSummary.reduce((acc: number, curr: any) => acc + curr._count, 0) || 1)) * 100}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

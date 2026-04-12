@@ -26,6 +26,7 @@ model User {
   createdAt     DateTime  @default(now())
   engines       Engine[]
   submissions   Submission[]
+  payouts       Payout[]
 
   // NextAuth
   accounts      Account[]
@@ -192,6 +193,7 @@ model Match {
   winnerEngine        Engine?     @relation("WinnerEngine", fields: [winnerEngineId], references: [id])
   games               Game[]
   ratings             Rating[]
+  payouts             Payout[]
 }
 
 model Game {
@@ -254,4 +256,19 @@ model Job {
   updatedAt   DateTime  @updatedAt
 
   @@index([status, runAt])
+}
+
+model Payout {
+  id        String   @id @default(uuid())
+  userId    String
+  matchId   String?
+  amount    Decimal  @db.Decimal(10, 2)
+  type      String   // 'WIN', 'DRAW', 'BONUS', 'REFUND'
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match     Match?   @relation(fields: [matchId], references: [id])
+
+  @@index([userId])
+  @@index([matchId])
 }

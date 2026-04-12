@@ -78,3 +78,36 @@ export async function DELETE(req: NextRequest) {
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
+
+// Proxy POST requests (match retries)
+export async function POST(req: NextRequest) {
+  const adminId = await requireAdmin();
+  if (!adminId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const url = new URL(req.url);
+  const subPath = url.pathname.replace("/api/admin/proxy", "");
+  const targetUrl = `${API_BASE}/api/admin${subPath}`;
+  
+  // Read body as text and forward (if present)
+  let body = undefined;
+  try {
+    const text = await req.text();
+    if (text) body = text;
+  } catch (e) {
+    // ignore
+  }
+
+  const res = await fetch(targetUrl, {
+    method: "POST",
+    headers: { 
+      "x-admin-secret": ADMIN_SECRET,
+      "Content-Type": "application/json",
+    },
+    body,
+  });
+
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
