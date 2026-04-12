@@ -494,8 +494,13 @@ app.delete("/api/engines/:id", async (req, res) => {
 
     if (!userId) return res.status(401).json({ error: "Authentication required" });
 
-    const engine = await prisma.engine.findUnique({
-      where: { id },
+    const engine = await prisma.engine.findFirst({
+      where: {
+        OR: [
+          { id },
+          { slug: id }
+        ]
+      },
       include: {
         versions: {
           take: 1,
@@ -521,8 +526,8 @@ app.delete("/api/engines/:id", async (req, res) => {
     const matchCount = await prisma.match.count({
       where: {
         OR: [
-          { challengerEngineId: id },
-          { defenderEngineId: id }
+          { challengerEngineId: engine.id },
+          { defenderEngineId: engine.id }
         ]
       }
     });
@@ -531,7 +536,7 @@ app.delete("/api/engines/:id", async (req, res) => {
       return res.status(400).json({ error: "Cannot delete agent because it has existing match history in the ladder. Agents with history should be disabled instead." });
     }
 
-    await prisma.engine.delete({ where: { id } });
+    await prisma.engine.delete({ where: { id: engine.id } });
 
     res.json({ success: true, message: "Agent decommissioned successfully." });
   } catch (error) {

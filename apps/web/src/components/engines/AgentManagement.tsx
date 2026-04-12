@@ -17,16 +17,20 @@ export function AgentManagement({ engineId, userId }: AgentManagementProps) {
 
   const handleDelete = async () => {
     setIsDeleting(true);
+    console.log(`[AgentManagement] Attempting deletion for engine ${engineId} by user ${userId}`);
+    
     try {
       const resp = await ApiClient.deleteEngine(engineId, userId);
+      console.log(`[AgentManagement] Deletion response:`, resp);
       
       if (resp.success) {
         router.push('/leaderboard');
         router.refresh();
       } else {
-        alert(`Deletion failed: Unexpected response from server`);
+        alert(`Deletion failed: ${resp.message || 'Unexpected response from server'}`);
       }
     } catch (e: any) {
+      console.error(`[AgentManagement] Deletion error:`, e);
       alert(`Deletion failed: ${e.message || 'Network error'}`);
     } finally {
       setIsDeleting(false);
