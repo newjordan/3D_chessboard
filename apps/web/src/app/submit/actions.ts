@@ -19,6 +19,7 @@ export async function submitEngine(formData: FormData) {
     formData.append("ownerUsername", username);
     formData.append("ownerEmail", email);
     formData.append("ownerName", session.user?.name || "");
+    formData.append("ownerImage", session.user?.image || "");
 
     const result = await ApiClient.submitEngine(formData);
     

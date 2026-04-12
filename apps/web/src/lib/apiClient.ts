@@ -28,8 +28,10 @@ export class ApiClient {
     return res.json();
   }
 
-  static async getLeaderboard() {
-    return this.request<any[]>("/api/leaderboard");
+  static async getLeaderboard(page: number = 1, limit: number = 25) {
+    return this.request<{ engines: any[]; total: number; page: number; limit: number }>(
+      `/api/leaderboard?page=${page}&limit=${limit}`
+    );
   }
 
   static async getMatches(engine?: string) {

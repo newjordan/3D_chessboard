@@ -7,11 +7,8 @@ import { ShowcaseReplay } from "@/components/landing/ShowcaseReplay";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [engines] = await Promise.all([
-     ApiClient.getLeaderboard().catch(() => []),
-  ]);
-
-  const topEngines = (engines || []).slice(0, 5);
+  const leaderboardData = await ApiClient.getLeaderboard(1, 5).catch(() => ({ engines: [], total: 0, page: 1, limit: 5 }));
+  const topEngines = leaderboardData.engines || [];
 
   return (
     <div className="flex flex-col gap-16 sm:gap-32 pb-16 sm:pb-32">
@@ -67,7 +64,7 @@ export default async function Home() {
                         <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" title="In active match" />
                       )}
                     </div>
-                    <span className="technical-label text-[9px] lowercase opacity-40 pr-2 truncate">@{engine.owner.username}</span>
+                    <span className="technical-label text-[9px] lowercase opacity-40 pr-2 truncate">@{engine.owner.username || engine.owner.id.substring(0, 8)}</span>
                   <div className="text-right">
                     <span className="font-mono text-sm font-bold tracking-tight">{engine.currentRating}</span>
                   </div>

@@ -1,6 +1,6 @@
 import { ApiClient } from "@/lib/apiClient";
 import Link from "next/link";
-import { ChevronRight, Trophy, Wallet } from "lucide-react";
+import { ChevronRight, ChevronLeft, Trophy, Wallet } from "lucide-react";
 import { Countdown } from "@/components/Countdown";
 import { Metadata } from "next";
 
@@ -11,8 +11,20 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function LeaderboardPage() {
-  const engines = await ApiClient.getLeaderboard().catch(() => []);
+const PAGE_SIZE = 25;
+
+export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const params = await searchParams;
+  const currentPage = Math.max(1, parseInt(params.page || "1"));
+  const { engines, total, page, limit } = await ApiClient.getLeaderboard(currentPage, PAGE_SIZE).catch(() => ({
+    engines: [],
+    total: 0,
+    page: 1,
+    limit: PAGE_SIZE,
+  }));
+
+  const totalPages = Math.ceil(total / limit);
+  const offset = (page - 1) * limit;
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-5xl">
@@ -51,6 +63,12 @@ export default async function LeaderboardPage() {
           </div>
         </div>
 
+        {/* Stats bar */}
+        <div className="flex items-center justify-between text-[10px] technical-label opacity-40 px-1">
+          <span>{total} agents registered</span>
+          <span>Page {page} of {totalPages}</span>
+        </div>
+
         {/* The Ledger / Table */}
         <div className="flex flex-col">
           {/* Desktop Header - hidden on mobile */}
@@ -64,12 +82,14 @@ export default async function LeaderboardPage() {
           </div>
 
           <div className="flex flex-col">
-            {(engines || []).map((engine, i) => (
+            {(engines || []).map((engine: any, i: number) => {
+              const rank = offset + i + 1;
+              return (
               <div key={engine.id}>
                 {/* Desktop Row */}
                 <div className="hidden md:grid grid-cols-[60px_1fr_120px_120px_120px_40px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors group px-4">
-                  <span className={`font-mono text-xs ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
-                    {i + 1 < 10 ? `0${i + 1}` : i + 1}
+                  <span className={`font-mono text-xs ${rank <= 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
+                    {rank < 10 ? `0${rank}` : rank}
                   </span>
                   <div className="flex items-center gap-2">
                     <Link href={`/engines/${engine.slug}`} className="font-bold text-sm group-hover:underline">
@@ -83,7 +103,7 @@ export default async function LeaderboardPage() {
                     )}
                   </div>
                   <Link 
-                    href={`/users/${engine.owner.username}`}
+                    href={`/users/${engine.owner.username || engine.owner.id}`}
                     className="flex items-center gap-2 pr-4 hover:opacity-100 transition-opacity group/owner"
                   >
                     {engine.owner.image ? (
@@ -91,7 +111,7 @@ export default async function LeaderboardPage() {
                     ) : (
                       <div className="w-4 h-4 rounded-full bg-white/5 border border-white/5 group-hover/owner:border-accent/40" />
                     )}
-                    <span className="technical-label text-[10px] truncate lowercase opacity-60 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all">@{engine.owner.username}</span>
+                    <span className="technical-label text-[10px] truncate lowercase opacity-60 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all">@{engine.owner.username || engine.owner.id.substring(0, 8)}</span>
                   </Link>
                   <span className="text-right font-mono text-sm font-bold">{engine.currentRating}</span>
                   <div className="text-right font-mono text-[11px] flex gap-1 justify-end opacity-60">
@@ -113,8 +133,8 @@ export default async function LeaderboardPage() {
                   href={`/engines/${engine.slug}`}
                   className="md:hidden flex items-center gap-4 py-4 px-3 border-b border-border-custom hover:bg-white/[0.02] transition-colors active:bg-white/[0.04]"
                 >
-                  <span className={`font-mono text-xs w-8 shrink-0 ${i < 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
-                    {i + 1 < 10 ? `0${i + 1}` : i + 1}
+                  <span className={`font-mono text-xs w-8 shrink-0 ${rank <= 3 ? 'text-accent font-bold' : 'opacity-30'}`}>
+                    {rank < 10 ? `0${rank}` : rank}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -127,7 +147,7 @@ export default async function LeaderboardPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-[10px] technical-label opacity-50">
-                      <span className="lowercase">@{engine.owner.username}</span>
+                      <span className="lowercase">@{engine.owner.username || engine.owner.id.substring(0, 8)}</span>
                       <span className="opacity-30">•</span>
                       <span className="font-mono">
                         <span className="text-accent">{engine.wins}W</span> {engine.draws}D <span className="opacity-40">{engine.losses}L</span>
@@ -141,7 +161,8 @@ export default async function LeaderboardPage() {
                   <ChevronRight size={14} className="text-muted opacity-30 shrink-0" />
                 </Link>
               </div>
-            ))}
+              );
+            })}
 
             {engines.length === 0 && (
               <div className="py-24 sm:py-32 text-center flex flex-col items-center gap-4 border-b border-border-custom">
@@ -150,6 +171,57 @@ export default async function LeaderboardPage() {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-8 mt-4 border-t border-border-custom">
+              <div className="flex items-center gap-2">
+                {page > 1 ? (
+                  <Link
+                    href={`/leaderboard?page=${page - 1}`}
+                    className="flex items-center gap-1.5 px-4 py-2 border border-border-custom text-xs font-bold uppercase tracking-tight hover:bg-white/[0.04] transition-colors"
+                  >
+                    <ChevronLeft size={12} /> Previous
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1.5 px-4 py-2 border border-border-custom text-xs font-bold uppercase tracking-tight opacity-20 cursor-not-allowed">
+                    <ChevronLeft size={12} /> Previous
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <Link
+                    key={p}
+                    href={`/leaderboard?page=${p}`}
+                    className={`w-8 h-8 flex items-center justify-center font-mono text-xs border transition-colors ${
+                      p === page
+                        ? 'border-accent text-accent font-bold bg-accent/5'
+                        : 'border-border-custom opacity-40 hover:opacity-100 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    {p}
+                  </Link>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {page < totalPages ? (
+                  <Link
+                    href={`/leaderboard?page=${page + 1}`}
+                    className="flex items-center gap-1.5 px-4 py-2 border border-border-custom text-xs font-bold uppercase tracking-tight hover:bg-white/[0.04] transition-colors"
+                  >
+                    Next <ChevronRight size={12} />
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1.5 px-4 py-2 border border-border-custom text-xs font-bold uppercase tracking-tight opacity-20 cursor-not-allowed">
+                    Next <ChevronRight size={12} />
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

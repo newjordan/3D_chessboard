@@ -202,23 +202,33 @@ app.get("/api/matches", async (req, res) => {
   }
 });
 
-// 3. Get All Active Engines (Leaderboard)
+// 3. Get All Active Engines (Leaderboard) — Paginated
 app.get("/api/leaderboard", async (req, res) => {
   try {
-    const engines = await prisma.engine.findMany({
-      where: { status: "active" },
-      orderBy: { currentRating: "desc" },
-      include: {
-        owner: { select: { username: true, image: true } },
-        _count: {
-          select: {
-            matchesChallenged: { where: { status: "running" } },
-            matchesDefended: { where: { status: "running" } },
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
+    const skip = (page - 1) * limit;
+
+    const [engines, total] = await Promise.all([
+      prisma.engine.findMany({
+        where: { status: "active" },
+        orderBy: { currentRating: "desc" },
+        skip,
+        take: limit,
+        include: {
+          owner: { select: { id: true, username: true, image: true } },
+          _count: {
+            select: {
+              matchesChallenged: { where: { status: "running" } },
+              matchesDefended: { where: { status: "running" } },
+            },
           },
         },
-      },
-    });
-    res.json(engines);
+      }),
+      prisma.engine.count({ where: { status: "active" } }),
+    ]);
+
+    res.json({ engines, total, page, limit });
   } catch (error) {
     console.error("Leaderboard error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -366,7 +376,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 // 7. Submit Engine
 app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req, res) => {
   try {
-    const { name, ownerUserId, generationModel } = req.body;
+    const { name, ownerUserId, ownerUsername, ownerName, ownerEmail, ownerImage, generationModel } = req.body;
     const file = req.file;
 
     if (!file || !name || !ownerUserId) {
@@ -391,24 +401,23 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
     // Upsert owner
     await prisma.user.upsert({
       where: { id: ownerUserId },
-      create: { id: ownerUserId },
-      update: {},
+      create: { 
+        id: ownerUserId,
+        username: ownerUsername || null,
+        name: ownerName || null,
+        email: ownerEmail || null,
+        image: ownerImage || null,
+      },
+      update: {
+        username: ownerUsername || undefined,
+        name: ownerName || undefined,
+        email: ownerEmail || undefined,
+        image: ownerImage || undefined,
+      },
     });
 
-    // 1. Quota Check: Limit 3 engines per user
+    // Check if this engine slug already exists (for upsert logic below)
     const existingEngine = await prisma.engine.findUnique({ where: { slug } });
-    
-    if (!existingEngine) {
-      const engineCount = await prisma.engine.count({
-        where: { ownerUserId }
-      });
-
-      if (engineCount >= 3) {
-        return res.status(403).json({ 
-          error: "Engine limit reached. You can only have 3 agents. Please delete one to submit a new bot." 
-        });
-      }
-    }
 
     // 2. Plagiarism Check
     const duplicateCode = await prisma.engineVersion.findFirst({

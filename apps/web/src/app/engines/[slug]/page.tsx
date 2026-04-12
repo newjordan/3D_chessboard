@@ -100,7 +100,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             
             <div className="flex flex-wrap items-center gap-4 sm:gap-8 text-sm text-muted">
               <Link 
-                href={`/users/${engine.owner.username}`}
+                href={`/users/${engine.owner.username || engine.owner.id}`}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity group/owner"
               >
                 {engine.owner.image ? (
@@ -108,7 +108,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                 ) : (
                   <User size={14} className="opacity-40 group-hover/owner:text-accent" />
                 )}
-                <span>By <span className="text-foreground font-bold group-hover/owner:text-accent transition-colors">@{engine.owner.username}</span></span>
+                <span>By <span className="text-foreground font-bold group-hover/owner:text-accent transition-colors">@{engine.owner.username || engine.owner.id.substring(0, 8)}</span></span>
               </Link>
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="opacity-40" />
