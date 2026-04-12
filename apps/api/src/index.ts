@@ -233,60 +233,6 @@ app.get("/api/leaderboard", async (req, res) => {
   }
 });
 
-// 4. Get Engine by Slug
-app.get("/api/engines/:slug", async (req, res) => {
-  try {
-    const engine = await prisma.engine.findUnique({
-      where: { slug: req.params.slug },
-      include: {
-        owner: { select: { username: true, image: true, id: true } },
-        versions: { orderBy: { submittedAt: "desc" } },
-        _count: { select: { matchesChallenged: true, matchesDefended: true } }
-      }
-    });
-
-    if (!engine) return res.status(404).json({ error: "Engine not found" });
-    res.json(engine);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 5. Get Engines by Owner
-app.get("/api/engines/by-owner/:userId", async (req, res) => {
-  try {
-    const engines = await prisma.engine.findMany({
-      where: { ownerUserId: req.params.userId },
-      include: {
-        versions: { orderBy: { submittedAt: "desc" }, take: 1 }
-      }
-    });
-    res.json(engines);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 6. Get Match Details
-app.get("/api/matches/:id", async (req, res) => {
-  try {
-    const match = await prisma.match.findUnique({
-      where: { id: req.params.id },
-      include: {
-        challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
-        defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
-        challengerVersion: true,
-        defenderVersion: true,
-      }
-    });
-
-    if (!match) return res.status(404).json({ error: "Match not found" });
-    res.json(match);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 
 // 4. Get Match PGN
 app.get("/api/matches/:id/pgn", async (req, res) => {
@@ -819,7 +765,7 @@ app.get("/api/admin/stats/advanced", async (req, res) => {
 
     // Create buckets of 100 ELO (800, 900, 1000, ...)
     const buckets: Record<number, number> = {};
-    engines.forEach((e: any) => {
+    engines.forEach(e => {
       const bucket = Math.floor(e.currentRating / 100) * 100;
       buckets[bucket] = (buckets[bucket] || 0) + 1;
     });

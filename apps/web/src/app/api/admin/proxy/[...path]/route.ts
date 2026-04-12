@@ -30,15 +30,6 @@ export async function GET(req: NextRequest) {
     headers: { "x-admin-secret": ADMIN_SECRET },
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    try {
-      return NextResponse.json(JSON.parse(text), { status: res.status });
-    } catch {
-      return NextResponse.json({ error: text || "Backend error" }, { status: res.status });
-    }
-  }
-
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
@@ -64,15 +55,6 @@ export async function PATCH(req: NextRequest) {
     body,
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    try {
-      return NextResponse.json(JSON.parse(text), { status: res.status });
-    } catch {
-      return NextResponse.json({ error: text || "Backend error" }, { status: res.status });
-    }
-  }
-
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
@@ -92,15 +74,6 @@ export async function DELETE(req: NextRequest) {
     method: "DELETE",
     headers: { "x-admin-secret": ADMIN_SECRET },
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    try {
-      return NextResponse.json(JSON.parse(text), { status: res.status });
-    } catch {
-      return NextResponse.json({ error: text || "Backend error" }, { status: res.status });
-    }
-  }
 
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
@@ -134,15 +107,6 @@ export async function POST(req: NextRequest) {
     },
     body,
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    try {
-      return NextResponse.json(JSON.parse(text), { status: res.status });
-    } catch {
-      return NextResponse.json({ error: text || "Backend error" }, { status: res.status });
-    }
-  }
 
   const data = await res.json();
   return NextResponse.json(data, { status: res.status });
