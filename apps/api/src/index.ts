@@ -151,7 +151,42 @@ app.get("/api/matches", async (req, res) => {
   }
 });
 
-// 4. Get Match Details
+// 4. Get Match PGN
+app.get("/api/matches/:id/pgn", async (req, res) => {
+  try {
+    const match = await prisma.match.findUnique({
+      where: { id: req.params.id },
+      select: { pgnStorageKey: true }
+    });
+
+    if (!match || !match.pgnStorageKey) {
+      return res.status(404).json({ error: "PGN not found for this match" });
+    }
+
+    try {
+      const response = await s3Client.send(new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: match.pgnStorageKey,
+      })) as any;
+
+      const Body = response.Body;
+      if (!Body) throw new Error("Empty response from R2");
+
+      const pgnText = await (Body as any).transformToString();
+      res.type("text/plain").send(pgnText);
+    } catch (s3Error: any) {
+      if (s3Error.name === "NoSuchKey") {
+        return res.status(404).json({ error: "PGN file not found in storage" });
+      }
+      throw s3Error;
+    }
+  } catch (error: any) {
+    console.error("PGN fetch error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 5. Get Match Details
 app.get("/api/matches/:id", async (req, res) => {
   try {
     const match = await prisma.match.findUnique({
@@ -170,34 +205,7 @@ app.get("/api/matches/:id", async (req, res) => {
   }
 });
 
-// 4b. Get Match PGN
-app.get("/api/matches/:id/pgn", async (req, res) => {
-  try {
-    const match = await prisma.match.findUnique({
-      where: { id: req.params.id },
-      select: { pgnStorageKey: true }
-    });
-
-    if (!match || !match.pgnStorageKey) {
-      return res.status(404).json({ error: "PGN not found for this match" });
-    }
-
-    const response = await s3Client.send(new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: match.pgnStorageKey,
-    })) as any;
-
-    const Body = response.Body;
-
-    if (!Body) throw new Error("Empty response from R2");
-
-    const pgnText = await (Body as any).transformToString();
-    res.type("text/plain").send(pgnText);
-  } catch (error: any) {
-    console.error("PGN fetch error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+ // 4. Get Engines by Owner
 // 4. Get Engines by Owner
 app.get("/api/engines/by-owner/:userId", async (req, res) => {
   try {
