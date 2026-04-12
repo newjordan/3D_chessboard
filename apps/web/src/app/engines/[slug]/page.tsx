@@ -94,7 +94,9 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
                   {(engine.versions || []).map((version: any) => (
                     <div key={version.id} className="p-4 grid grid-cols-4 items-center">
                       <div className="flex flex-col">
-                        <span className="font-bold">{version.uciName || "Processing..."}</span>
+                        <span className="font-bold">
+                          {version.uciName || version.versionLabel || (version.validationStatus === 'passed' ? 'Active Build' : 'Processing...')}
+                        </span>
                         <span className="text-[10px] font-mono text-white/40 truncate">{version.sha256.substring(0, 12)}</span>
                       </div>
                       <div>
