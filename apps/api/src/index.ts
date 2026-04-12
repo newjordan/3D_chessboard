@@ -203,7 +203,22 @@ app.get("/api/engines/:slug", async (req, res) => {
       where: { slug: req.params.slug },
       include: {
         owner: { select: { username: true, image: true } },
-        versions: { orderBy: { submittedAt: "desc" } },
+        versions: { 
+          orderBy: { submittedAt: "desc" },
+          select: {
+            id: true,
+            versionLabel: true,
+            storageKey: true,
+            sha256: true,
+            fileSizeBytes: true,
+            validationStatus: true,
+            validationNotes: true,
+            uciName: true,
+            language: true,
+            submittedAt: true,
+            validatedAt: true
+          }
+        },
         matchesChallenged: {
           take: 10,
           orderBy: { completedAt: "desc" },
@@ -364,7 +379,32 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
 
 // 8. Delete Engine (DISABLED)
 app.delete("/api/engines/:id", async (req, res) => {
-  return res.status(403).json({ error: "Agent deletion is disabled." });
+  try {
+    const { id } = req.params;
+    const { userId } = req.query; // Verification from caller
+
+    if (!userId) return res.status(401).json({ error: "Authentication required" });
+
+    const engine = await prisma.engine.findUnique({
+      where: { id },
+      select: { ownerUserId: true }
+    });
+
+    if (!engine) return res.status(404).json({ error: "Agent not found" });
+    if (engine.ownerUserId !== userId) {
+      return res.status(403).json({ error: "Permission denied: Only the owner can destroy this agent." });
+    }
+
+    // Deletion cascade handled by Prisma schema (versions, match relations must be careful)
+    // Actually schema has onDelete: Cascade for versions, but Matches usually we keep or soft-delete.
+    // Given the request, we will perform a full delete.
+    await prisma.engine.delete({ where: { id } });
+
+    res.json({ success: true, message: "Agent decommissioned successfully." });
+  } catch (error) {
+    console.error("Delete engine error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.listen(port, () => {

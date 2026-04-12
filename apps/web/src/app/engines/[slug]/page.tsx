@@ -9,9 +9,15 @@ import {
   Cpu, 
   History,
   Activity,
-  ArrowLeft
+  ArrowLeft,
+  AlertOctagon,
+  ShieldAlert,
+  Terminal
 } from "lucide-react";
 import Link from "next/link";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { AgentManagement } from "@/components/engines/AgentManagement";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -29,12 +35,16 @@ export const dynamic = "force-dynamic";
 
 export default async function EngineDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const session = await getServerSession(authOptions);
   
   const engine = await ApiClient.getEngine(slug).catch(() => null);
 
   if (!engine) {
     notFound();
   }
+
+  const isOwner = (session?.user as any)?.id === engine.ownerUserId;
+  const latestVersion = engine.versions?.[0];
 
   const allMatches = [
     ...(engine?.matchesChallenged || []).map((m: any) => ({ ...m, role: 'challenger' })),
@@ -52,6 +62,27 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
           <div className="flex flex-col gap-6">
+            {/* Build Failure Alert for Owner */}
+            {isOwner && latestVersion?.validationStatus === 'failed' && (
+              <div className="flex flex-col gap-4 p-6 bg-red-950/20 border border-red-900/40 rounded-xl animate-in fade-in slide-in-from-left-4">
+                <div className="flex items-center gap-3 text-red-500">
+                  <AlertOctagon size={20} />
+                  <span className="technical-label font-bold text-xs uppercase tracking-widest">Build Pipeline Failed</span>
+                </div>
+                <div className="flex flex-col gap-2 bg-black/40 p-4 rounded border border-red-900/20">
+                   <div className="flex items-center gap-2 technical-label text-[10px] opacity-40">
+                      <Terminal size={10} /> validation_exception.log
+                   </div>
+                   <p className="font-mono text-[11px] text-red-200/80 leading-relaxed">
+                     {latestVersion.validationNotes || "Unknown validation error encountered during sandbox probing."}
+                   </p>
+                </div>
+                <Link href="/submit" className="text-[10px] technical-label text-accent hover:underline w-fit">
+                   Modify Code & Re-upload &rarr;
+                </Link>
+              </div>
+            )}
+
             <div className="flex items-center gap-4">
               <h1 className="text-5xl font-bold tracking-tight">{engine.name}</h1>
               <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border border-border-custom ${
@@ -160,7 +191,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             </h3>
             <div className="grid grid-cols-2 gap-y-10">
               {[
-                { label: "Matches", val: engine.gamesPlayed / 2 },
+                { label: "Matches", val: (engine.gamesPlayed || 0) / 2 },
                 { label: "Win %", val: engine.gamesPlayed > 0 ? ((engine.wins / engine.gamesPlayed) * 100).toFixed(1) + "%" : "0%" },
                 { label: "Draw %", val: engine.gamesPlayed > 0 ? ((engine.draws / engine.gamesPlayed) * 100).toFixed(1) + "%" : "0%" },
                 { label: "Loss %", val: engine.gamesPlayed > 0 ? ((engine.losses / engine.gamesPlayed) * 100).toFixed(1) + "%" : "0%" }
@@ -192,6 +223,16 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               </div>
             </div>
           </div>
+
+          {/* Management Tools - Owner Only */}
+          {isOwner && (
+            <div className="flex flex-col gap-6 p-8 border border-red-900/10 bg-red-950/[0.02] shadow-sm">
+              <h3 className="technical-label flex items-center gap-2 text-red-500/80">
+                <ShieldAlert size={12} /> Command Console
+              </h3>
+              <AgentManagement engineId={engine.id} userId={(session?.user as any)?.id} />
+            </div>
+          )}
         </div>
       </div>
     </div>
