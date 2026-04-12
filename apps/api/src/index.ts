@@ -59,17 +59,42 @@ app.get("/api/health", (req, res) => {
 });
 
 // 3. Get All Active Engines (Leaderboard)
-app.get("/api/engines", async (req, res) => {
+app.get("/api/leaderboard", async (req, res) => {
   try {
     const engines = await prisma.engine.findMany({
       where: { status: "active" },
       orderBy: { currentRating: "desc" },
       include: {
         owner: { select: { username: true } },
+        _count: {
+          select: {
+            matchesChallenged: { where: { status: "running" } },
+            matchesDefended: { where: { status: "running" } },
+          },
+        },
       },
     });
     res.json(engines);
   } catch (error) {
+    console.error("Leaderboard error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 4. Get Recent Matches
+app.get("/api/matches", async (req, res) => {
+  try {
+    const matches = await prisma.match.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        challengerEngine: { select: { name: true, slug: true } },
+        defenderEngine: { select: { name: true, slug: true } },
+      }
+    });
+    res.json(matches);
+  } catch (error: any) {
+    console.error("Matches list error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -148,6 +173,31 @@ app.get("/api/engines/by-owner/:userId", async (req, res) => {
     res.json(engines);
   } catch (error: any) {
     console.error("Owner engines error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 7. Get Engine Detail by Slug
+app.get("/api/engines/:slug", async (req, res) => {
+  try {
+    const engine = await prisma.engine.findUnique({
+      where: { slug: req.params.slug },
+      include: {
+        owner: { select: { username: true } },
+        versions: { orderBy: { submittedAt: "desc" } },
+        _count: {
+          select: {
+            matchesChallenged: true,
+            matchesDefended: true,
+          }
+        }
+      }
+    });
+
+    if (!engine) return res.status(404).json({ error: "Agent not found" });
+    res.json(engine);
+  } catch (error: any) {
+    console.error("Engine detail error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
