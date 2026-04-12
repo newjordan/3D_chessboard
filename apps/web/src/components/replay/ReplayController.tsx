@@ -30,8 +30,14 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
 
   const gamesList = useMemo(() => {
     if (!pgn) return [];
-    const segments = pgn.trim().split(/\n(?=\[Event )/).map(s => s.trim()).filter(s => s.length > 10);
-    return segments.length > 0 ? segments : [pgn];
+    // Split by the [Event tag, but ensure we don't create empty first segments
+    const segments = pgn.split(/\[Event /g)
+                        .filter(s => s.trim().length > 0)
+                        .map(s => `[Event ${s.trim()}`);
+    
+    // Filter for segments that actually contain moves (e.g. "1. ")
+    // This removes match-level headers that might not have a game body.
+    return segments.filter(s => /\d+\.\s/.test(s));
   }, [pgn]);
 
   const currentGamePgn = useMemo(() => gamesList[selectedGameIndex] || "", [gamesList, selectedGameIndex]);
