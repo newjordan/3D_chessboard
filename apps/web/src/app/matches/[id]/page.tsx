@@ -86,33 +86,63 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           <div className="flex flex-col">
             {(match?.games || []).map((game: any, idx: number) => {
               const isChallengerWhite = game.whiteEngineId === match.challengerEngineId;
-              const whiteEngine = isChallengerWhite ? match.challengerEngine : match.defenderEngine;
-              const blackEngine = isChallengerWhite ? match.defenderEngine : match.challengerEngine;
               
+              // Calculate points relative to the Match Header order (Challenger vs Defender)
+              let challengerPoint = 0;
+              let defenderPoint = 0;
+              if (game.result === '1-0') {
+                if (isChallengerWhite) challengerPoint = 1;
+                else defenderPoint = 1;
+              } else if (game.result === '0-1') {
+                if (isChallengerWhite) defenderPoint = 1;
+                else challengerPoint = 1;
+              } else {
+                challengerPoint = 0.5;
+                defenderPoint = 0.5;
+              }
+
               return (
-                <div key={game.id} className="grid grid-cols-[80px_1fr_100px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors">
+                <div key={game.id} className="grid grid-cols-[80px_1fr_120px] items-center py-6 border-b border-border-custom hover:bg-white/[0.02] transition-colors">
                   <span className="technical-label opacity-30">Game {idx + 1}</span>
                   <div className="flex items-center gap-6 text-[13px] font-medium">
-                    <div className="flex items-center gap-3 min-w-[160px]">
-                      <div className="w-2 h-2 rounded-full bg-white border border-white/20" title="White" />
-                      <span className={game.result === '1-0' ? 'text-accent font-bold' : 'opacity-80'}>
-                        {whiteEngine.name}
+                    {/* Challenger Column */}
+                    <div className="flex items-center gap-3 min-w-[170px]">
+                      <div className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold border ${
+                        isChallengerWhite ? 'bg-white text-black border-white' : 'bg-neutral-900 text-white border-white/10'
+                      }`} title={isChallengerWhite ? "White" : "Black"}>
+                        {isChallengerWhite ? 'W' : 'B'}
+                      </div>
+                      <span className={challengerPoint > defenderPoint ? 'text-accent font-bold' : 'opacity-80'}>
+                        {match.challengerEngine.name}
                       </span>
                     </div>
+
                     <span className="opacity-10 font-mono text-[10px]">VS</span>
-                    <div className="flex items-center gap-3 min-w-[160px]">
-                      <div className="w-2 h-2 rounded-full bg-neutral-800 border border-white/10" title="Black" />
-                      <span className={game.result === '0-1' ? 'text-accent font-bold' : 'opacity-80'}>
-                        {blackEngine.name}
+
+                    {/* Defender Column */}
+                    <div className="flex items-center gap-3 min-w-[170px]">
+                      <div className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold border ${
+                        !isChallengerWhite ? 'bg-white text-black border-white' : 'bg-neutral-900 text-white border-white/10'
+                      }`} title={!isChallengerWhite ? "White" : "Black"}>
+                        {!isChallengerWhite ? 'W' : 'B'}
+                      </div>
+                      <span className={defenderPoint > challengerPoint ? 'text-accent font-bold' : 'opacity-80'}>
+                        {match.defenderEngine.name}
                       </span>
                     </div>
                   </div>
+
+                  {/* Normalized Score Column */}
                   <div className="flex flex-col items-end gap-1">
-                     <span className={`font-mono text-xs font-bold ${
-                       game.result === '1/2-1/2' ? 'opacity-40' : 'text-foreground'
-                     }`}>
-                       {game.result}
-                     </span>
+                     <div className="flex items-center gap-2">
+                        <span className={`font-mono text-xs font-bold ${challengerPoint > defenderPoint ? 'text-accent' : 'opacity-40'}`}>
+                          {challengerPoint}
+                        </span>
+                        <span className="opacity-10 text-[10px]">-</span>
+                        <span className={`font-mono text-xs font-bold ${defenderPoint > challengerPoint ? 'text-accent' : 'opacity-40'}`}>
+                          {defenderPoint}
+                        </span>
+                     </div>
                      {game.termination && (
                        <span className="technical-label text-[9px] opacity-30 lowercase italic">
                          {game.termination}

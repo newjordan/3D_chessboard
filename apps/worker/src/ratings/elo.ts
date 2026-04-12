@@ -5,7 +5,7 @@ export function calculateEloChange(
   ratingA: number,
   ratingB: number,
   scoreA: number, // 1 for win, 0.5 for draw, 0 for loss
-  kFactor: number = 64
+  kFactor: number = 32
 ): number {
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   return Math.round(kFactor * (scoreA - expectedA));
@@ -20,7 +20,7 @@ export function updateRatingsForMatch(
   scoreA: number, // Sum of points for A (e.g., 2.5)
   scoreB: number, // Sum of points for B (e.g., 1.5)
   totalGames: number,
-  kFactor: number = 64
+  kFactor: number = 32
 ): { deltaA: number; deltaB: number } {
   const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
   const actualA = scoreA / totalGames;
