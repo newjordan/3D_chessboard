@@ -58,6 +58,150 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "healthy" });
 });
 
+// --- SOCIAL & SHOWCASE ENDPOINTS (High Priority) ---
+
+// Get a Random Recent Match (for Showcase)
+app.get("/api/matches/random", async (req, res) => {
+  console.log("[API] GET /api/matches/random requested");
+  try {
+    const total = await prisma.match.count({ where: { status: "completed" } });
+    if (total === 0) {
+      console.warn("[API] No completed matches found for showcase");
+      return res.status(200).json(null); // Return 200/null instead of 404
+    }
+    
+    const recentCount = Math.min(total, 50);
+    const skip = Math.floor(Math.random() * recentCount);
+    
+    const match = await prisma.match.findFirst({
+      where: { status: "completed" },
+      skip,
+      include: {
+        challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
+        defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
+      }
+    });
+    res.json(match);
+  } catch (error) {
+    console.error("Random match error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get User Profile with Aggregates
+app.get("/api/users/:handle", async (req, res) => {
+  console.log(`[API] GET /api/users/${req.params.handle} requested`);
+  try {
+    const { handle } = req.params;
+    
+    // 1. Case-insensitive search by username
+    let user = await prisma.user.findFirst({
+      where: { 
+        username: {
+          equals: handle,
+          mode: 'insensitive'
+        }
+      },
+      include: {
+        engines: {
+          orderBy: { currentRating: "desc" },
+          include: {
+            _count: { select: { matchesChallenged: true, matchesDefended: true } }
+          }
+        }
+      }
+    });
+
+    // 2. Fallback to ID if not found by username
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { id: handle },
+        include: {
+          engines: {
+            orderBy: { currentRating: "desc" },
+            include: {
+              _count: { select: { matchesChallenged: true, matchesDefended: true } }
+            }
+          }
+        }
+      });
+    }
+
+    if (!user) return res.status(404).json({ error: "Developer not found" });
+
+    // 3. Aggregate performance across all engines for this profile
+    const allMatches = await prisma.match.findMany({
+      where: {
+        OR: [
+          { challengerEngine: { ownerUserId: user.id }, status: 'completed' },
+          { defenderEngine: { ownerUserId: user.id }, status: 'completed' }
+        ]
+      }
+    });
+
+    let totalWins = 0;
+    let totalLosses = 0;
+    let totalDraws = 0;
+
+    allMatches.forEach(match => {
+      const isChallenger = match.challengerEngineId ? (user?.engines.some(e => e.id === match.challengerEngineId)) : false;
+      const cScore = Number(match.challengerScore || 0);
+      const dScore = Number(match.defenderScore || 0);
+
+      if (cScore === dScore) {
+        totalDraws++;
+      } else if ((isChallenger && cScore > dScore) || (!isChallenger && dScore > cScore)) {
+        totalWins++;
+      } else {
+        totalLosses++;
+      }
+    });
+
+    res.json({
+      ...user,
+      stats: {
+        totalWins,
+        totalLosses,
+        totalDraws,
+        totalEarnings: totalWins * 5.00, // $5.00 per win prize calculation
+        peakRating: Math.max(1200, ...user.engines.map(e => e.currentRating))
+      }
+    });
+  } catch (error) {
+    console.error("User profile error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get Recent Matches (with optional engine filtering)
+app.get("/api/matches", async (req, res) => {
+  console.log(`[API] GET /api/matches requested (engine=${req.query.engine})`);
+  try {
+    const { engine: engineSlug } = req.query;
+    const where: any = {};
+    if (engineSlug && typeof engineSlug === 'string') {
+      where.OR = [
+        { challengerEngine: { slug: engineSlug } },
+        { defenderEngine: { slug: engineSlug } }
+      ];
+    }
+
+    const matches = await prisma.match.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
+        defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
+      }
+    });
+    res.json(matches);
+  } catch (error: any) {
+    console.error("Matches list error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // 3. Get All Active Engines (Leaderboard)
 app.get("/api/leaderboard", async (req, res) => {
   try {
@@ -81,67 +225,6 @@ app.get("/api/leaderboard", async (req, res) => {
   }
 });
 
-// 4. Get a Random Recent Match (for Showcase)
-app.get("/api/matches/random", async (req, res) => {
-  try {
-    const total = await prisma.match.count({ where: { status: "completed" } });
-    if (total === 0) return res.status(404).json({ error: "No completed matches found" });
-    
-    // Pick a random offset from recent games
-    const recentCount = Math.min(total, 50);
-    const skip = Math.floor(Math.random() * recentCount);
-    
-    const match = await prisma.match.findFirst({
-      where: { status: "completed" },
-      skip,
-      include: {
-        challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
-        defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
-      }
-    });
-    res.json(match);
-  } catch (error) {
-    console.error("Random match error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 4. Get Recent Matches (with optional engine filtering)
-app.get("/api/matches", async (req, res) => {
-  try {
-    const { engine: engineSlug } = req.query;
-    
-    const where: any = {};
-    if (engineSlug && typeof engineSlug === 'string') {
-      where.OR = [
-        { challengerEngine: { slug: engineSlug } },
-        { defenderEngine: { slug: engineSlug } }
-      ];
-    }
-
-    const matches = await prisma.match.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: {
-        challengerEngine: { 
-          include: { 
-            owner: { select: { username: true, image: true } } 
-          } 
-        },
-        defenderEngine: { 
-          include: { 
-            owner: { select: { username: true, image: true } } 
-          } 
-        },
-      }
-    });
-    res.json(matches);
-  } catch (error: any) {
-    console.error("Matches list error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 // 4. Get Match PGN
 app.get("/api/matches/:id/pgn", async (req, res) => {
@@ -277,50 +360,6 @@ app.get("/api/engines/:slug", async (req, res) => {
   }
 });
 
-// 8. Get User Profile with Aggregates
-app.get("/api/users/:handle", async (req, res) => {
-  try {
-    const { handle } = req.params;
-    const user = await prisma.user.findUnique({
-      where: { username: handle },
-      include: {
-        engines: {
-          orderBy: { currentRating: "desc" },
-          include: {
-            _count: {
-              select: {
-                matchesChallenged: true,
-                matchesDefended: true,
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!user) {
-      // Fallback: check if handle is actually a UUID ID
-      const userById = await prisma.user.findUnique({
-        where: { id: handle },
-        include: {
-          engines: {
-            orderBy: { currentRating: "desc" },
-            include: {
-              _count: { select: { matchesChallenged: true, matchesDefended: true } }
-            }
-          }
-        }
-      });
-      if (!userById) return res.status(404).json({ error: "Developer not found" });
-      return res.json(userById);
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error("User profile error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 const upload = multer({ storage: multer.memoryStorage() });
 

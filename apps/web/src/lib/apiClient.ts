@@ -1,11 +1,17 @@
 const isServer = typeof window === "undefined";
-const API_BASE_URL = isServer
+const BASE_URL_RAW = isServer
   ? (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001")
   : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
 
+// Standardize: No trailing slash
+const API_BASE_URL = BASE_URL_RAW.replace(/\/+$/, "");
+
 export class ApiClient {
   private static async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const res = await fetch(`${API_BASE_URL}${path}`, {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const url = `${API_BASE_URL}${normalizedPath}`;
+
+    const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
