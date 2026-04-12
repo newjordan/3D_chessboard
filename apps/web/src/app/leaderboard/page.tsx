@@ -79,14 +79,17 @@ export default async function LeaderboardPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 pr-4">
+                <Link 
+                  href={`/users/${engine.owner.username}`}
+                  className="flex items-center gap-2 pr-4 hover:opacity-100 transition-opacity group/owner"
+                >
                   {engine.owner.image ? (
-                    <img src={engine.owner.image} alt={engine.owner.username} className="w-4 h-4 rounded-full border border-white/5" />
+                    <img src={engine.owner.image} alt={engine.owner.username} className="w-4 h-4 rounded-full border border-white/5 group-hover/owner:border-accent/40 transition-colors" />
                   ) : (
-                    <div className="w-4 h-4 rounded-full bg-white/5 border border-white/5" />
+                    <div className="w-4 h-4 rounded-full bg-white/5 border border-white/5 group-hover/owner:border-accent/40" />
                   )}
-                  <span className="technical-label text-[10px] truncate lowercase opacity-60">@{engine.owner.username}</span>
-                </div>
+                  <span className="technical-label text-[10px] truncate lowercase opacity-60 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all">@{engine.owner.username}</span>
+                </Link>
                 <span className="text-right font-mono text-sm font-bold">{engine.currentRating}</span>
                 <div className="text-right font-mono text-[11px] flex gap-1 justify-end opacity-60">
                    <span className="text-accent font-bold">{engine.wins}</span>

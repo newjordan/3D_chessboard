@@ -51,6 +51,15 @@ export function MatchRow({ match, engineName }: MatchRowProps) {
                 match.challengerEngine?.owner?.image && <img src={match.challengerEngine.owner.image} alt="" className="w-3.5 h-3.5 rounded-full border border-white/5" />
               )}
               {opponentName}
+              <span 
+                className="text-[9px] technical-label opacity-40 lowercase group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.href = `/users/${match.role === 'challenger' ? match.defenderEngine?.owner?.username : match.challengerEngine?.owner?.username}`;
+                }}
+              >
+                @{match.role === 'challenger' ? match.defenderEngine?.owner?.username : match.challengerEngine?.owner?.username}
+              </span>
             </Link>
           </div>
         </div>

@@ -277,6 +277,51 @@ app.get("/api/engines/:slug", async (req, res) => {
   }
 });
 
+// 8. Get User Profile with Aggregates
+app.get("/api/users/:handle", async (req, res) => {
+  try {
+    const { handle } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { username: handle },
+      include: {
+        engines: {
+          orderBy: { currentRating: "desc" },
+          include: {
+            _count: {
+              select: {
+                matchesChallenged: true,
+                matchesDefended: true,
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      // Fallback: check if handle is actually a UUID ID
+      const userById = await prisma.user.findUnique({
+        where: { id: handle },
+        include: {
+          engines: {
+            orderBy: { currentRating: "desc" },
+            include: {
+              _count: { select: { matchesChallenged: true, matchesDefended: true } }
+            }
+          }
+        }
+      });
+      if (!userById) return res.status(404).json({ error: "Developer not found" });
+      return res.json(userById);
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error("User profile error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 // 7. Submit Engine

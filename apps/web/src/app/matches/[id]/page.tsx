@@ -80,12 +80,15 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   <Link href={`/engines/${match.challengerEngine.slug}`} className="text-4xl lg:text-5xl font-bold tracking-tighter hover:text-accent transition-colors text-right">
                     {match.challengerEngine.name}
                   </Link>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="technical-label text-xs opacity-40">@{match.challengerEngine.owner.username}</span>
+                  <Link 
+                    href={`/users/${match.challengerEngine.owner.username}`}
+                    className="flex items-center gap-2 mt-1 hover:opacity-100 transition-opacity group/owner"
+                  >
+                    <span className="technical-label text-xs opacity-40 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all font-bold">@{match.challengerEngine.owner.username}</span>
                     {match.challengerEngine.owner.image && (
-                      <img src={match.challengerEngine.owner.image} className="w-4 h-4 rounded-full border border-white/5" alt="" />
+                      <img src={match.challengerEngine.owner.image} className="w-4 h-4 rounded-full border border-white/5 group-hover/owner:border-accent/40" alt="" />
                     )}
-                  </div>
+                  </Link>
                 </div>
                 <div className="flex gap-2 font-mono text-[10px] opacity-40">
                   <span>ELO {match.challengerEngine.currentRating}</span>
@@ -121,12 +124,15 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   <Link href={`/engines/${match.defenderEngine.slug}`} className="text-4xl lg:text-5xl font-bold tracking-tighter hover:text-accent transition-colors">
                     {match.defenderEngine.name}
                   </Link>
-                  <div className="flex items-center gap-2 mt-1">
+                  <Link 
+                    href={`/users/${match.defenderEngine.owner.username}`}
+                    className="flex items-center gap-2 mt-1 hover:opacity-100 transition-opacity group/owner"
+                  >
                     {match.defenderEngine.owner.image && (
-                      <img src={match.defenderEngine.owner.image} className="w-4 h-4 rounded-full border border-white/5" alt="" />
+                      <img src={match.defenderEngine.owner.image} className="w-4 h-4 rounded-full border border-white/5 group-hover/owner:border-accent/40" alt="" />
                     )}
-                    <span className="technical-label text-xs opacity-40">@{match.defenderEngine.owner.username}</span>
-                  </div>
+                    <span className="technical-label text-xs opacity-40 group-hover/owner:text-accent group-hover/owner:opacity-100 transition-all font-bold">@{match.defenderEngine.owner.username}</span>
+                  </Link>
                 </div>
                 <div className="flex gap-2 font-mono text-[10px] opacity-40">
                   <span>ELO {match.defenderEngine.currentRating}</span>

@@ -99,14 +99,17 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             </div>
             
             <div className="flex flex-wrap items-center gap-8 text-sm text-muted">
-              <div className="flex items-center gap-3">
+              <Link 
+                href={`/users/${engine.owner.username}`}
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity group/owner"
+              >
                 {engine.owner.image ? (
-                  <img src={engine.owner.image} alt={engine.owner.username} className="w-6 h-6 rounded-full border border-white/10 shadow-sm" />
+                  <img src={engine.owner.image} alt={engine.owner.username} className="w-6 h-6 rounded-full border border-white/10 shadow-sm group-hover/owner:border-accent/40" />
                 ) : (
-                  <User size={14} className="opacity-40" />
+                  <User size={14} className="opacity-40 group-hover/owner:text-accent" />
                 )}
-                <span>By <span className="text-foreground font-bold">@{engine.owner.username}</span></span>
-              </div>
+                <span>By <span className="text-foreground font-bold group-hover/owner:text-accent transition-colors">@{engine.owner.username}</span></span>
+              </Link>
               <div className="flex items-center gap-2">
                 <Calendar size={14} className="opacity-40" />
                 <span>Since {new Date(engine.createdAt).toLocaleDateString()}</span>

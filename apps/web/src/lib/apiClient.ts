@@ -53,6 +53,10 @@ export class ApiClient {
     return this.request<any[]>(`/api/engines/by-owner/${userId}`);
   }
 
+  static async getUserProfile(handle: string) {
+    return this.request<any>(`/api/users/${handle}`);
+  }
+
   static async submitEngine(form: FormData) {
     const res = await fetch(`${API_BASE_URL}/api/engines/submit`, {
       method: "POST",
