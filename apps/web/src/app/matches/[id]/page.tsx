@@ -52,7 +52,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const draws = match.games.filter((g: any) => g.result === '1/2-1/2').length;
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.16))] flex flex-col bg-background overflow-hidden">
+    <div className="h-[calc(100vh-theme(spacing.16))] flex flex-col bg-background overflow-hidden overflow-x-hidden">
       
       {/* 1. Large "Arena" Scorecard Header */}
       <div className="flex-none border-b border-border-custom bg-white/[0.01] relative">
@@ -176,7 +176,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   }
 
                   return (
-                    <div key={game.id} className="grid grid-cols-[80px_1fr_120px] items-center py-6 border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors group px-4 -mx-4">
+                    <div key={game.id} className="grid grid-cols-[80px_1fr_120px] items-center py-6 border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors group px-4">
                       <span className="font-mono text-xs opacity-20">#{String(idx + 1).padStart(2, '0')}</span>
                       
                       <div className="flex items-center gap-12">

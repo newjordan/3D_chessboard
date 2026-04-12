@@ -224,8 +224,8 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             </div>
           </div>
 
-          {/* Management Tools - Owner Only */}
-          {isOwner && (
+          {/* Management Tools - Owner Only & ONLY IF FAILED */}
+          {isOwner && latestVersion?.validationStatus === 'failed' && (
             <div className="flex flex-col gap-6 p-8 border border-red-900/10 bg-red-950/[0.02] shadow-sm">
               <h3 className="technical-label flex items-center gap-2 text-red-500/80">
                 <ShieldAlert size={12} /> Command Console

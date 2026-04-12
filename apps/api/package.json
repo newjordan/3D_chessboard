@@ -4,7 +4,7 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
+    "dev": "nodemon --watch 'src/**/*.ts' --exec 'npx ts-node' src/index.ts",
     "generate": "prisma generate --schema ../../prisma/schema.prisma",
     "build": "tsc",
     "start": "node dist/index.js"

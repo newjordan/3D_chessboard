@@ -387,12 +387,23 @@ app.delete("/api/engines/:id", async (req, res) => {
 
     const engine = await prisma.engine.findUnique({
       where: { id },
-      select: { ownerUserId: true }
+      include: {
+        versions: {
+          take: 1,
+          orderBy: { submittedAt: 'desc' },
+          select: { validationStatus: true }
+        }
+      }
     });
 
     if (!engine) return res.status(404).json({ error: "Agent not found" });
     if (engine.ownerUserId !== userId) {
       return res.status(403).json({ error: "Permission denied: Only the owner can destroy this agent." });
+    }
+
+    const latestStatus = engine.versions[0]?.validationStatus;
+    if (latestStatus !== 'failed') {
+      return res.status(400).json({ error: "Decommissioning blocked: You can only delete agents with failed builds." });
     }
 
     // Deletion cascade handled by Prisma schema (versions, match relations must be careful)
