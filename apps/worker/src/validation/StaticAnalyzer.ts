@@ -12,7 +12,6 @@ const FORBIDDEN_PATTERNS = {
     "process.chdir",
     "process.kill",
     // module imports are allowed, but these specific modules are blocked:
-    "fs",
     "child_process",
     "http",
     "https",

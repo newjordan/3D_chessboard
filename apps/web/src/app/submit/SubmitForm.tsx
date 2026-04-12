@@ -14,11 +14,19 @@ Requirements:
 - Output a single UCI move to stdout (e.g. "e2e4") and exit
 - The move MUST be legal for the given position
 - You have 5 seconds per move, 256MB memory, 1 CPU core
-- Standard library modules are ALLOWED (e.g. math, random, sys, readline)
-- NO external packages (no npm, no pip, no late-binding dependencies)
-- NO network access, NO filesystem writes
+- Standard libraries like 'math', 'random', 'sys', and 'readline' are ALLOWED.
+- NO 'fs', NO 'child_process', NO network access (for security).
 
-The agent will be called once per move with the board state as a FEN string. It should analyze the position and print the best move in UCI notation (e.g. "e2e4", "g1f3", "e7e8q" for promotion).`;
+The agent will be called once per move with the board state as a FEN string. It should analyze the position and print the best move in UCI notation (e.g. "e2e4", "g1f3", "e7e8q" for promotion).
+
+Node.js Example (use 'readline', NOT 'fs'):
+const readline = require('readline');
+const rl = readline.createInterface({ input: process.stdin });
+rl.on('line', (fen) => {
+  // logic...
+  console.log("e2e4");
+  process.exit(0);
+});`;
 
 type SubmissionPhase = "form" | "validating" | "passed" | "failed";
 
@@ -59,7 +67,6 @@ export function SubmitForm() {
     "Other"
   ];
 
-  // Fetch user's engines for update flow
   useEffect(() => {
     if (session?.user) {
       const userId = (session.user as any).id;
@@ -69,7 +76,6 @@ export function SubmitForm() {
     }
   }, [session]);
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -87,33 +93,27 @@ export function SubmitForm() {
     });
 
     pollRef.current = setInterval(async () => {
+      setValidation(prev => prev ? { ...prev, pollCount: prev.pollCount + 1 } : prev);
+
       try {
         const data = await ApiClient.getSubmissionStatus(submissionId);
         const vs = data.version?.validationStatus;
 
-        setValidation(prev => {
-          if (!prev) return prev;
-          const newCount = prev.pollCount + 1;
-
-          if (vs === "passed") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            return { ...prev, phase: "passed", uciName: data.version?.uciName, pollCount: newCount };
-          }
-          if (vs === "failed") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            return { ...prev, phase: "failed", validationNotes: data.version?.validationNotes, pollCount: newCount };
-          }
-
-          // Timeout after 60 polls (~2 minutes)
-          if (newCount > 60) {
-            if (pollRef.current) clearInterval(pollRef.current);
-            return { ...prev, phase: "failed", validationNotes: "Validation timed out. The worker may be busy. Check your dashboard for updates.", pollCount: newCount };
-          }
-
-          return { ...prev, pollCount: newCount };
-        });
-      } catch {
-        // Silently retry on network errors
+        if (vs === "passed" || vs === "failed") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          
+          setValidation(prev => {
+            if (!prev) return prev;
+            return { 
+              ...prev, 
+              phase: vs as SubmissionPhase, 
+              uciName: data.version?.uciName,
+              validationNotes: data.version?.validationNotes
+            };
+          });
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
       }
     }, 2000);
   };
@@ -175,7 +175,6 @@ export function SubmitForm() {
   };
 
   const handleReupload = () => {
-    // Keep engineName and model, reset file and validation state
     setFile(null);
     setErrorMsg("");
     if (pollRef.current) clearInterval(pollRef.current);
@@ -216,7 +215,6 @@ export function SubmitForm() {
     );
   }
 
-  // ── Validation Status View ──
   if (validation) {
     return (
       <div className="container mx-auto px-6 py-16 max-w-3xl flex flex-col gap-12 text-white min-h-screen">
@@ -229,7 +227,6 @@ export function SubmitForm() {
         </div>
 
         <div className="border border-border-custom soft-shadow bg-white/[0.01] flex flex-col">
-          {/* Pipeline Steps */}
           <div className="flex flex-col divide-y divide-border-custom">
             {/* Step 1: Upload */}
             <div className="flex items-center gap-4 p-6">
@@ -340,7 +337,6 @@ export function SubmitForm() {
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
           {validation.phase === "passed" && (
             <>
@@ -377,7 +373,7 @@ export function SubmitForm() {
           )}
 
           {validation.phase === "validating" && (
-            <div className="py-4 text-center technical-label opacity-30 text-xs">
+            <div className="py-4 text-center technical-label opacity-30 text-xs w-full">
               Pipeline is running. This page auto-updates every 2 seconds.
             </div>
           )}
@@ -386,7 +382,6 @@ export function SubmitForm() {
     );
   }
 
-  // ── Submission Form ──
   return (
     <div className="container mx-auto px-6 py-16 max-w-4xl flex flex-col gap-16 text-white min-h-screen">
       <div className="flex flex-col gap-6">
@@ -400,7 +395,6 @@ export function SubmitForm() {
       <div className="grid lg:grid-cols-[1fr_300px] gap-20">
         <form onSubmit={handleSubmit} className="flex flex-col gap-12">
           <div className="flex flex-col gap-10">
-            {/* Submission Type Toggle */}
             {userEngines.length > 0 && (
               <div className="flex flex-col gap-4">
                 <label className="technical-label text-white/40">Submission Type</label>
@@ -427,7 +421,6 @@ export function SubmitForm() {
               </div>
             )}
 
-            {/* Engine Selector (Update Mode) */}
             {submissionType === "update" && (
               <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
                 <label className="technical-label text-white/40">Select Agent to Update</label>
@@ -559,9 +552,9 @@ export function SubmitForm() {
               </button>
             </div>
             <div className="bg-white/[0.02] border border-border-custom p-6">
-              <pre className="text-[11px] font-mono text-white/40 whitespace-pre-wrap leading-relaxed">
-                {AGENT_PROMPT.substring(0, 300)}...
-              </pre>
+              <div className="text-[11px] font-mono text-white/40 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
+                {AGENT_PROMPT}
+              </div>
             </div>
             <p className="text-[11px] leading-relaxed text-white/40 font-medium italic">
               Standard tournament rules apply. No late-binding evaluations or network egress allowed.
