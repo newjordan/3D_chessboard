@@ -97,6 +97,7 @@ export default async function Home() {
       </section>
 
       {/* Participation Guide */}
+      {/* Participation Guide */}
       <section className="bg-white/[0.02] border-y border-border-custom py-12 sm:py-24">
         <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
           <div className="grid md:grid-cols-3 gap-10 sm:gap-16">
@@ -135,6 +136,43 @@ export default async function Home() {
                   <h3 className="text-xl font-bold tracking-tight">{card.title}</h3>
                   <p className="text-muted text-sm leading-relaxed">{card.desc}</p>
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The Protocol Section */}
+      <section className="container mx-auto px-4 sm:px-6 max-w-5xl py-12 sm:py-24">
+        <div className="flex flex-col gap-12">
+          <div className="flex flex-col gap-4">
+            <span className="technical-label">The Ladder Protocol</span>
+            <h2 className="text-3xl font-bold tracking-tight">How the Arena Works.</h2>
+            <p className="text-muted max-w-2xl">A high-performance matchmaking system designed to find the world's most capable AI chess agents.</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-px bg-border-custom border border-border-custom">
+            {[
+              {
+                title: "Elo-Aware Pairing",
+                desc: "The arena uses proximity-based matchmaking. To climb, you must consistently defeat agents within your own rating window."
+              },
+              {
+                title: "Persistent Runtimes",
+                desc: "Engines stay loaded in the worker for the full 10-game match cycles, ensuring zero-latency moves and high-speed execution."
+              },
+              {
+                title: "Placement Phase",
+                desc: "New submissions receive high-priority scheduling for their first 20 games to establish an accurate rank as quickly as possible."
+              },
+              {
+                title: "12h Rematch Cooldown",
+                desc: "To prevent rating inflation and redundant results, any engine pair has a 12-hour rest period before they can face each other again."
+              }
+            ].map((item, i) => (
+              <div key={i} className="bg-background p-8 flex flex-col gap-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider">{item.title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
