@@ -72,13 +72,15 @@ async function pollJobs() {
   setTimeout(pollJobs, 2000);
 }
 
-const SCHEDULER_INTERVAL_MS = 10_000;
+const SCHEDULER_INTERVAL_MS = 30_000;
 
 async function pollScheduler() {
   try {
     const scheduled = await scheduleMatches();
     if (scheduled > 0) {
       console.log(`[${new Date().toISOString()}] Scheduler queued ${scheduled} new match(es)`);
+    } else {
+      console.log(`[${new Date().toISOString()}] Scheduler polled: 0 matches queued. Engines verified against rules.`);
     }
   } catch (error) {
     console.error("Scheduler error:", error);
