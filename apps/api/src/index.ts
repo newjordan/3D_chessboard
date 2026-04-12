@@ -185,6 +185,22 @@ app.get("/api/engines/:slug", async (req, res) => {
       include: {
         owner: { select: { username: true } },
         versions: { orderBy: { submittedAt: "desc" } },
+        matchesChallenged: {
+          take: 10,
+          orderBy: { completedAt: "desc" },
+          include: {
+            challengerEngine: { select: { name: true, slug: true } },
+            defenderEngine: { select: { name: true, slug: true } },
+          }
+        },
+        matchesDefended: {
+          take: 10,
+          orderBy: { completedAt: "desc" },
+          include: {
+            challengerEngine: { select: { name: true, slug: true } },
+            defenderEngine: { select: { name: true, slug: true } },
+          }
+        },
         _count: {
           select: {
             matchesChallenged: true,
