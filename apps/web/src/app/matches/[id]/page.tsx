@@ -7,8 +7,7 @@ import {
   Calendar, 
   Activity,
   ArrowLeft,
-  ShieldCheck,
-  Download
+  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import { ReplayButton } from "@/components/replay/ReplayButton";
@@ -179,10 +178,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
              <div className="flex flex-col gap-3">
                 <ReplayButton matchId={match.id} />
-                
-                <button className="w-full py-3 border border-white/10 text-white/40 font-bold text-[10px] uppercase tracking-widest hover:bg-white/[0.02] transition-all flex items-center justify-center gap-2">
-                    <Download size={14} /> Download PGN
-                </button>
              </div>
           </section>
 

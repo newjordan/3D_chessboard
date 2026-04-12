@@ -21,8 +21,11 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
   // Split PGN into multiple games if they exist
   const gamesList = useMemo(() => {
     if (!pgn) return [];
-    // Split by [Event tag at the start of a line
-    const segments = pgn.trim().split(/\n(?=\[Event )/);
+    // Split by [Event tag at the start of a line, then clean up segments
+    const segments = pgn.trim()
+      .split(/\n(?=\[Event )/)
+      .map(s => s.trim())
+      .filter(s => s.length > 10); // Ignore tiny fragments
     return segments.length > 0 ? segments : [pgn];
   }, [pgn]);
 
@@ -31,13 +34,23 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
   }, [gamesList, selectedGameIndex]);
 
   const history = useMemo(() => {
+    if (!currentGamePgn) return [];
     const tempChess = new Chess();
     try {
-      tempChess.loadPgn(currentGamePgn);
+      // Clean segments to avoid syntax errors on trailing results
+      // chess.js 1.x is sensitive to multiple outcome markers
+      const cleanPgn = currentGamePgn.replace(/(1-0|0-1|1\/2-1\/2)$/, '').trim();
+      tempChess.loadPgn(cleanPgn);
       return tempChess.history({ verbose: true });
     } catch (e) {
-      console.error("Failed to parse PGN:", e);
-      return [];
+      // Fallback: try loading without cleanup if it failed
+      try {
+        tempChess.loadPgn(currentGamePgn);
+        return tempChess.history({ verbose: true });
+      } catch (innerError) {
+        console.error("Failed to parse PGN:", innerError);
+        return [];
+      }
     }
   }, [currentGamePgn]);
 
@@ -113,7 +126,14 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn }) => {
 
       {/* 3D Scene Container - Larger for full page */}
       <div className="aspect-[16/10] relative w-full border border-white/5 bg-black/40 soft-shadow overflow-hidden rounded-xl">
-        <Canvas shadows gl={{ antialias: true, alpha: true }}>
+        <Canvas 
+          shadows
+          onCreated={({ gl }) => {
+            // Address deprecation: PCFSoftShadowMap -> PCFShadowMap
+            gl.shadowMap.type = 1; // PCFShadowMap
+          }}
+          gl={{ antialias: true, alpha: true }}
+        >
           <PerspectiveCamera makeDefault position={[0, 10, 10]} fov={45} />
           
           <ambientLight intensity={0.5} />
