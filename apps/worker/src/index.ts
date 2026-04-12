@@ -355,12 +355,27 @@ async function handleRatingApply(payload: any) {
     return;
   }
 
+  // Dynamic K-Factor Logic
+  // - New engines (< 30 games): K=40 (Placement boost)
+  // - Established masters (> 2400): K=16 (Stability)
+  // - Default: K=32
+  const getKFactor = (engine: any) => {
+    if (engine.gamesPlayed < 30) return 40;
+    if (engine.currentRating > 2400) return 16;
+    return 32;
+  };
+
+  const kA = getKFactor(match.challengerEngine);
+  const kB = getKFactor(match.defenderEngine);
+
   const { deltaA, deltaB } = updateRatingsForMatch(
     match.challengerEngine.currentRating,
     match.defenderEngine.currentRating,
     Number(match.challengerScore),
     Number(match.defenderScore),
-    match.gamesPlanned
+    match.gamesPlanned,
+    kA,
+    kB
   );
 
   // Calculate detailed stats from individual games

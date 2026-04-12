@@ -1,21 +1,21 @@
 import { prisma, MatchType, MatchStatus, JobType, JobStatus, EngineStatus } from "../db";
 
 /**
- * Rematch cooldown in milliseconds (12 hours).
+ * Rematch cooldown in milliseconds (4 hours).
  * Engines can play each other again after this period.
  */
-const REMATCH_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const REMATCH_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
 /**
  * How many matches to schedule per poll cycle to avoid flooding the queue.
  */
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 20;
 
 /**
  * Maximum Elo distance for a "competitive" match.
  * If no engines are within this range, it will broaden the search.
  */
-const ELO_PROXIMITY_WINDOW = 400;
+const ELO_PROXIMITY_WINDOW = 800;
 
 interface EnginePairCandidate {
   engineA: any;
@@ -23,32 +23,43 @@ interface EnginePairCandidate {
   score: number; // Higher is better for priority
 }
 
+const SCHEDULER_LOCK_ID = 1337;
+
 /**
  * Actively schedules competitive rating matches.
  * Prioritizes:
- * 1. New engines (< 20 games) to get them ranked quickly.
+ * 1. New engines (< 30 games) to get them ranked quickly.
  * 2. Engines close in Elo rating for meaningful progression.
  * 3. Enforces a cooldown to prevent redundant matches.
  */
 export async function scheduleMatches(): Promise<number> {
-  const activeEngines = await prisma.engine.findMany({
-    where: {
-      status: EngineStatus.active,
-      versions: {
-        some: { validationStatus: "passed" },
-      },
-    },
-    orderBy: { currentRating: "desc" },
-    include: {
-      versions: {
-        where: { validationStatus: "passed" },
-        orderBy: { submittedAt: "desc" },
-        take: 1,
-      },
-    },
-  });
+  // 0. Acquire Distributed Lock (Postgres Advisory Lock)
+  // This ensures ONLY ONE worker replica runs the scheduler at a time.
+  const lock = await prisma.$queryRaw<[{ pg_try_advisory_lock: boolean }]>`SELECT pg_try_advisory_lock(${SCHEDULER_LOCK_ID})`;
+  
+  if (!lock || !lock[0].pg_try_advisory_lock) {
+    return 0; // Lock is held by another worker replica
+  }
 
-  if (activeEngines.length < 2) return 0;
+  try {
+    const activeEngines = await prisma.engine.findMany({
+      where: {
+        status: EngineStatus.active,
+        versions: {
+          some: { validationStatus: "passed" },
+        },
+      },
+      orderBy: { currentRating: "desc" },
+      include: {
+        versions: {
+          where: { validationStatus: "passed" },
+          orderBy: { submittedAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (activeEngines.length < 2) return 0;
 
   // Check how many pending/processing jobs exist
   const activeJobs = await prisma.job.count({
@@ -75,11 +86,12 @@ export async function scheduleMatches(): Promise<number> {
       const eloDiff = Math.abs(a.currentRating - b.currentRating);
       
       // Calculate a "Priority Score"
-      // - Bonus for new engines (under 20 games played)
+      // - Bonus for new engines (under 30 games played)
       // - Penalty for Elo distance
-      let score = 1000 - eloDiff;
-      if (a.gamesPlayed < 20) score += 500;
-      if (b.gamesPlayed < 20) score += 500;
+      // Use Math.max to prevent extremely negative scores from large gaps
+      let score = Math.max(0, 1000 - eloDiff);
+      if (a.gamesPlayed < 30) score += 500;
+      if (b.gamesPlayed < 30) score += 500;
 
       candidates.push({ engineA: a, engineB: b, score });
     }
@@ -125,7 +137,7 @@ export async function scheduleMatches(): Promise<number> {
           defenderVersionId: candidate.engineB.versions[0].id,
           matchType: MatchType.rating,
           gamesPlanned: 2,
-          timeControl: "40/60",
+          timeControl: "5+0.1", // Blitz time control as used in common engine matches
           status: MatchStatus.queued,
         },
       });
@@ -147,4 +159,8 @@ export async function scheduleMatches(): Promise<number> {
   }
 
   return scheduled;
+} finally {
+  // Always release the lock so other workers can try again in the next 30s cycle
+  await prisma.$executeRaw`SELECT pg_release_advisory_lock(${SCHEDULER_LOCK_ID})`;
+}
 }

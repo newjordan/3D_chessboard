@@ -235,6 +235,32 @@ app.get("/api/leaderboard", async (req, res) => {
   }
 });
 
+// Get Rating Distribution (Histogram)
+app.get("/api/stats/rating-histogram", async (req, res) => {
+  try {
+    const engines = await prisma.engine.findMany({
+      where: { status: "active" },
+      select: { currentRating: true }
+    });
+
+    // Bin into 100-Elo buckets
+    const bins: Record<number, number> = {};
+    engines.forEach((e: any) => {
+      const bin = Math.floor(e.currentRating / 100) * 100;
+      bins[bin] = (bins[bin] || 0) + 1;
+    });
+
+    const result = Object.entries(bins)
+      .map(([bin, count]) => ({ bin: parseInt(bin), count }))
+      .sort((a, b) => a.bin - b.bin);
+
+    res.json(result);
+  } catch (error) {
+    console.error("Histogram error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 // 4. Get Match PGN
 app.get("/api/matches/:id/pgn", async (req, res) => {

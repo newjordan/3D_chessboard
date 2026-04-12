@@ -18,6 +18,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { AgentManagement } from "@/components/engines/AgentManagement";
+import { RatingHistogram } from "@/components/RatingHistogram";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -51,6 +52,8 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
     ...(engine?.matchesDefended || []).map((m: any) => ({ ...m, role: 'defender' }))
   ].sort((a, b) => (new Date(b.completedAt || 0).getTime()) - (new Date(a.completedAt || 0).getTime()))
    .slice(0, 5);
+
+  const histogramData = await ApiClient.getRatingHistogram().catch(() => []);
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-5xl flex flex-col gap-12 sm:gap-20">
@@ -192,7 +195,10 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             <h3 className="technical-label flex items-center gap-2">
               <Activity size={12} /> Performance Data
             </h3>
-            <div className="grid grid-cols-2 gap-y-10">
+            
+            <RatingHistogram data={histogramData} currentRating={engine.currentRating} />
+
+            <div className="grid grid-cols-2 gap-y-10 border-t border-white/5 pt-8">
               {[
                 { label: "Matches", val: (engine.gamesPlayed || 0) / 2 },
                 { label: "Win %", val: engine.gamesPlayed > 0 ? ((engine.wins / engine.gamesPlayed) * 100).toFixed(1) + "%" : "0%" },

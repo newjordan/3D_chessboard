@@ -47,6 +47,10 @@ export class ApiClient {
     return this.request<any>(`/api/engines/${slug}`);
   }
 
+  static async getRatingHistogram() {
+    return this.request<{ bin: number, count: number }[]>("/api/stats/rating-histogram");
+  }
+
   static async getMatch(id: string) {
     return this.request<any>(`/api/matches/${id}`);
   }
