@@ -545,9 +545,38 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       },
     });
 
-    res.json({ success: true, submissionId: submission.id });
+    res.json({ success: true, submissionId: submission.id, engineSlug: engine.slug, versionId: version.id });
   } catch (error: any) {
     console.error("Submission error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 8. Get Submission Status (for polling)
+app.get("/api/submissions/:id", async (req, res) => {
+  try {
+    const submission = await prisma.submission.findUnique({
+      where: { id: req.params.id },
+      include: {
+        version: {
+          select: {
+            validationStatus: true,
+            validationNotes: true,
+            uciName: true,
+            uciAuthor: true,
+            validatedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!submission) {
+      return res.status(404).json({ error: "Submission not found" });
+    }
+
+    res.json(submission);
+  } catch (error: any) {
+    console.error("Submission status error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

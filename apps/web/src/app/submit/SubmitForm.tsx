@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession, signIn } from "next-auth/react";
-import { FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check, Upload } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check, Upload, RefreshCw, Terminal, XCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { submitEngine } from "./actions";
 import { ApiClient } from "@/lib/apiClient";
@@ -19,6 +19,17 @@ Requirements:
 
 The agent will be called once per move with the current board state as a FEN string. It should analyze the position and print the best move it can find in UCI notation (e.g. "e2e4", "g1f3", "e7e8q" for promotion).`;
 
+type SubmissionPhase = "form" | "validating" | "passed" | "failed";
+
+interface ValidationState {
+  submissionId: string;
+  engineSlug: string;
+  phase: SubmissionPhase;
+  validationNotes: string | null;
+  uciName: string | null;
+  pollCount: number;
+}
+
 export function SubmitForm() {
   const { data: session, status } = useSession();
   const [file, setFile] = useState<File | null>(null);
@@ -26,10 +37,11 @@ export function SubmitForm() {
   const [model, setModel] = useState("Claude Sonnet 4.6");
   const [customModel, setCustomModel] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
-  const [engineCount, setEngineCount] = useState<number | null>(null);
+
+  const [validation, setValidation] = useState<ValidationState | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const models = [
     "Claude Sonnet 4.6",
@@ -42,14 +54,54 @@ export function SubmitForm() {
     "Other"
   ];
 
+  // Cleanup polling on unmount
   useEffect(() => {
-    if (session?.user) {
-      const userId = (session.user as any).id;
-      ApiClient.getEnginesByOwner(userId)
-        .then((engines: any[]) => setEngineCount(engines.length))
-        .catch(() => setEngineCount(0));
-    }
-  }, [session]);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const startPolling = (submissionId: string, engineSlug: string) => {
+    setValidation({
+      submissionId,
+      engineSlug,
+      phase: "validating",
+      validationNotes: null,
+      uciName: null,
+      pollCount: 0,
+    });
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const data = await ApiClient.getSubmissionStatus(submissionId);
+        const vs = data.version?.validationStatus;
+
+        setValidation(prev => {
+          if (!prev) return prev;
+          const newCount = prev.pollCount + 1;
+
+          if (vs === "passed") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            return { ...prev, phase: "passed", uciName: data.version?.uciName, pollCount: newCount };
+          }
+          if (vs === "failed") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            return { ...prev, phase: "failed", validationNotes: data.version?.validationNotes, pollCount: newCount };
+          }
+
+          // Timeout after 60 polls (~2 minutes)
+          if (newCount > 60) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            return { ...prev, phase: "failed", validationNotes: "Validation timed out. The worker may be busy. Check your dashboard for updates.", pollCount: newCount };
+          }
+
+          return { ...prev, pollCount: newCount };
+        });
+      } catch {
+        // Silently retry on network errors
+      }
+    }, 2000);
+  };
 
   const copyPrompt = () => {
     navigator.clipboard.writeText(AGENT_PROMPT);
@@ -81,7 +133,7 @@ export function SubmitForm() {
     if (!file || !engineName) return;
 
     setIsUploading(true);
-    setUploadStatus("idle");
+    setErrorMsg("");
 
     try {
       const finalModel = model === "Other" ? customModel : model;
@@ -91,19 +143,35 @@ export function SubmitForm() {
       formData.append("generationModel", finalModel);
 
       const result = await submitEngine(formData);
-      
+
       if (result.success) {
-        setUploadStatus("success");
+        startPolling(result.submissionId, result.engineSlug);
       } else {
         setErrorMsg(result.error || "Upload failed");
-        setUploadStatus("error");
       }
     } catch (err: any) {
-      setUploadStatus("error");
       setErrorMsg(err.message || "Failed to upload engine. Please try again.");
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleReupload = () => {
+    // Keep engineName and model, reset file and validation state
+    setFile(null);
+    setErrorMsg("");
+    if (pollRef.current) clearInterval(pollRef.current);
+    setValidation(null);
+  };
+
+  const handleNewSubmission = () => {
+    setFile(null);
+    setEngineName("");
+    setModel("Claude Sonnet 4.6");
+    setCustomModel("");
+    setErrorMsg("");
+    if (pollRef.current) clearInterval(pollRef.current);
+    setValidation(null);
   };
 
   if (status === "loading") return null;
@@ -130,6 +198,177 @@ export function SubmitForm() {
     );
   }
 
+  // ── Validation Status View ──
+  if (validation) {
+    return (
+      <div className="container mx-auto px-6 py-16 max-w-3xl flex flex-col gap-12 text-white min-h-screen">
+        <div className="flex flex-col gap-6">
+          <div className="technical-label">V.03 / Validation Pipeline</div>
+          <h1 className="text-5xl font-bold tracking-tight">{engineName}</h1>
+          <p className="text-muted text-sm text-white/60">
+            Monitoring real-time validation status for your submission.
+          </p>
+        </div>
+
+        <div className="border border-border-custom soft-shadow bg-white/[0.01] flex flex-col">
+          {/* Pipeline Steps */}
+          <div className="flex flex-col divide-y divide-border-custom">
+            {/* Step 1: Upload */}
+            <div className="flex items-center gap-4 p-6">
+              <div className="w-8 h-8 rounded-full border border-accent bg-accent/10 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={14} className="text-accent" />
+              </div>
+              <div className="flex-1">
+                <span className="font-bold text-sm">Binary Uploaded</span>
+                <span className="technical-label text-[10px] opacity-40 ml-3">COMPLETE</span>
+              </div>
+              <span className="text-accent text-[10px] font-mono font-bold">✓</span>
+            </div>
+
+            {/* Step 2: Queued */}
+            <div className="flex items-center gap-4 p-6">
+              <div className="w-8 h-8 rounded-full border border-accent bg-accent/10 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={14} className="text-accent" />
+              </div>
+              <div className="flex-1">
+                <span className="font-bold text-sm">Validation Job Queued</span>
+                <span className="technical-label text-[10px] opacity-40 ml-3">COMPLETE</span>
+              </div>
+              <span className="text-accent text-[10px] font-mono font-bold">✓</span>
+            </div>
+
+            {/* Step 3: Sandbox Probe */}
+            <div className="flex items-center gap-4 p-6">
+              {validation.phase === "validating" ? (
+                <div className="w-8 h-8 rounded-full border border-accent/40 flex items-center justify-center shrink-0 animate-pulse">
+                  <Loader2 size={14} className="text-accent animate-spin" />
+                </div>
+              ) : validation.phase === "passed" ? (
+                <div className="w-8 h-8 rounded-full border border-accent bg-accent/10 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={14} className="text-accent" />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full border border-red-500/40 bg-red-500/10 flex items-center justify-center shrink-0">
+                  <XCircle size={14} className="text-red-500" />
+                </div>
+              )}
+              <div className="flex-1">
+                <span className="font-bold text-sm">Sandbox Probe</span>
+                <span className={`technical-label text-[10px] ml-3 ${
+                  validation.phase === "validating" ? "text-accent animate-pulse" :
+                  validation.phase === "passed" ? "opacity-40" : "text-red-400"
+                }`}>
+                  {validation.phase === "validating" ? "RUNNING..." :
+                   validation.phase === "passed" ? "COMPLETE" : "FAILED"}
+                </span>
+              </div>
+              {validation.phase === "validating" && (
+                <span className="text-[10px] font-mono opacity-30">{validation.pollCount * 2}s</span>
+              )}
+              {validation.phase === "passed" && (
+                <span className="text-accent text-[10px] font-mono font-bold">✓</span>
+              )}
+              {validation.phase === "failed" && (
+                <span className="text-red-500 text-[10px] font-mono font-bold">✗</span>
+              )}
+            </div>
+
+            {/* Step 4: Arena Registration */}
+            <div className="flex items-center gap-4 p-6">
+              {validation.phase === "passed" ? (
+                <div className="w-8 h-8 rounded-full border border-accent bg-accent/10 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={14} className="text-accent" />
+                </div>
+              ) : (
+                <div className={`w-8 h-8 rounded-full border border-border-custom flex items-center justify-center shrink-0 ${validation.phase === "failed" ? "opacity-20" : "opacity-40"}`}>
+                  <span className="text-[10px] font-mono opacity-40">04</span>
+                </div>
+              )}
+              <div className="flex-1">
+                <span className={`font-bold text-sm ${validation.phase !== "passed" && validation.phase !== "failed" ? "opacity-40" : ""} ${validation.phase === "failed" ? "opacity-20" : ""}`}>
+                  Arena Registration
+                </span>
+                {validation.phase === "passed" && (
+                  <span className="technical-label text-[10px] opacity-40 ml-3">COMPLETE</span>
+                )}
+              </div>
+              {validation.phase === "passed" && (
+                <span className="text-accent text-[10px] font-mono font-bold">✓</span>
+              )}
+            </div>
+          </div>
+
+          {/* Result Panel */}
+          {validation.phase === "failed" && validation.validationNotes && (
+            <div className="border-t border-border-custom p-6 bg-red-950/10">
+              <div className="flex items-center gap-2 mb-3">
+                <Terminal size={12} className="text-red-400" />
+                <span className="technical-label text-[10px] text-red-400">VALIDATION_ERROR.LOG</span>
+              </div>
+              <pre className="font-mono text-[11px] text-red-200/70 whitespace-pre-wrap leading-relaxed bg-black/40 p-4 border border-red-900/20 rounded">
+                {validation.validationNotes}
+              </pre>
+            </div>
+          )}
+
+          {validation.phase === "passed" && validation.uciName && (
+            <div className="border-t border-border-custom p-6 bg-accent/[0.03]">
+              <div className="flex items-center gap-2 mb-2">
+                <Terminal size={12} className="text-accent" />
+                <span className="technical-label text-[10px] text-accent/60">UCI_HANDSHAKE</span>
+              </div>
+              <span className="font-mono text-sm font-bold">{validation.uciName}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          {validation.phase === "passed" && (
+            <>
+              <Link
+                href={`/engines/${validation.engineSlug}`}
+                className="flex-1 py-4 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              >
+                View Agent Profile <ArrowRight size={14} />
+              </Link>
+              <button
+                onClick={handleNewSubmission}
+                className="flex-1 py-4 border border-border-custom font-bold text-sm tracking-tight hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2"
+              >
+                Submit Another Agent
+              </button>
+            </>
+          )}
+
+          {validation.phase === "failed" && (
+            <>
+              <button
+                onClick={handleReupload}
+                className="flex-1 py-4 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw size={14} /> Re-upload Code for "{engineName}"
+              </button>
+              <button
+                onClick={handleNewSubmission}
+                className="flex-1 py-4 border border-border-custom font-bold text-sm tracking-tight hover:bg-white/[0.04] transition-all flex items-center justify-center gap-2"
+              >
+                Start Fresh
+              </button>
+            </>
+          )}
+
+          {validation.phase === "validating" && (
+            <div className="py-4 text-center technical-label opacity-30 text-xs">
+              Pipeline is running. This page auto-updates every 2 seconds.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Submission Form ──
   return (
     <div className="container mx-auto px-6 py-16 max-w-4xl flex flex-col gap-16 text-white min-h-screen">
       <div className="flex flex-col gap-6">
@@ -140,155 +379,124 @@ export function SubmitForm() {
         </p>
       </div>
 
-      {uploadStatus === "success" ? (
-        <div className="border border-border-custom p-16 flex flex-col items-center text-center gap-8 soft-shadow bg-white/[0.01]">
-          <div className="w-12 h-12 rounded-full border border-accent flex items-center justify-center">
-            <CheckCircle2 size={24} className="text-accent" />
-          </div>
-          <div className="flex flex-col gap-3">
-            <h2 className="text-3xl font-bold tracking-tight text-white">Handshake Received.</h2>
-            <p className="text-muted text-sm max-w-md text-white/60">
-              Agent <strong>{engineName}</strong> has been queued for validation. This normally takes 5-10 seconds of processing time.
-            </p>
-          </div>
-          <div className="flex gap-4">
-            <Link href="/dashboard" className="px-6 py-3 border border-border-custom font-bold text-sm tracking-tight hover:bg-white/5 transition-all text-white">
-              Track Progress
-            </Link>
-            <button
-              onClick={() => {
-                setUploadStatus("idle");
-                setFile(null);
-                setEngineName("");
-                setModel("Claude 3.5 Sonnet");
-                setCustomModel("");
-              }}
-              className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all"
-            >
-              Submit Another
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid lg:grid-cols-[1fr_300px] gap-20">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-12">
-            <div className="flex flex-col gap-10">
-              <div className="flex flex-col gap-4">
-                <label className="technical-label text-white/40">Engine Designation</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Pawnstorm Alpha"
-                  value={engineName}
-                  onChange={(e) => setEngineName(e.target.value)}
-                  required
-                  maxLength={64}
-                  className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors text-white"
-                />
-              </div>
+      <div className="grid lg:grid-cols-[1fr_300px] gap-20">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-12">
+          <div className="flex flex-col gap-10">
+            <div className="flex flex-col gap-4">
+              <label className="technical-label text-white/40">Engine Designation</label>
+              <input
+                type="text"
+                placeholder="e.g. Pawnstorm Alpha"
+                value={engineName}
+                onChange={(e) => setEngineName(e.target.value)}
+                required
+                maxLength={64}
+                className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors text-white"
+              />
+            </div>
 
-              <div className="flex flex-col gap-4">
-                <label className="technical-label text-white/40">Generator Model</label>
-                <div className="flex flex-col gap-3">
-                  <select
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors appearance-none cursor-pointer text-white"
-                  >
-                    {models.map((m) => (
-                      <option key={m} value={m} className="bg-black">{m}</option>
-                    ))}
-                  </select>
-                  
-                  {model === "Other" && (
-                    <input
-                      type="text"
-                      placeholder="Specify custom model..."
-                      value={customModel}
-                      onChange={(e) => setCustomModel(e.target.value)}
-                      required={model === "Other"}
-                      className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors text-white animate-in fade-in slide-in-from-top-2"
-                    />
+            <div className="flex flex-col gap-4">
+              <label className="technical-label text-white/40">Generator Model</label>
+              <div className="flex flex-col gap-3">
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors appearance-none cursor-pointer text-white"
+                >
+                  {models.map((m) => (
+                    <option key={m} value={m} className="bg-black">{m}</option>
+                  ))}
+                </select>
+                
+                {model === "Other" && (
+                  <input
+                    type="text"
+                    placeholder="Specify custom model..."
+                    value={customModel}
+                    onChange={(e) => setCustomModel(e.target.value)}
+                    required={model === "Other"}
+                    className="w-full bg-background border border-border-custom p-4 text-sm font-medium focus:outline-none focus:border-accent transition-colors text-white animate-in fade-in slide-in-from-top-2"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <label className="technical-label text-white/40">Binary (.js or .py)</label>
+              <div className="relative group">
+                <input
+                  type="file"
+                  accept=".js,.py"
+                  onChange={handleFileChange}
+                  required
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                />
+                <div className={`w-full min-h-[160px] border border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-border-custom bg-white/[0.01] hover:bg-white/[0.03]'}`}>
+                  {file ? (
+                    <>
+                      <FileText size={32} className="text-accent" />
+                      <div className="text-center">
+                        <p className="font-bold text-sm text-white">{file.name}</p>
+                        <p className="technical-label text-[9px] text-white/40">{(file.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={32} className="opacity-10 text-white" />
+                      <div className="text-center space-y-1">
+                        <p className="font-bold text-sm text-white">Drop agent code here</p>
+                        <p className="technical-label text-[9px] text-white/40">JS or Python / Max 1MB</p>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
-
-              <div className="flex flex-col gap-4">
-                <label className="technical-label text-white/40">Binary (.js or .py)</label>
-                <div className="relative group">
-                  <input
-                    type="file"
-                    accept=".js,.py"
-                    onChange={handleFileChange}
-                    required
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                  />
-                  <div className={`w-full min-h-[160px] border border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-border-custom bg-white/[0.01] hover:bg-white/[0.03]'}`}>
-                    {file ? (
-                      <>
-                        <FileText size={32} className="text-accent" />
-                        <div className="text-center">
-                          <p className="font-bold text-sm text-white">{file.name}</p>
-                          <p className="technical-label text-[9px] text-white/40">{(file.size / 1024).toFixed(1)} KB</p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <Upload size={32} className="opacity-10 text-white" />
-                        <div className="text-center space-y-1">
-                          <p className="font-bold text-sm text-white">Drop agent code here</p>
-                          <p className="technical-label text-[9px] text-white/40">JS or Python / Max 1MB</p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {errorMsg && <p className="mt-3 text-red-400 text-xs flex items-center gap-1 font-medium"><AlertCircle size={12} /> {errorMsg}</p>}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isUploading || !file || !engineName}
-              className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight border-2 border-transparent hover:opacity-90 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-neutral-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={16} />
-                  Complete Submission
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="flex flex-col gap-10">
-            <div className="flex flex-col gap-6">
-              <div className="flex items-center justify-between border-b border-border-custom pb-4 text-white/40">
-                <span className="technical-label">Technical Spec</span>
-                <button
-                  type="button"
-                  onClick={copyPrompt}
-                  className="technical-label flex items-center gap-1 hover:text-accent transition-colors"
-                >
-                  {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
-                </button>
-              </div>
-              <div className="bg-white/[0.02] border border-border-custom p-6">
-                <pre className="text-[11px] font-mono text-white/40 whitespace-pre-wrap leading-relaxed">
-                  {AGENT_PROMPT.substring(0, 300)}...
-                </pre>
-              </div>
-              <p className="text-[11px] leading-relaxed text-white/40 font-medium italic">
-                Standard tournament rules apply. No late-binding evaluations or network egress allowed.
-              </p>
+              {errorMsg && <p className="mt-3 text-red-400 text-xs flex items-center gap-1 font-medium"><AlertCircle size={12} /> {errorMsg}</p>}
             </div>
           </div>
+
+          <button
+            type="submit"
+            disabled={isUploading || !file || !engineName}
+            className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight border-2 border-transparent hover:opacity-90 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-neutral-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={16} />
+                Complete Submission
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="flex flex-col gap-10">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between border-b border-border-custom pb-4 text-white/40">
+              <span className="technical-label">Technical Spec</span>
+              <button
+                type="button"
+                onClick={copyPrompt}
+                className="technical-label flex items-center gap-1 hover:text-accent transition-colors"
+              >
+                {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
+              </button>
+            </div>
+            <div className="bg-white/[0.02] border border-border-custom p-6">
+              <pre className="text-[11px] font-mono text-white/40 whitespace-pre-wrap leading-relaxed">
+                {AGENT_PROMPT.substring(0, 300)}...
+              </pre>
+            </div>
+            <p className="text-[11px] leading-relaxed text-white/40 font-medium italic">
+              Standard tournament rules apply. No late-binding evaluations or network egress allowed.
+            </p>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

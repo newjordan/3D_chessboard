@@ -65,6 +65,10 @@ export class ApiClient {
     return this.request<any>(`/api/users/${handle}`);
   }
 
+  static async getSubmissionStatus(submissionId: string) {
+    return this.request<any>(`/api/submissions/${submissionId}`);
+  }
+
   static async submitEngine(form: FormData) {
     const res = await fetch(`${API_BASE_URL}/api/engines/submit`, {
       method: "POST",
