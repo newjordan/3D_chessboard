@@ -92,12 +92,17 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   <span className="opacity-20 font-mono">VS</span>
                   <span>{match.defenderEngine.name}</span>
                 </div>
-                <div className="text-right">
+                <div className="flex flex-col items-end gap-1">
                    <span className={`font-mono text-sm font-bold ${
                      game.result === '1-0' ? 'text-accent' : game.result === '0-1' ? 'text-red-800' : 'opacity-40'
                    }`}>
                      {game.result}
                    </span>
+                   {game.termination && (
+                     <span className="technical-label text-[9px] opacity-40 lowercase italic">
+                       {game.termination}
+                     </span>
+                   )}
                 </div>
               </div>
             ))}
