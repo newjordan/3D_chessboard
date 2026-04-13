@@ -107,17 +107,62 @@ async function notifyMatchResult(match: any, deltaA: number, deltaB: number, cha
       }
     };
 
-    if (!DISCORD_WEBHOOK_URL) return;
+    if (!DISCORD_WEBHOOK_URL) {
+      console.warn("DISCORD_WEBHOOK_URL not set. Skipping notification.");
+      return;
+    }
 
-    await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ embeds: [embed] }),
     });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Discord API Error (API-result): ${response.status} ${response.statusText} - ${errorText}`);
+    }
   } catch (error) {
     console.error("Failed to send Discord notification:", error);
   }
 }
+
+async function notifyGameResult(match: any, round: number, result: string, termination: string) {
+    try {
+      const resultEmoji = result === "1-0" ? "⚪" : result === "0-1" ? "⚫" : "🤝";
+      const embed = {
+        title: `🎮 Game ${round} Finished`,
+        description: `${resultEmoji} Result: **${result}** (${termination})`,
+        color: 0xf1c40f, // Yellow/Gold
+        fields: [
+          {
+            name: "Matchup",
+            value: `${match.challengerEngine.name} vs ${match.defenderEngine.name}`,
+            inline: true
+          }
+        ],
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: `Match ID: ${match.id.substring(0, 8)}`
+        }
+      };
+  
+      if (!DISCORD_WEBHOOK_URL) return;
+  
+      const response = await fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ embeds: [embed] }),
+      });
+  
+      if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Discord API Error (API-game): ${response.status} ${response.statusText} - ${errorText}`);
+      }
+    } catch (error) {
+      console.error("Failed to send Discord notification (game):", error);
+    }
+  }
 
 // Helper: Slugify
 const slugify = (text: string) => {
@@ -1153,6 +1198,12 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
       challengerScore: Number(challengerScore),
       defenderScore: Number(defenderScore)
     };
+
+    // Replay games for the Live Feed
+    for (const g of gameSubmissions) {
+        await notifyGameResult(notifiedMatch, g.roundIndex, g.result, g.termination);
+    }
+
     await notifyMatchResult(notifiedMatch, deltaA, deltaB, challengerWins, defenderWins, draws);
 
     res.json({ success: true });

@@ -15,17 +15,19 @@ import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import { Readable } from "stream";
-import { notifyMatchStarted, notifyMatchResult, notifyEngineValidated } from "./notifications";
+import { notifyMatchStarted, notifyMatchResult, notifyEngineValidated, notifyGameResult } from "./notifications";
 
 const WORKER_ID = `worker-${process.env.HOSTNAME || Math.random().toString(36).substring(7)}`;
 
 async function pollJobs() {
   try {
     const job = await prisma.$transaction(async (tx) => {
+      const matchExclusion = process.env.ENABLE_MATCH_RUN === 'true' ? '' : 'AND "jobType" != \'match_run\'';
+
       const pendingJobs = await tx.$queryRawUnsafe<any[]>(`
         SELECT id FROM "Job"
         WHERE status = 'pending' AND "runAt" <= NOW()
-        AND "jobType" != 'match_run'
+        ${matchExclusion}
         ORDER BY 
           CASE 
             WHEN "jobType" = 'rating_apply' THEN 0
@@ -277,7 +279,12 @@ async function handleMatchRun(payload: any) {
         language: (match.defenderVersion.language || defenderExt.slice(1)) as "js" | "py",
         name: match.defenderEngine.name,
       },
-      { games: match.gamesPlanned }
+      { 
+        games: match.gamesPlanned,
+        onGameComplete: async (round, res, term) => {
+          await notifyGameResult(match, round, res, term);
+        }
+      }
     );
 
     // 3. Validate score integrity

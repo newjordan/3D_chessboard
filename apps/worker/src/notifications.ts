@@ -1,53 +1,66 @@
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const BASE_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
 export async function notifyMatchStarted(match: any) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   try {
+    console.log(`[Notification] Sending Match Started for ${match.id}...`);
     const embed = {
       title: "⚔️ Match Started",
-      description: `**${match.challengerEngine.name}** vs **${match.defenderEngine.name}**`,
+      description: `**${match.challengerEngine?.name || "Unknown"}** vs **${match.defenderEngine?.name || "Unknown"}**`,
       color: 0x3498db, // Blue
       fields: [
         {
           name: "Challenger",
-          value: `${match.challengerEngine.name} (${match.challengerEngine.currentRating} Elo)`,
+          value: `${match.challengerEngine?.name || "N/A"} (${match.challengerEngine?.currentRating || 1200} Elo)`,
           inline: true
         },
         {
           name: "Defender",
-          value: `${match.defenderEngine.name} (${match.defenderEngine.currentRating} Elo)`,
+          value: `${match.defenderEngine?.name || "N/A"} (${match.defenderEngine?.currentRating || 1200} Elo)`,
           inline: true
         },
         {
           name: "Format",
-          value: `${match.gamesPlanned} Games`,
+          value: `${match.gamesPlanned || 0} Games`,
           inline: false
         }
       ],
       timestamp: new Date().toISOString(),
       footer: {
-        text: `Match ID: ${match.id.substring(0, 8)}`
+        text: `Match ID: ${String(match.id).substring(0, 8)}`
       }
     };
 
-    if (!DISCORD_WEBHOOK_URL) return;
+    if (!webhookUrl) {
+      console.warn("DEBUG: No DISCORD_WEBHOOK_URL found in environment.");
+      return;
+    }
 
-    await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ embeds: [embed] }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Discord API Error (started): ${response.status} ${response.statusText} - ${errorText}`);
+    } else {
+      console.log(`[Notification] Match Started sent successfully.`);
+    }
   } catch (error) {
     console.error("Failed to send Discord notification (started):", error);
   }
 }
 
 export async function notifyMatchResult(match: any, deltaA: number, deltaB: number, challengerWins: number, defenderWins: number, draws: number) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   try {
-    const resultText = match.challengerScore > match.defenderScore 
-      ? `🏆 **${match.challengerEngine.name}** won the match!`
-      : match.defenderScore > match.challengerScore
-      ? `🏆 **${match.defenderEngine.name}** won the match!`
+    console.log(`[Notification] Sending Match Result for ${match.id}...`);
+    const resultText = (match.challengerScore || 0) > (match.defenderScore || 0)
+      ? `🏆 **${match.challengerEngine?.name || "Challenger"}** won the match!`
+      : (match.defenderScore || 0) > (match.challengerScore || 0)
+      ? `🏆 **${match.defenderEngine?.name || "Defender"}** won the match!`
       : "🤝 The match ended in a draw.";
 
     const embed = {
@@ -56,13 +69,13 @@ export async function notifyMatchResult(match: any, deltaA: number, deltaB: numb
       color: 0x2ecc71, // Green
       fields: [
         {
-          name: match.challengerEngine.name,
-          value: `Score: **${match.challengerScore}**\nRating: ${match.challengerEngine.currentRating + deltaA} (${deltaA > 0 ? "+" : ""}${deltaA})`,
+          name: match.challengerEngine?.name || "Challenger",
+          value: `Score: **${match.challengerScore || 0}**\nRating: ${(match.challengerEngine?.currentRating || 1200) + deltaA} (${deltaA > 0 ? "+" : ""}${deltaA})`,
           inline: true
         },
         {
-          name: match.defenderEngine.name,
-          value: `Score: **${match.defenderScore}**\nRating: ${match.defenderEngine.currentRating + deltaB} (${deltaB > 0 ? "+" : ""}${deltaB})`,
+          name: match.defenderEngine?.name || "Defender",
+          value: `Score: **${match.defenderScore || 0}**\nRating: ${(match.defenderEngine?.currentRating || 1200) + deltaB} (${deltaB > 0 ? "+" : ""}${deltaB})`,
           inline: true
         },
         {
@@ -74,23 +87,72 @@ export async function notifyMatchResult(match: any, deltaA: number, deltaB: numb
       url: `${BASE_URL}/matches/${match.id}`,
       timestamp: new Date().toISOString(),
       footer: {
-        text: `Match ID: ${match.id.substring(0, 8)}`
+        text: `Match ID: ${String(match.id).substring(0, 8)}`
       }
     };
 
-    if (!DISCORD_WEBHOOK_URL) return;
+    if (!webhookUrl) return;
 
-    await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ embeds: [embed] }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Discord API Error (result): ${response.status} ${response.statusText} - ${errorText}`);
+    } else {
+      console.log(`[Notification] Match Result sent successfully.`);
+    }
   } catch (error) {
     console.error("Failed to send Discord notification (result):", error);
   }
 }
 
+export async function notifyGameResult(match: any, round: number, result: string, termination: string) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  try {
+    console.log(`[Notification] Sending Game Result for round ${round}...`);
+    const resultEmoji = result === "1-0" ? "⚪" : result === "0-1" ? "⚫" : "🤝";
+    const embed = {
+      title: `🎮 Game ${round} Finished`,
+      description: `${resultEmoji} Result: **${result}** (${termination})`,
+      color: 0xf1c40f, // Yellow/Gold
+      fields: [
+        {
+          name: "Matchup",
+          value: `${match.challengerEngine?.name || "Agent A"} vs ${match.defenderEngine?.name || "Agent B"}`,
+          inline: true
+        }
+      ],
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: `Match ID: ${String(match.id).substring(0, 8)}`
+      }
+    };
+
+    if (!webhookUrl) return;
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Discord API Error (game): ${response.status} ${response.statusText} - ${errorText}`);
+    } else {
+      console.log(`[Notification] Game Result sent successfully.`);
+    }
+  } catch (error) {
+    console.error("Failed to send Discord notification (game):", error);
+  }
+}
+
 export async function notifyEngineValidated(engine: any, owner: any) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   try {
     const embed = {
       title: "🚀 New Agent Validated",
@@ -111,17 +173,22 @@ export async function notifyEngineValidated(engine: any, owner: any) {
       thumbnail: owner.image ? { url: owner.image } : undefined,
       timestamp: new Date().toISOString(),
       footer: {
-        text: `Engine ID: ${engine.id.substring(0, 8)}`
+        text: `Engine ID: ${String(engine.id).substring(0, 8)}`
       }
     };
 
-    if (!DISCORD_WEBHOOK_URL) return;
+    if (!webhookUrl) return;
 
-    await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ embeds: [embed] }),
     });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Discord API Error (validated): ${response.status} ${response.statusText} - ${errorText}`);
+    }
   } catch (error) {
     console.error("Failed to send Discord notification (validated):", error);
   }

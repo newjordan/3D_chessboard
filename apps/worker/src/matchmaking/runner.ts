@@ -141,7 +141,10 @@ class EngineController {
 export async function runMatch(
   agentA: AgentConfig,
   agentB: AgentConfig,
-  options: { games: number }
+  options: { 
+    games: number;
+    onGameComplete?: (round: number, result: string, termination: string) => Promise<void>;
+  }
 ): Promise<MatchResult> {
   const results: GameResult[] = [];
   const allPgns: string[] = [];
@@ -157,6 +160,12 @@ export async function runMatch(
     allPgns.push(gameResult.pgn);
 
     console.log(`  Result: ${gameResult.result} (${gameResult.termination})`);
+
+    if (options.onGameComplete) {
+      await options.onGameComplete(round, gameResult.result, gameResult.termination).catch(err => {
+        console.error(`Failed to trigger onGameComplete callback for round ${round}:`, err);
+      });
+    }
   }
 
   return {

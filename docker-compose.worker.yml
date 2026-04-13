@@ -14,7 +14,8 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - WORKER_ID=local-5070-pc
+      - WORKER_ID=local-worker
+      - ENABLE_MATCH_RUN=true
     # Optional: If you ever want to use your 5070 for GPU engines:
     # deploy:
     #   resources:
