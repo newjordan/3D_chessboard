@@ -1333,7 +1333,7 @@ app.get("/api/admin/engines", authorizeAdmin, async (req, res) => {
 // 4. Update Engine Status (Admin Override)
 app.patch("/api/admin/engines/:id/status", authorizeAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status } = req.body;
     
     const updated = await prisma.engine.update({
@@ -1363,7 +1363,7 @@ app.get("/api/admin/jobs", authorizeAdmin, async (req, res) => {
 // 6. Retry Job
 app.post("/api/admin/jobs/:id/retry", authorizeAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const updated = await prisma.job.update({
       where: { id },
       data: { 
