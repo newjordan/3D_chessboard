@@ -1142,7 +1142,7 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
         WHERE status = 'active'
       ) ranked
       WHERE e.id = ranked.id
-    `).catch(err => console.error("Failed to update global ranks:", err));
+    `).catch((err: any) => console.error("Failed to update global ranks:", err));
 
     console.log(`[Broker] Match ${matchId} Result: ${challengerScore}-${defenderScore}. Deltas: ${deltaA > 0 ? '+' : ''}${deltaA} / ${deltaB > 0 ? '+' : ''}${deltaB}`);
     console.log(`[Broker] Successfully processed result for match ${matchId}. Winner recorded.`);
