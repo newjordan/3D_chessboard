@@ -1,6 +1,7 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-export function createPieces(scene, offset) {
+export async function createPieces(scene, offset) {
   const piecesContainer = new THREE.Group();
   scene.add(piecesContainer);
 
@@ -10,68 +11,88 @@ export function createPieces(scene, offset) {
   const blackMaterial = new THREE.LineBasicMaterial({ color: 0x22aaff, transparent: true, opacity: 0.7 });
   const activeMaterial = new THREE.LineBasicMaterial({ color: 0x00ffaa, transparent: true, opacity: 1.0 });
 
-  function createTopologicalPiece(type, isWhite) {
+  const loader = new GLTFLoader();
+  const loadedGeometries = {};
+  
+  const modelsToLoad = ['pawn', 'rook', 'knight', 'bishop', 'queen', 'king'];
+  
+  // Await loading all external geometry assets provided by user
+  await Promise.all(modelsToLoad.map(type => {
+    return new Promise((resolve, reject) => {
+      // URL references the local Vite public mappings
+      loader.load(`/models/styles/classic-lowpoly/models/white/${type}.glb`, (gltf) => {
+        // Collect all meshes in the GLB
+        const geometries = [];
+        gltf.scene.traverse((child) => {
+          if (child.isMesh) {
+             geometries.push(child.geometry.clone()); 
+          }
+        });
+        
+        if (geometries.length > 0) {
+          // Merge or process geometries? For Wireframe, we can just merge them if there are multiple.
+          // Or just take the first one if it's a single low poly mesh
+          let geometry = geometries[0]; // let's stick to first mesh assuming single export
+          
+          geometry.computeBoundingBox();
+          
+          // NEVER translate X and Z using bounding box center, because asymmetrical pieces (Knights) will have offset bases!
+          // Only shift Y so it sits on the board perfectly.
+          geometry.translate(0, -geometry.boundingBox.min.y, 0);
+          
+          const ySize = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
+          // Calculate max X/Z width to ensure it fits in the 1x1 square
+          const xSize = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
+          const zSize = geometry.boundingBox.max.z - geometry.boundingBox.min.z;
+          const largestDim = Math.max(xSize, zSize);
+
+          let desiredHeight = 1.0;
+          switch(type) {
+              case 'pawn': desiredHeight = 0.8; break;
+              case 'rook': desiredHeight = 1.0; break;
+              case 'knight': desiredHeight = 1.25; break;
+              case 'bishop': desiredHeight = 1.4; break;
+              case 'queen': desiredHeight = 1.6; break;
+              case 'king': desiredHeight = 1.8; break;
+          }
+          
+          // If the model is enormously wide, we must cap its height scaling so it doesn't spill over a 1x1 square
+          let scaleFac = desiredHeight / ySize;
+          if (largestDim * scaleFac > 0.8) {
+              scaleFac = 0.8 / largestDim; // lock width to 0.8 maximum
+          }
+
+          geometry.scale(scaleFac, scaleFac, scaleFac);
+          
+          loadedGeometries[type] = geometry;
+        }
+        resolve();
+      }, undefined, (err) => {
+          console.error("Failed loading model:", type, err);
+          resolve(); // Resolve anyway so it doesn't break everything
+      });
+    });
+  }));
+
+  function createTopologicalPiece(code, isWhite) {
     const group = new THREE.Group();
-    let geometries = [];
-    let height = 0.8;
-
-    // Use combinations of Lathe, Sphere, and Cylinder for topological complex nets
-    const addMesh = (geom, yPos) => {
-      geom.translate(0, yPos, 0);
-      geometries.push(geom);
-    };
-
-    const r1 = 0.35, r2 = 0.15;
     
-    // Base is always a ring stack
-    addMesh(new THREE.CylinderGeometry(0.3, r1, 0.2, 16, 2), 0.1);
-
-    switch (type) {
-      case 'P':
-        height = 0.8;
-        addMesh(new THREE.CylinderGeometry(r2, 0.25, 0.4, 12, 4), 0.4);
-        addMesh(new THREE.SphereGeometry(r2 + 0.05, 12, 8), 0.7);
-        break;
-      case 'R':
-        height = 1.0;
-        addMesh(new THREE.CylinderGeometry(0.25, 0.28, 0.6, 16, 6), 0.5);
-        addMesh(new THREE.CylinderGeometry(0.3, 0.25, 0.2, 16, 2), 0.9);
-        break;
-      case 'N':
-        height = 1.2;
-        addMesh(new THREE.CylinderGeometry(0.2, 0.28, 0.4, 12, 4), 0.4);
-        // Horse head proxy - asymmetrical topological
-        addMesh(new THREE.SphereGeometry(0.25, 12, 8), 0.8);
-        addMesh(new THREE.CylinderGeometry(0.1, 0.2, 0.3, 8, 3).rotateX(Math.PI/4).translate(0, 0, 0.1), 0.9);
-        break;
-      case 'B':
-        height = 1.3;
-        addMesh(new THREE.CylinderGeometry(r2, 0.25, 0.6, 12, 5), 0.5);
-        addMesh(new THREE.ConeGeometry(r2 + 0.05, 0.4, 12, 4), 0.9);
-        addMesh(new THREE.SphereGeometry(0.05, 8, 8), 1.15);
-        break;
-      case 'Q':
-        height = 1.6;
-        addMesh(new THREE.CylinderGeometry(r2, 0.3, 0.8, 16, 6), 0.6);
-        addMesh(new THREE.SphereGeometry(0.25, 16, 8), 1.1);
-        addMesh(new THREE.CylinderGeometry(0.3, 0.1, 0.3, 12, 2), 1.35); // crown
-        break;
-      case 'K':
-        height = 1.8;
-        addMesh(new THREE.CylinderGeometry(r2, 0.3, 0.9, 16, 6), 0.65);
-        addMesh(new THREE.CylinderGeometry(0.25, 0.25, 0.3, 16, 4), 1.25);
-        addMesh(new THREE.BoxGeometry(0.1, 0.3, 0.1), 1.55); // cross vertical
-        addMesh(new THREE.BoxGeometry(0.2, 0.1, 0.1), 1.55); // cross horizontal
-        break;
-    }
+    let typeMap = { 'P':'pawn', 'R':'rook', 'N':'knight', 'B':'bishop', 'Q':'queen', 'K':'king' };
+    const typeName = typeMap[code];
+    let geo = loadedGeometries[typeName];
 
     const material = isWhite ? whiteMaterial : blackMaterial;
     
-    // We use WireframeGeometry on each added mesh for the intricate grid look
-    geometries.forEach(geo => {
+    if (geo) {
+      // Use WireframeGeometry to map the lowpoly GLB into our neon lattice style
       const wireframe = new THREE.LineSegments(new THREE.WireframeGeometry(geo), material);
       group.add(wireframe);
-    });
+    } else {
+      // Fallback cylinder if model fails
+      const fallbackGeo = new THREE.CylinderGeometry(0.3, 0.4, 1.0);
+      fallbackGeo.translate(0, 0.5, 0);
+      group.add(new THREE.LineSegments(new THREE.WireframeGeometry(fallbackGeo), material));
+    }
 
     // Double Ring Halo under the piece
     const haloGroup = new THREE.Group();
@@ -93,6 +114,13 @@ export function createPieces(scene, offset) {
     haloGroup.add(ring2);
     group.add(haloGroup);
 
+    // Make knight face correct direction
+    if (typeName === 'knight') {
+      // The original model might face Z or X. 
+      // We assume it faces +Z or +X. Let's force them to face each other.
+      group.rotation.y = isWhite ? Math.PI : 0; 
+    }
+
     group.userData = { material, haloMat };
 
     return group;
@@ -113,7 +141,10 @@ export function createPieces(scene, offset) {
     for(let file = 0; file < 8; file++) {
       const type = setup[rank][file];
       if (type) {
-        const isWhite = rank < 2;
+        // Standard mapping: Ranks 0-1 Black, Ranks 6-7 White? 
+        // In our setup z is array index, let's say rank 0 is black (far) and rank 7 is white (near).
+        // The array has rank 0 starting at index 0. Let's make rank > 4 white.
+        const isWhite = rank > 4;
         const piece = createTopologicalPiece(type, isWhite);
         
         const x = file * 1 - (offset - 0.5);
@@ -135,7 +166,6 @@ export function createPieces(scene, offset) {
     piecesContainer, 
     pieces,
     highlightPiece: (pieceGroup) => {
-      // Color rings to active and opacity 1
       pieceGroup.userData.haloMat.opacity = 1;
       pieceGroup.children.forEach(c => {
          if (c.type === 'LineSegments') c.material = activeMaterial;

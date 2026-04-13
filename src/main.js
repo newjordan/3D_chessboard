@@ -8,7 +8,7 @@ const appContainer = document.getElementById('app');
 
 const { scene, camera, renderer, composer, controls } = setupScene(appContainer);
 const { boardGroup, squareSize, offset } = createBoard(scene);
-const { piecesContainer, pieces, highlightPiece, unhighlightPiece } = createPieces(scene, offset);
+const { piecesContainer, pieces, highlightPiece, unhighlightPiece } = await createPieces(scene, offset);
 
 const clock = new THREE.Clock();
 
