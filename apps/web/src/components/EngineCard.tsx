@@ -3,11 +3,46 @@
 import Link from "next/link";
 import { TrendingUp, History, Info, Loader2, ChevronRight } from "lucide-react";
 
+import { ApiClient } from "@/lib/apiClient";
+import { useSession } from "next-auth/react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 interface EngineCardProps {
   engine: any;
+  isOwner?: boolean;
 }
 
-export function EngineCard({ engine }: EngineCardProps) {
+export function EngineCard({ engine, isOwner = false }: EngineCardProps) {
+  const { data: session } = useSession();
+  const [isToggling, setIsToggling] = useState(false);
+  const router = useRouter();
+
+  const handleToggleStatus = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const userId = (session?.user as any)?.id;
+    if (!userId || !isOwner) return;
+
+    setIsToggling(true);
+    const targetStatus = engine.status === 'active' ? 'disabled_by_owner' : 'active';
+    
+    try {
+      const resp = await ApiClient.updateEngineStatus(engine.id, targetStatus, userId);
+      if (resp.success) {
+        router.refresh();
+      } else {
+        alert(resp.message || "Failed to update status");
+      }
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setIsToggling(true); // Keep it loading until refresh
+      // Reset after a bit if refresh is slow
+      setTimeout(() => setIsToggling(false), 2000);
+    }
+  };
   const latestVersion = engine.versions?.[0];
 
   return (
@@ -33,15 +68,36 @@ export function EngineCard({ engine }: EngineCardProps) {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            {engine.status === 'pending' && <Loader2 size={10} className="animate-spin text-accent" />}
-            <span className={`technical-label px-2 py-0.5 border border-border-custom flex items-center gap-1.5 ${
-              engine.status === 'active' ? 'text-accent' : (engine.status === 'pending' ? 'text-accent/60' : 'text-muted')
-            }`}>
-              {engine.status === 'pending' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />}
-              {engine.status === 'pending' ? 'validating' : engine.status}
-            </span>
-          </div>
+          {isOwner ? (
+            <button 
+              onClick={handleToggleStatus}
+              disabled={isToggling || engine.status === 'pending'}
+              className={`technical-label px-2 py-0.5 border flex items-center gap-1.5 transition-all outline-none ${
+                engine.status === 'active' 
+                  ? 'bg-accent/10 border-accent/30 text-accent hover:bg-accent/20' 
+                  : (engine.status === 'pending' ? 'border-border-custom opacity-40 cursor-not-allowed' : 'bg-white/5 border-border-custom text-muted hover:bg-white/10')
+              }`}
+            >
+              {isToggling ? (
+                <Loader2 size={10} className="animate-spin" />
+              ) : (
+                <>
+                  {engine.status === 'pending' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />}
+                  {engine.status === 'pending' ? 'validating' : engine.status}
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              {engine.status === 'pending' && <Loader2 size={10} className="animate-spin text-accent" />}
+              <span className={`technical-label px-2 py-0.5 border border-border-custom flex items-center gap-1.5 ${
+                engine.status === 'active' ? 'text-accent' : (engine.status === 'pending' ? 'text-accent/60' : 'text-muted')
+              }`}>
+                {engine.status === 'pending' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />}
+                {engine.status === 'pending' ? 'validating' : engine.status}
+              </span>
+            </div>
+          )}
           {(Number(engine._count?.matchesChallenged || 0) + Number(engine._count?.matchesDefended || 0)) > 0 && (
             <div className="flex items-center gap-1.5 technical-label text-[9px] text-accent font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping duration-1000" />

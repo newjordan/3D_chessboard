@@ -12,7 +12,7 @@ export async function preparePlacementMatches(versionId: string) {
 
   if (!version) throw new Error("Engine version not found");
 
-  const opponents = await prisma.engine.findMany({
+  const allOpponents = await prisma.engine.findMany({
     where: {
       id: { not: version.engineId },
       status: EngineStatus.active,
@@ -20,11 +20,12 @@ export async function preparePlacementMatches(versionId: string) {
         some: { validationStatus: "passed" }
       }
     },
-    take: 3,
-    orderBy: {
-      currentRating: "desc",
-    },
   });
+
+  // Shuffle and pick 10
+  const opponents = allOpponents
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 10);
 
   console.log(`Preparing placement matches for ${version.engine.name} against ${opponents.length} valid opponents`);
 
