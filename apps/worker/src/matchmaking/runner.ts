@@ -57,11 +57,15 @@ class EngineController {
 
   async getMove(fen: string): Promise<string> {
     if (!this.child || this.isDead) {
+      const startBoot = performance.now();
       this.isDead = false;
       this.spawn();
+      const endBoot = performance.now();
+      console.log(`[${this.config.name}] Boot time: ${(endBoot - startBoot).toFixed(2)}ms`);
     }
 
     const child = this.child!;
+    const startThink = performance.now();
     return new Promise((resolve, reject) => {
       let completed = false;
       let stdout = "";
@@ -71,6 +75,8 @@ class EngineController {
         if (!completed && stdout.includes("\n")) {
           completed = true;
           cleanup();
+          const endThink = performance.now();
+          console.log(`[${this.config.name}] Think time: ${(endThink - startThink).toFixed(2)}ms`);
           resolve(stdout.split("\n")[0].trim());
         }
       };

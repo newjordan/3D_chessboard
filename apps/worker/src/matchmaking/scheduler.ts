@@ -8,8 +8,9 @@ const REMATCH_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
 /**
  * How many matches to schedule per poll cycle to avoid flooding the queue.
+ * Set to 4 (Conservative Mode) to ensure each engine gets maximum CPU on the $20 plan.
  */
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 4;
 
 /**
  * Maximum Elo distance for a "competitive" match.
@@ -165,4 +166,41 @@ export async function scheduleMatches(): Promise<number> {
   // Fix: Renamed from pg_release_advisory_lock (incorrect name) to pg_advisory_unlock (correct Postgres name)
   await prisma.$executeRaw`SELECT pg_advisory_unlock(1337::bigint)`;
 }
+}
+
+/**
+ * Finds jobs that have been 'processing' for more than 30 minutes
+ * and marks them as failed so the scheduler can move on.
+ */
+export async function reapStaleJobs(): Promise<number> {
+  const STALE_THRESHOLD_MS = 30 * 60 * 1000;
+  const staleTime = new Date(Date.now() - STALE_THRESHOLD_MS);
+
+  const staleJobs = await prisma.job.findMany({
+    where: {
+      status: JobStatus.processing,
+      updatedAt: { lt: staleTime },
+    },
+  });
+
+  if (staleJobs.length === 0) return 0;
+
+  console.log(`[Reaper] Clearing ${staleJobs.length} stale jobs.`);
+
+  for (const job of staleJobs) {
+    await prisma.job.update({
+      where: { id: job.id },
+      data: { status: JobStatus.failed },
+    });
+
+    // If it was a match, cancel the match too
+    if (job.jobType === JobType.match_run && job.payloadJson && (job.payloadJson as any).matchId) {
+      await prisma.match.update({
+        where: { id: (job.payloadJson as any).matchId },
+        data: { status: MatchStatus.canceled },
+      }).catch(() => {});
+    }
+  }
+
+  return staleJobs.length;
 }

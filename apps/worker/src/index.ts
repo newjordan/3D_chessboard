@@ -7,7 +7,7 @@ import { validateFileType } from "./validation/filetype";
 import { analyzeStatic } from "./validation/StaticAnalyzer";
 import { probeAgent } from "./validation/probe";
 import { preparePlacementMatches } from "./matchmaking/placement";
-import { scheduleMatches } from "./matchmaking/scheduler";
+import { scheduleMatches, reapStaleJobs } from "./matchmaking/scheduler";
 import { runMatch } from "./matchmaking/runner";
 import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { updateRatingsForMatch } from "./ratings/elo";
@@ -95,6 +95,21 @@ async function pollScheduler() {
   }
 
   setTimeout(pollScheduler, SCHEDULER_INTERVAL_MS);
+}
+
+const REAPER_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function pollReaper() {
+  try {
+    const reapedCount = await reapStaleJobs();
+    if (reapedCount > 0) {
+      console.log(`[${new Date().toISOString()}] Reaper identified and recovered ${reapedCount} stale job(s).`);
+    }
+  } catch (error) {
+    console.error("Reaper error:", error);
+  }
+
+  setTimeout(pollReaper, REAPER_INTERVAL_MS);
 }
 
 async function processJob(job: any) {
@@ -492,3 +507,4 @@ async function failSubmission(submissionId: string, versionId: string, reason: s
 console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
 pollJobs();
 pollScheduler();
+pollReaper();
