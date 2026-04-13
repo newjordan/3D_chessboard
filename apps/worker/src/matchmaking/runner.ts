@@ -23,11 +23,11 @@ export interface AgentConfig {
 
 const MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
 const MAX_PLIES = 500;
-const MOVE_TIMEOUT_MS = 5000;
+const MOVE_TIMEOUT_MS = 10000; // Increased to 10s for stability during tests
 
 /**
  * Manages the lifecycle of an engine process during a game.
- * Supports both legacy agents (exit after move) and persistent agents (stay alive).
+ * Uses a "One-Shot" model (Fresh spawn + Stdin end) for maximum compatibility.
  */
 class EngineController {
   private child: ChildProcess | null = null;
@@ -56,16 +56,15 @@ class EngineController {
   }
 
   async getMove(fen: string): Promise<string> {
-    if (!this.child || this.isDead) {
-      const startBoot = performance.now();
-      this.isDead = false;
-      this.spawn();
-      const endBoot = performance.now();
-      console.log(`[${this.config.name}] Boot time: ${(endBoot - startBoot).toFixed(2)}ms`);
-    }
+    const startBoot = performance.now();
+    this.isDead = false;
+    this.spawn();
+    const endBoot = performance.now();
+    console.log(`[${this.config.name}] Boot time: ${(endBoot - startBoot).toFixed(2)}ms`);
 
     const child = this.child!;
     const startThink = performance.now();
+
     return new Promise((resolve, reject) => {
       let completed = false;
       let stdout = "";
@@ -122,6 +121,7 @@ class EngineController {
       child.on("error", onError);
 
       child.stdin?.write(fen + "\n");
+      child.stdin?.end();
     });
   }
 
