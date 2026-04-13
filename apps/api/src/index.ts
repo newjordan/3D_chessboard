@@ -302,7 +302,7 @@ app.get("/api/matches/:id", async (req, res) => {
 app.get("/api/engines/by-owner/:userId", async (req, res) => {
   try {
     const engines = await prisma.engine.findMany({
-      where: { ownerUserId: req.params.userId },
+      where: { ownerUserId: req.params.userId as string },
       orderBy: { createdAt: "desc" },
       include: {
         owner: { select: { username: true, image: true } },
@@ -383,7 +383,7 @@ app.get("/api/users/:handle", async (req, res) => {
 app.get("/api/engines/:slug", async (req, res) => {
   try {
     const engine = await prisma.engine.findUnique({
-      where: { slug: req.params.slug },
+      where: { slug: req.params.slug as string },
       include: {
         owner: { select: { username: true, image: true } },
         versions: { 
@@ -620,15 +620,15 @@ app.get("/api/submissions/:id", async (req, res) => {
 });
 
 // 9. Upload Engine Assets (Avatar/Piece)
-app.post("/api/engines/:id/assets", upload.fields([{ name: "avatar", maxCount: 1 }, { name: "piece", maxCount: 1 }]), async (req, res) => {
+app.post("/api/engines/:id/assets", upload.fields([{ name: "avatar", maxCount: 1 }, { name: "piece", maxCount: 1 }]), async (req: any, res: any) => {
   try {
-    const { id } = req.params;
+    const engineId = req.params.id as string;
     const { userId } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     if (!userId) return res.status(401).json({ error: "Authentication required" });
 
-    const engine = await prisma.engine.findUnique({ where: { id } });
+    const engine = await prisma.engine.findUnique({ where: { id: engineId } });
     if (!engine) return res.status(404).json({ error: "Agent not found" });
     if (engine.ownerUserId !== userId) return res.status(403).json({ error: "Permission denied" });
 
@@ -637,32 +637,32 @@ app.post("/api/engines/:id/assets", upload.fields([{ name: "avatar", maxCount: 1
     if (files.avatar && files.avatar[0]) {
       const file = files.avatar[0];
       const ext = path.extname(file.originalname).toLowerCase();
-      const key = `assets/engines/${id}/avatar${ext}`;
+      const key = `assets/engines/${engineId}/avatar${ext}`;
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
       }));
-      updates.avatarUrl = `/api/assets/${id}/avatar?v=${Date.now()}`;
+      updates.avatarUrl = `/api/assets/${engineId}/avatar?v=${Date.now()}`;
     }
 
     if (files.piece && files.piece[0]) {
       const file = files.piece[0];
       const ext = path.extname(file.originalname).toLowerCase();
-      const key = `assets/engines/${id}/piece${ext}`;
+      const key = `assets/engines/${engineId}/piece${ext}`;
       await s3Client.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
       }));
-      updates.pieceUrl = `/api/assets/${id}/piece?v=${Date.now()}`;
+      updates.pieceUrl = `/api/assets/${engineId}/piece?v=${Date.now()}`;
     }
 
     if (Object.keys(updates).length > 0) {
       await prisma.engine.update({
-        where: { id },
+        where: { id: engineId },
         data: updates,
       });
     }
@@ -677,7 +677,8 @@ app.post("/api/engines/:id/assets", upload.fields([{ name: "avatar", maxCount: 1
 // 10. Serve Engine Assets (Proxy)
 app.get("/api/assets/:engineId/:type", async (req, res) => {
   try {
-    const { engineId, type } = req.params;
+    const engineId = req.params.engineId as string;
+    const type = req.params.type as string;
     if (type !== 'avatar' && type !== 'piece') return res.status(400).json({ error: "Invalid asset type" });
 
     const engine = await prisma.engine.findUnique({ 
@@ -725,7 +726,7 @@ app.get("/api/assets/:engineId/:type", async (req, res) => {
 // 8. Delete Engine (DISABLED)
 app.delete("/api/engines/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { userId } = req.query; // Verification from caller
 
     if (!userId) return res.status(401).json({ error: "Authentication required" });
