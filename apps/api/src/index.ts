@@ -916,7 +916,10 @@ app.post("/api/broker/next-jobs", authorizeBroker, async (req, res) => {
       };
     }));
 
-    res.json(packages.filter(p => p !== null));
+    const jobPackages = packages.filter(p => p !== null);
+    console.log(`[Broker] Dispatched ${jobPackages.length} jobs to ${brokerId}: ${jobPackages.map(p => p?.matchId).join(', ')}`);
+
+    res.json(jobPackages);
   } catch (error) {
     console.error("Broker fetch error:", error);
     res.status(500).json({ error: "Failed to fetch jobs" });
@@ -956,9 +959,11 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
 
     // Check 1: Identity (Self-Play detection)
     if (pgnWhite === pgnBlack) {
+      const errorMsg = `PGN shows '${pgnWhite}' playing against itself. Expected '${challengerName}' vs '${defenderName}'.`;
+      console.warn(`[Broker] Validation Failure for match ${matchId}: ${errorMsg}`);
       return res.status(400).json({
         error: "Validation Failed",
-        details: `PGN shows '${pgnWhite}' playing against itself. Expected '${challengerName}' vs '${defenderName}'.`,
+        details: errorMsg,
         suggestion: "Ensure your engine runner is correctly passing different names to the White and Black slots."
       });
     }
@@ -966,18 +971,22 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
     // Check 2: Player Matching
     const names = [pgnWhite?.toLowerCase(), pgnBlack?.toLowerCase()];
     if (!names.includes(challengerName.toLowerCase()) || !names.includes(defenderName.toLowerCase())) {
+      const errorMsg = `PGN Player names ('${pgnWhite}' vs '${pgnBlack}') do not match expected engines ('${challengerName}' vs '${defenderName}').`;
+      console.warn(`[Broker] Validation Failure for match ${matchId}: ${errorMsg}`);
       return res.status(400).json({
         error: "Validation Failed",
-        details: `PGN Player names ('${pgnWhite}' vs '${pgnBlack}') do not match expected engines ('${challengerName}' vs '${defenderName}').`,
+        details: errorMsg,
         suggestion: "Verify that the PGN headers match the engine names provided in the job package."
       });
     }
 
     // Check 3: Round Count
     if (resultsCount !== match.gamesPlanned) {
+      const errorMsg = `PGN contains ${resultsCount} games, but match was configured for ${match.gamesPlanned} games.`;
+      console.warn(`[Broker] Validation Failure for match ${matchId}: ${errorMsg}`);
       return res.status(400).json({
         error: "Validation Failed",
-        details: `PGN contains ${resultsCount} games, but match was configured for ${match.gamesPlanned} games.`,
+        details: errorMsg,
         suggestion: "Check if your runner is accidentally duplicating rounds or failing to finish them."
       });
     }
@@ -1135,6 +1144,7 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
       WHERE e.id = ranked.id
     `).catch(err => console.error("Failed to update global ranks:", err));
 
+    console.log(`[Broker] Match ${matchId} Result: ${challengerScore}-${defenderScore}. Deltas: ${deltaA > 0 ? '+' : ''}${deltaA} / ${deltaB > 0 ? '+' : ''}${deltaB}`);
     console.log(`[Broker] Successfully processed result for match ${matchId}. Winner recorded.`);
 
     // 🔥 Fire the Webhook!
