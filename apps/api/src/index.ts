@@ -61,6 +61,7 @@ app.get("/api/health", (req, res) => {
 const authorizeBroker = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const secret = req.headers['x-broker-secret'];
   if (!secret || secret !== process.env.BROKER_SECRET) {
+    console.warn(`[Broker] Unauthorized access attempt from ${req.ip}`);
     return res.status(401).json({ error: "Unauthorized broker access" });
   }
   next();
@@ -847,8 +848,10 @@ app.post("/api/broker/next-jobs", authorizeBroker, async (req, res) => {
 // 2. Submit Match Result
 app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
   const { jobId, matchId, pgn, result, challengerScore, defenderScore } = req.body;
+  console.log(`[Broker] Submission received for match ${matchId} (Job: ${jobId})`);
 
   if (!matchId || !pgn || !result) {
+    console.error(`[Broker] Malformed submission for match ${matchId}. Missing required fields.`);
     return res.status(400).json({ error: "Missing required submission fields" });
   }
 
@@ -890,6 +893,7 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
       })
     ]);
 
+    console.log(`[Broker] Successfully processed result for match ${matchId}. Winner recorded.`);
     res.json({ success: true });
   } catch (error) {
     console.error("Broker submit error:", error);
