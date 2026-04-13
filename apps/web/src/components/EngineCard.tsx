@@ -69,32 +69,37 @@ export function EngineCard({ engine, isOwner = false }: EngineCardProps) {
         </div>
         <div className="flex flex-col items-end gap-2">
           {isOwner ? (
-            <button 
-              onClick={handleToggleStatus}
-              disabled={isToggling || engine.status === 'pending'}
-              className={`technical-label px-2 py-0.5 border flex items-center gap-1.5 transition-all outline-none ${
-                engine.status === 'active' 
-                  ? 'bg-accent/10 border-accent/30 text-accent hover:bg-accent/20' 
-                  : (engine.status === 'pending' ? 'border-border-custom opacity-40 cursor-not-allowed' : 'bg-white/5 border-border-custom text-muted hover:bg-white/10')
-              }`}
-            >
-              {isToggling ? (
-                <Loader2 size={10} className="animate-spin" />
-              ) : (
-                <>
-                  {engine.status === 'pending' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />}
-                  {engine.status === 'pending' ? 'validating' : engine.status}
-                </>
-              )}
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              {engine.status === 'pending' && <Loader2 size={10} className="animate-spin text-accent" />}
-              <span className={`technical-label px-2 py-0.5 border border-border-custom flex items-center gap-1.5 ${
-                engine.status === 'active' ? 'text-accent' : (engine.status === 'pending' ? 'text-accent/60' : 'text-muted')
+            <div className="flex flex-col items-end gap-1">
+              <button 
+                onClick={handleToggleStatus}
+                disabled={isToggling || engine.status === 'pending'}
+                className={`group relative flex items-center h-6 w-12 rounded-full transition-all duration-300 outline-none ${
+                  engine.status === 'active' ? 'bg-accent/20 border border-accent/40' : 'bg-white/5 border border-white/10'
+                } ${isToggling ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+              >
+                <span className={`absolute left-1 h-4 w-4 rounded-full transition-all duration-300 flex items-center justify-center ${
+                  engine.status === 'active' 
+                    ? 'translate-x-6 bg-accent' 
+                    : 'translate-x-0 bg-muted-foreground'
+                }`}>
+                  {isToggling && <Loader2 size={10} className="animate-spin text-black" />}
+                </span>
+              </button>
+              <span className={`technical-label text-[8px] uppercase tracking-widest ${
+                engine.status === 'active' ? 'text-accent' : 'text-muted-foreground'
               }`}>
-                {engine.status === 'pending' && <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />}
-                {engine.status === 'pending' ? 'validating' : engine.status}
+                {engine.status === 'pending' ? 'initializing' : (engine.status === 'active' ? 'online' : 'paused')}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-end gap-1">
+              <div className={`h-4 w-4 rounded-full border ${
+                engine.status === 'active' ? 'bg-accent/20 border-accent/40 animate-pulse' : 'bg-white/5 border-white/10'
+              }`} />
+              <span className={`technical-label text-[8px] uppercase tracking-widest ${
+                engine.status === 'active' ? 'text-accent' : 'text-muted-foreground'
+              }`}>
+                {engine.status}
               </span>
             </div>
           )}
