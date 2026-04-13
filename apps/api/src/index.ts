@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import multer from "multer";
 import crypto from "crypto";
 import path from "path";
@@ -53,10 +53,35 @@ app.get("/", (req, res) => {
   res.json({ status: "ok", service: "Chess Agents API" });
 });
 
-// 2. Monitoring
 app.get("/api/health", (req, res) => {
   res.json({ status: "healthy" });
 });
+
+// --- BROKER MIDDLEWARE ---
+const authorizeBroker = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const secret = req.headers['x-broker-secret'];
+  if (!secret || secret !== process.env.BROKER_SECRET) {
+    return res.status(401).json({ error: "Unauthorized broker access" });
+  }
+  next();
+};
+
+// Helper: Fetch engine source from R2
+async function fetchEngineSource(key: string): Promise<string> {
+  try {
+    const response = await s3Client.send(new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+    })) as any;
+    
+    const body = response.Body;
+    if (!body) return "";
+    return await body.transformToString();
+  } catch (err) {
+    console.error(`Failed to fetch source for ${key}:`, err);
+    return "";
+  }
+}
 
 // --- SOCIAL & SHOWCASE ENDPOINTS (High Priority) ---
 
@@ -724,6 +749,151 @@ app.delete("/api/engines/:id", async (req, res) => {
   } catch (error: any) {
     console.error("Delete engine error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- MATCH BROKER API ---
+
+// 1. Fetch Next Jobs (Batch)
+app.post("/api/broker/next-jobs", authorizeBroker, async (req, res) => {
+  const count = Math.min(10, Math.max(1, req.body.count || 1));
+  const brokerId = `broker-${req.body.brokerId || 'external'}`;
+  
+  console.log(`[Broker] ${brokerId} requesting ${count} jobs`);
+
+  try {
+    const jobs = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Find pending match_run jobs using the same logic as workers
+      const pendingJobs = (await tx.$queryRawUnsafe(`
+        SELECT id FROM "Job"
+        WHERE status = 'pending' AND "runAt" <= NOW() AND "jobType" = 'match_run'
+        ORDER BY "runAt" ASC
+        LIMIT ${count}
+        FOR UPDATE SKIP LOCKED
+      `)) as any[];
+
+      if (!pendingJobs || pendingJobs.length === 0) return [];
+
+      const jobIds = pendingJobs.map((j: { id: string }) => j.id);
+
+      // Mark them as processing
+      await tx.job.updateMany({
+        where: { id: { in: jobIds } },
+        data: {
+          status: 'processing' as any,
+          workerId: brokerId,
+          lockedAt: new Date(),
+          attempts: { increment: 1 }
+        }
+      });
+
+      return await tx.job.findMany({
+        where: { id: { in: jobIds } }
+      });
+    });
+
+    if (jobs.length === 0) return res.json([]);
+
+    // Hydrate jobs with match data and source code
+    const packages = await Promise.all(jobs.map(async (job: any) => {
+      const { matchId } = job.payloadJson as { matchId: string };
+      
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        include: {
+          challengerVersion: true,
+          defenderVersion: true,
+          challengerEngine: true,
+          defenderEngine: true,
+        }
+      });
+
+      if (!match) return null;
+
+      // Extract raw code for the broker
+      const [challengerCode, defenderCode] = await Promise.all([
+        fetchEngineSource(match.challengerVersion.storageKey),
+        fetchEngineSource(match.defenderVersion.storageKey)
+      ]);
+
+      return {
+        jobId: job.id,
+        matchId: match.id,
+        matchType: match.matchType,
+        timeControl: match.timeControl,
+        gamesPlanned: match.gamesPlanned,
+        challenger: {
+          id: match.challengerEngineId,
+          name: match.challengerEngine.name,
+          language: match.challengerVersion.language,
+          code: challengerCode
+        },
+        defender: {
+          id: match.defenderEngineId,
+          name: match.defenderEngine.name,
+          language: match.defenderVersion.language,
+          code: defenderCode
+        }
+      };
+    }));
+
+    res.json(packages.filter(p => p !== null));
+  } catch (error) {
+    console.error("Broker fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch jobs" });
+  }
+});
+
+// 2. Submit Match Result
+app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
+  const { jobId, matchId, pgn, result, challengerScore, defenderScore } = req.body;
+
+  if (!matchId || !pgn || !result) {
+    return res.status(400).json({ error: "Missing required submission fields" });
+  }
+
+  try {
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (!match) return res.status(404).json({ error: "Match not found" });
+
+    // Store PGN
+    const pgnKey = `matches/${matchId}/match.pgn`;
+    await s3Client.send(new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: pgnKey,
+      Body: pgn,
+      ContentType: "application/x-chess-pgn",
+    }));
+
+    // Atomically update Match, Job, and create Rating Job
+    await prisma.$transaction([
+      prisma.match.update({
+        where: { id: matchId },
+        data: {
+          status: 'completed' as any,
+          completedAt: new Date(),
+          challengerScore: challengerScore,
+          defenderScore: defenderScore,
+          pgnStorageKey: pgnKey
+        }
+      }),
+      prisma.job.update({
+        where: { id: jobId },
+        data: { status: 'completed' as any, updatedAt: new Date() }
+      }),
+      prisma.job.create({
+        data: {
+          jobType: 'rating_apply' as any,
+          payloadJson: { matchId },
+          status: 'pending' as any
+        }
+      })
+    ]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Broker submit error:", error);
+    res.status(500).json({ error: "Failed to submit result" });
   }
 });
 
