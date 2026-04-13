@@ -253,6 +253,12 @@ async function handleMatchRun(payload: any) {
   const pathB = path.join(tempDir, `agent_b${defenderExt}`);
 
   try {
+    // Set match to running status so it shows up in UI
+    await prisma.match.update({
+      where: { id: matchId },
+      data: { status: MatchStatus.running }
+    });
+
     // 1. Download agents
     console.log(`Downloading agents for match ${matchId}...`);
     await downloadAgent(match.challengerVersion.storageKey, pathA);

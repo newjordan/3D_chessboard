@@ -4,13 +4,13 @@ import { prisma, MatchType, MatchStatus, JobType, JobStatus, EngineStatus } from
  * Rematch cooldown in milliseconds (4 hours).
  * Engines can play each other again after this period.
  */
-const REMATCH_COOLDOWN_MS = 4 * 60 * 60 * 1000;
+const REMATCH_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 
 /**
  * How many matches to schedule per poll cycle to avoid flooding the queue.
  * Set to 4 (Conservative Mode) to ensure each engine gets maximum CPU on the $20 plan.
  */
-const BATCH_SIZE = 4;
+const BATCH_SIZE = 6;
 
 /**
  * Maximum Elo distance for a "competitive" match.
@@ -173,7 +173,7 @@ export async function scheduleMatches(): Promise<number> {
  * and marks them as failed so the scheduler can move on.
  */
 export async function reapStaleJobs(): Promise<number> {
-  const STALE_THRESHOLD_MS = 30 * 60 * 1000;
+  const STALE_THRESHOLD_MS = 10 * 60 * 1000;
   const staleTime = new Date(Date.now() - STALE_THRESHOLD_MS);
 
   const staleJobs = await prisma.job.findMany({

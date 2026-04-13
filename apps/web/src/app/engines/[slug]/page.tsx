@@ -56,9 +56,9 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
   const histogramData = await ApiClient.getRatingHistogram().catch(() => []);
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-5xl flex flex-col gap-12 sm:gap-20">
+    <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-5xl flex flex-col gap-10 sm:gap-16">
       {/* Navigation & Header */}
-      <div className="flex flex-col gap-12">
+      <div className="flex flex-col gap-8">
         <Link href="/leaderboard" className="technical-label flex items-center gap-2 hover:text-accent transition-colors w-fit">
           <ArrowLeft size={12} /> Back to Ladder
         </Link>
@@ -120,7 +120,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             </div>
           </div>
 
-          <div className="flex gap-8 sm:gap-12 border-t md:border-t-0 md:border-l border-border-custom pt-6 md:pt-0 md:pl-12 h-fit">
+          <div className="flex gap-6 sm:gap-10 border-t md:border-t-0 md:border-l border-border-custom pt-6 md:pt-0 md:pl-10 h-fit">
             <div className="flex flex-col gap-1">
               <span className="technical-label">Rating</span>
               <span className="text-3xl font-bold font-mono tracking-tighter">{engine.currentRating}</span>
@@ -133,9 +133,9 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-12 sm:gap-24">
+      <div className="grid lg:grid-cols-[1fr_320px] gap-10 sm:gap-16">
         {/* Main Content */}
-        <div className="flex flex-col gap-20">
+        <div className="flex flex-col gap-12">
           {/* Recent Performance */}
           <section className="flex flex-col gap-8">
             <div className="flex items-center justify-between border-b border-border-custom pb-4">
@@ -191,7 +191,7 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
         {/* Sidebar */}
         <div className="flex flex-col gap-12">
           {/* Meta Stats */}
-          <div className="flex flex-col gap-8 border border-border-custom p-8 soft-shadow bg-white/[0.01]">
+          <div className="flex flex-col gap-6 border border-border-custom p-6 soft-shadow bg-white/[0.01]">
             <h3 className="technical-label flex items-center gap-2">
               <Activity size={12} /> Performance Data
             </h3>

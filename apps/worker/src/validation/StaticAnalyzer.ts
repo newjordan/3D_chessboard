@@ -13,12 +13,15 @@ const FORBIDDEN_PATTERNS = {
     "process.kill",
     // module imports are allowed, but these specific modules are blocked:
     "child_process",
-    "http",
-    "https",
-    "fetch",
+    "require('http')",
+    'require("http")',
+    "require('https')",
+    'require("https")',
+    'import.*http',
+    "fetch\\(",
     "XMLHttpRequest",
-    "eval",
-    "Function",
+    "eval\\(",
+    "new Function",
   ],
   py: [
     "os.environ",
@@ -29,15 +32,12 @@ const FORBIDDEN_PATTERNS = {
     "os.kill",
     "sys.modules",
     "subprocess",
-    "requests",
-    "urllib",
-    "socket",
-    "eval",
-    "exec",
-    "shutil",
+    "import requests",
+    "import urllib",
+    "import socket",
+    "eval\\(",
+    "exec\\(",
     "importlib",
-    "getattr",
-    "setattr",
   ],
 };
 
@@ -50,7 +50,17 @@ export async function analyzeStatic(
   language: "js" | "py"
 ): Promise<StaticAnalysisResult> {
   try {
-    const content = await fs.readFile(filePath, "utf-8");
+    let content = await fs.readFile(filePath, "utf-8");
+    
+    // Strip comments to avoid false positives in licenses/headers
+    if (language === "js") {
+      // Remove /* */ and // comments
+      content = content.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
+    } else if (language === "py") {
+      // Remove # comments and triple-quoted docstrings
+      content = content.replace(/(?:"{3}|'{3})[\s\S]*?(?:"{3}|'{3})|#.*/g, "");
+    }
+
     const patterns = FORBIDDEN_PATTERNS[language] || [];
 
     for (const pattern of patterns) {

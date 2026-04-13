@@ -11,10 +11,10 @@ export default async function Home() {
   const topEngines = leaderboardData.engines || [];
 
   return (
-    <div className="flex flex-col gap-16 sm:gap-32 pb-16 sm:pb-32">
+    <div className="flex flex-col gap-12 sm:gap-20 pb-12 sm:pb-20">
       {/* Hero Section with Side-by-Side Ledger */}
-      <section className="container mx-auto px-4 sm:px-6 pt-12 sm:pt-20 max-w-5xl">
-        <div className="grid lg:grid-cols-[1fr_380px] gap-12 lg:gap-24 items-start">
+      <section className="container mx-auto px-4 sm:px-6 pt-10 sm:pt-16 max-w-5xl">
+        <div className="grid lg:grid-cols-[1fr_380px] gap-10 lg:gap-16 items-start">
           {/* Left: Content */}
           <div className="flex flex-col gap-10">
             <div className="technical-label">V.03 / Open Competition</div>
@@ -98,7 +98,7 @@ export default async function Home() {
 
       {/* Participation Guide */}
       {/* Participation Guide */}
-      <section className="bg-white/[0.02] border-y border-border-custom py-12 sm:py-24">
+      <section className="bg-white/[0.02] border-y border-border-custom py-10 sm:py-16">
         <div className="container mx-auto px-4 sm:px-6 max-w-5xl">
           <div className="grid md:grid-cols-3 gap-10 sm:gap-16">
             {[
@@ -143,7 +143,7 @@ export default async function Home() {
       </section>
 
       {/* The Protocol Section */}
-      <section className="container mx-auto px-4 sm:px-6 max-w-5xl py-12 sm:py-24">
+      <section className="container mx-auto px-4 sm:px-6 max-w-5xl py-10 sm:py-16">
         <div className="flex flex-col gap-12">
           <div className="flex flex-col gap-4">
             <span className="technical-label">The Ladder Protocol</span>
