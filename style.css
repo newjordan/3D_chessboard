@@ -1,0 +1,98 @@
+:root {
+  --neon-cyan: #00ffff;
+  --neon-green: #00ff00;
+  --background: #000510;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--background);
+  font-family: 'Orbitron', sans-serif;
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#timer-box {
+  position: absolute;
+  top: 2rem;
+  left: 3rem;
+  border: 2px dotted var(--neon-cyan);
+  padding: 0.5rem 1.5rem;
+  background-color: rgba(0, 10, 20, 0.8);
+  background-image: radial-gradient(circle, rgba(0, 255, 255, 0.2) 1px, transparent 1px);
+  background-size: 4px 4px;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+#timer {
+  color: var(--neon-cyan);
+  font-size: 2rem;
+  font-weight: 700;
+  text-shadow: 0 0 5px var(--neon-cyan);
+  letter-spacing: 2px;
+}
+
+#move-history-box {
+  position: absolute;
+  top: 2rem;
+  right: 3rem;
+  width: 300px;
+  height: 200px;
+  border: 2px dotted var(--neon-cyan);
+  padding: 1rem;
+  background-color: rgba(0, 10, 20, 0.8);
+  background-image: radial-gradient(circle, rgba(0, 255, 255, 0.2) 1px, transparent 1px);
+  background-size: 4px 4px;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 10px rgba(0, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#moves {
+  color: var(--neon-green);
+  font-size: 1.2rem;
+  line-height: 1.8;
+  text-shadow: 0 0 3px var(--neon-green);
+}
+
+.move-num {
+  display: inline-block;
+  width: 30px;
+  color: var(--neon-green);
+}
+
+.move-white {
+  display: inline-block;
+  width: 60px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 3px var(--neon-cyan);
+}
+
+.move-black {
+  display: inline-block;
+  width: 60px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 3px var(--neon-cyan);
+}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Holographic 3D Chess</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="ui-layer">
+      <div id="timer-box">
+        <span id="timer">00:53</span>
+      </div>
+      <div id="move-history-box">
+        <div id="moves">
+          <!-- Moves will be populated here -->
+          <div><span class="move-num">1.</span> <span class="move-white">e4</span> <span class="move-black">e5</span></div>
+          <div><span class="move-num">2.</span> <span class="move-white">Nf3</span> <span class="move-black">Nc6</span></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
