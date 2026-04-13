@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Play, Terminal, Zap, Code, ShieldCheck } from "lucide-react";
+import { ChevronRight, Play, Terminal, Zap, Code, ShieldCheck, Trophy, Coins } from "lucide-react";
 import { ApiClient } from "@/lib/apiClient";
 import { Countdown } from "@/components/Countdown";
 import { ShowcaseReplay } from "@/components/landing/ShowcaseReplay";
@@ -17,7 +17,12 @@ export default async function Home() {
         <div className="grid lg:grid-cols-[1fr_380px] gap-10 lg:gap-16 items-start">
           {/* Left: Content */}
           <div className="flex flex-col gap-10">
-            <div className="technical-label">V.03 / Open Competition</div>
+            <div className="flex flex-col gap-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent technical-label text-[10px] w-fit animate-fade-in shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)]">
+                <Trophy size={12} fill="currentColor" /> $150.00 Monthly Prize Pool Active
+              </div>
+              <div className="technical-label">V.03 / Open Competition</div>
+            </div>
             
             <div className="flex flex-col gap-6">
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.05]">
@@ -78,14 +83,37 @@ export default async function Home() {
             </div>
 
             <div className="flex flex-col gap-6 pt-4">
-               <div className="flex flex-col gap-2">
-                  <span className="technical-label opacity-40">Next Prize Cycle</span>
-                  <Countdown targetDate="2026-05-11T00:00:00Z" />
-               </div>
-               <div className="flex justify-between items-center text-[10px] border-t border-border-custom pt-4">
-                  <span className="technical-label opacity-40">$150.00 Prize / Mo.</span>
-                  <Link href="/leaderboard" className="technical-label hover:text-accent transition-all">View Full Ladder &rarr;</Link>
-               </div>
+                <div className="bg-accent/5 border border-accent/20 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden group soft-shadow">
+                  {/* Decorative Glow */}
+                  <div className="absolute -right-8 -top-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                    <Trophy size={140} className="text-accent" />
+                  </div>
+                  
+                  <div className="relative flex flex-col gap-1">
+                    <span className="technical-label text-[10px] text-accent font-bold tracking-widest uppercase">Tournament Reward</span>
+                    <div className="flex items-baseline gap-2">
+                       <span className="text-5xl font-bold tracking-tight text-foreground">$150.00</span>
+                    </div>
+                    <span className="technical-label text-[10px] opacity-40 uppercase tracking-tight">CASH PRIZE POOL / MONTHLY</span>
+                  </div>
+
+                  <div className="relative pt-4 border-t border-accent/10 flex flex-col gap-2">
+                     <div className="flex items-center justify-between">
+                        <span className="technical-label text-[9px] opacity-60">NEXT REWARD CYCLE:</span>
+                        <div className="flex items-center gap-1 text-accent animate-pulse">
+                          <Coins size={10} />
+                          <span className="text-[9px] font-bold">READY</span>
+                        </div>
+                     </div>
+                     <Countdown targetDate="2026-05-11T00:00:00Z" />
+                  </div>
+                </div>
+
+                <div className="flex justify-center items-center text-[10px] pt-2">
+                   <Link href="/leaderboard" className="technical-label opacity-40 hover:text-accent hover:opacity-100 transition-all flex items-center gap-2">
+                     View Full Seasonal Ladder <ChevronRight size={12} />
+                   </Link>
+                </div>
             </div>
           </div>
         </div>
