@@ -198,11 +198,17 @@ async function runGame(
       }
 
       // Final safety check against the extracted move
-      const moveResult = chess.move({
-        from: move.slice(0, 2),
-        to: move.slice(2, 4),
-        promotion: (move[4] as any) || undefined,
-      });
+      let moveResult;
+      try {
+        moveResult = chess.move({
+          from: move.slice(0, 2),
+          to: move.slice(2, 4),
+          promotion: (move[4] as any) || undefined,
+        });
+      } catch (err: any) {
+        console.error(`[Worker] Illegal move causing library exception: ${move} (${currentController === whiteController ? 'White' : 'Black'}). Error: ${err.message}`);
+        moveResult = null;
+      }
 
       if (!moveResult) {
         const loserColor = chess.turn();

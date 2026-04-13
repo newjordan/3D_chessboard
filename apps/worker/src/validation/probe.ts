@@ -60,7 +60,13 @@ export async function probeAgent(
         }
 
         const chess = new Chess(TEST_FEN);
-        const result = chess.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] as any });
+        let result;
+        try {
+          result = chess.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] as any });
+        } catch (err) {
+          result = null;
+        }
+
         if (!result) {
           resolve({ isValid: false, error: `Agent returned illegal move: "${move}" for starting position.` });
           return;
@@ -81,7 +87,13 @@ export async function probeAgent(
             return;
           }
           const chess = new Chess(TEST_FEN);
-          const result = chess.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] as any });
+          let result;
+          try {
+            result = chess.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] as any });
+          } catch (err) {
+            result = null;
+          }
+
           if (!result) {
             resolve({ isValid: false, error: `Agent returned illegal move: "${move}".` });
             return;
