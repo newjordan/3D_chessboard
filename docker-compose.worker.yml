@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  worker:
+    # Option A: Pull from Docker Hub (Recommended for remote servers)
+    # image: jaymaart/chess-worker:latest
+    
+    # Option B: Build locally (Recommended for development)
+    build:
+      context: .
+      dockerfile: ./apps/worker/Dockerfile
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - WORKER_ID=local-5070-pc
+    # Optional: If you ever want to use your 5070 for GPU engines:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    volumes:
+      - ./apps/worker/tmp:/app/apps/worker/tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10mb"
+        max-file: "3"
+
+networks:
+  default:
+    name: chess-arena-net

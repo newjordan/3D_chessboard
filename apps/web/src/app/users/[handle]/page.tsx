@@ -73,11 +73,8 @@ export default function UserProfilePage() {
             <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
               <div className="flex flex-col sm:flex-row items-center sm:items-baseline gap-1 sm:gap-3 mb-2">
                 <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">{user.username}</h1>
-                <span className="technical-label text-accent opacity-50 text-xs">Verified Developer</span>
               </div>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-muted">
-                <span className="flex items-center gap-1.5"><Shield size={14} className="text-accent" /> Senior Architect</span>
-                <span className="opacity-20">•</span>
                 <span>Active since {new Date(user.createdAt).toLocaleDateString()}</span>
                 <span className="opacity-20">•</span>
                 <span className="font-mono text-[10px] opacity-30">REG_UID: {user.id.substring(0,8)}</span>
@@ -85,9 +82,7 @@ export default function UserProfilePage() {
             </div>
 
             <div className="flex flex-col gap-3">
-               <button className="px-6 py-2.5 bg-white text-black font-bold rounded-lg hover:bg-neutral-200 transition-colors flex items-center gap-2">
-                 Follow Developer <Zap size={16} fill="currentColor" />
-               </button>
+               {/* Actions removed for clean minimalism */}
             </div>
           </div>
         </div>

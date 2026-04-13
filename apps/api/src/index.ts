@@ -163,7 +163,7 @@ app.get("/api/users/:handle", async (req, res) => {
         totalWins,
         totalLosses,
         totalDraws,
-        totalEarnings: totalWins * 5.00, // $5.00 per win prize calculation
+        totalEarnings: 0, // Reset to zero for the first month
         peakRating: Math.max(1200, ...user.engines.map((e: any) => e.currentRating))
       }
     });
@@ -322,62 +322,7 @@ app.get("/api/engines/by-owner/:userId", async (req, res) => {
   }
 });
 
-// Get User Profile by username or ID
-app.get("/api/users/:handle", async (req, res) => {
-  try {
-    const { handle } = req.params;
-
-    // Try to find by username first, then by ID
-    let user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username: handle },
-          { id: handle },
-        ],
-      },
-      include: {
-        engines: {
-          where: { status: "active" },
-          orderBy: { currentRating: "desc" },
-          include: {
-            _count: {
-              select: {
-                matchesChallenged: true,
-                matchesDefended: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Aggregate stats from engines
-    const totalWins = user.engines.reduce((sum: number, e: any) => sum + e.wins, 0);
-    const totalLosses = user.engines.reduce((sum: number, e: any) => sum + e.losses, 0);
-    const totalDraws = user.engines.reduce((sum: number, e: any) => sum + e.draws, 0);
-    const peakRating = user.engines.length > 0
-      ? Math.max(...user.engines.map((e: any) => e.currentRating))
-      : 1200;
-
-    res.json({
-      ...user,
-      stats: {
-        totalWins,
-        totalLosses,
-        totalDraws,
-        peakRating,
-        totalEarnings: 0,
-      },
-    });
-  } catch (error: any) {
-    console.error("User profile error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+// Duplicate endpoint removed
 
 // 7. Get Engine Detail by Slug
 app.get("/api/engines/:slug", async (req, res) => {

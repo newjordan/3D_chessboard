@@ -8,9 +8,9 @@ const REMATCH_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 
 /**
  * How many matches to schedule per poll cycle to avoid flooding the queue.
- * Set to 4 (Conservative Mode) to ensure each engine gets maximum CPU on the $20 plan.
+ * Set to 20 for Local Performance Mode (High-core CPUs like R9 7900X).
  */
-const BATCH_SIZE = 6;
+const BATCH_SIZE = 20;
 
 /**
  * Maximum Elo distance for a "competitive" match.
@@ -173,7 +173,7 @@ export async function scheduleMatches(): Promise<number> {
  * and marks them as failed so the scheduler can move on.
  */
 export async function reapStaleJobs(): Promise<number> {
-  const STALE_THRESHOLD_MS = 10 * 60 * 1000;
+  const STALE_THRESHOLD_MS = 5 * 60 * 1000;
   const staleTime = new Date(Date.now() - STALE_THRESHOLD_MS);
 
   const staleJobs = await prisma.job.findMany({
