@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession, signIn } from "next-auth/react";
-import { FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check, Upload, RefreshCw, Terminal, XCircle, ArrowRight } from "lucide-react";
+import { FileText, CheckCircle2, AlertCircle, Loader2, Copy, Check, Upload, RefreshCw, Terminal, XCircle, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { submitEngine } from "./actions";
 import { ApiClient } from "@/lib/apiClient";
@@ -76,6 +76,19 @@ export function SubmitForm() {
         .catch(() => setUserEngines([]));
     }
   }, [session]);
+
+  // Persistence logic for the OAuth redirect flow
+  useEffect(() => {
+    const savedName = localStorage.getItem("draft_engine_name");
+    const savedModel = localStorage.getItem("draft_engine_model");
+    if (savedName) setEngineName(savedName);
+    if (savedModel) setModel(savedModel);
+  }, []);
+
+  useEffect(() => {
+    if (engineName) localStorage.setItem("draft_engine_name", engineName);
+    if (model) localStorage.setItem("draft_engine_model", model);
+  }, [engineName, model]);
 
   useEffect(() => {
     return () => {
@@ -194,28 +207,6 @@ export function SubmitForm() {
   };
 
   if (status === "loading") return null;
-
-  if (!session) {
-    return (
-      <div className="container mx-auto px-6 py-20 max-w-2xl flex flex-col items-center justify-center min-h-[50vh] text-center gap-8 text-white">
-        <div className="w-12 h-12 rounded-full border border-border-custom flex items-center justify-center">
-          <AlertCircle size={20} className="text-muted" />
-        </div>
-        <div className="flex flex-col gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Identity Required.</h1>
-          <p className="text-muted text-sm leading-relaxed text-white/60">
-            Competition entries are tied to GitHub accounts to prevent floods and ensure verifiable ownership of the prize pool slots.
-          </p>
-        </div>
-        <button
-          onClick={() => signIn("github")}
-          className="px-8 py-3 bg-foreground text-background font-bold text-sm tracking-tight hover:opacity-90 transition-all"
-        >
-          Authenticate with GitHub
-        </button>
-      </div>
-    );
-  }
 
   if (validation) {
     return (
@@ -389,9 +380,18 @@ export function SubmitForm() {
       <div className="flex flex-col gap-6">
         <div className="technical-label">V.03 / Registration</div>
         <h1 className="text-5xl font-bold tracking-tight">Submit Agent</h1>
-        <p className="text-muted max-w-xl leading-relaxed text-white/60">
-          Upload a stateless agent. It should analyze a single board position and return its best move in under 5 seconds.
-        </p>
+        {!session ? (
+          <div className="flex items-center gap-3 p-4 bg-accent/5 border border-accent/20 rounded-lg max-w-xl animate-in fade-in slide-in-from-left-2">
+            <ShieldCheck size={16} className="text-accent shrink-0" />
+            <p className="text-[11px] text-accent/80 leading-relaxed font-medium">
+              You are currently viewing as a guest. You can prepare your submission now, but you'll need to sign in with GitHub to finalize it.
+            </p>
+          </div>
+        ) : (
+          <p className="text-muted max-w-xl leading-relaxed text-white/60">
+            Upload a stateless agent. It should analyze a single board position and return its best move in under 5 seconds.
+          </p>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-[1fr_300px] gap-20">
@@ -522,23 +522,34 @@ export function SubmitForm() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={isUploading || !file || !engineName}
-            className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight border-2 border-transparent hover:opacity-90 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-neutral-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={16} />
-                Complete Submission
-              </>
-            )}
-          </button>
+          {!session ? (
+            <button
+              type="button"
+              onClick={() => signIn("github")}
+              className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight border-2 border-transparent hover:opacity-90 transition-all flex items-center justify-center gap-3"
+            >
+              <CheckCircle2 size={16} />
+              Sign in with GitHub to Submit
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={isUploading || !file || !engineName}
+              className="w-full py-4 bg-foreground text-background font-bold text-sm tracking-tight border-2 border-transparent hover:opacity-90 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-neutral-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={16} />
+                  Complete Submission
+                </>
+              )}
+            </button>
+          )}
         </form>
 
         <div className="flex flex-col gap-10">
