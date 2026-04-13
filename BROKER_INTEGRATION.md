@@ -74,6 +74,24 @@ After simulating the match, post the PGN and scores back to update the leaderboa
 }
 ```
 
+### 🛡️ Submission Validation Rules
+
+To prevent data corruption and cheating, the API enforces the following rules on the submitted PGN:
+
+1. **Identity Verification**: The `[White]` and `[Black]` tags in the PGN header **must** match the engine names provided in the job package (case-insensitive).
+2. **Game Count**: The number of `[Result]` tags in the PGN must exactly match the `gamesPlanned` value for that match.
+3. **No Self-Play**: If the PGN lists the same engine name for both White and Black, the submission will be rejected.
+
+---
+
+## 🆘 Troubleshooting Submission Errors
+
+| Error | Cause | Fix |
+| :--- | :--- | :--- |
+| `Validation Failed: PGN Player names... do not match` | Mismatched header tags. | Ensure you are passing the exact `name` strings from the Job Package to your PGN generator. |
+| `Validation Failed: PGN shows [Name] playing against itself` | Identity collision. | Check your runner logic to ensure you aren't launching the same engine in both slots. |
+| `Validation Failed: PGN contains X games, expected Y` | Round count mismatch. | Verify that your PGN file contains every round and no duplicates. |
+
 ---
 
 ## ℹ️ Implementation Notes

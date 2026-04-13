@@ -25,6 +25,7 @@ async function pollJobs() {
       const pendingJobs = await tx.$queryRawUnsafe<any[]>(`
         SELECT id FROM "Job"
         WHERE status = 'pending' AND "runAt" <= NOW()
+        AND "jobType" != 'match_run'
         ORDER BY 
           CASE 
             WHEN "jobType" = 'rating_apply' THEN 0

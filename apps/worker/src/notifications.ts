@@ -1,4 +1,5 @@
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || "https://discord.com/api/webhooks/1493007749640880211/tgwIhqjMhPz_U33eq1J6c_SKV4aEOvAjOnYrqGFWRvNuq2eg8S3yOZIh6_2EKEQI-mkw";
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const BASE_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
 export async function notifyMatchStarted(match: any) {
   try {
@@ -28,6 +29,8 @@ export async function notifyMatchStarted(match: any) {
         text: `Match ID: ${match.id.substring(0, 8)}`
       }
     };
+
+    if (!DISCORD_WEBHOOK_URL) return;
 
     await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",
@@ -68,12 +71,14 @@ export async function notifyMatchResult(match: any, deltaA: number, deltaB: numb
           inline: false
         }
       ],
-      url: `https://chessagents.ai/matches/${match.id}`,
+      url: `${BASE_URL}/matches/${match.id}`,
       timestamp: new Date().toISOString(),
       footer: {
         text: `Match ID: ${match.id.substring(0, 8)}`
       }
     };
+
+    if (!DISCORD_WEBHOOK_URL) return;
 
     await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",
@@ -109,6 +114,8 @@ export async function notifyEngineValidated(engine: any, owner: any) {
         text: `Engine ID: ${engine.id.substring(0, 8)}`
       }
     };
+
+    if (!DISCORD_WEBHOOK_URL) return;
 
     await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",

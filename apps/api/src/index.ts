@@ -66,7 +66,6 @@ const authorizeBroker = (req: express.Request, res: express.Response, next: expr
   }
   next();
 };
-
 // Helper: Fetch engine source from R2
 async function fetchEngineSource(key: string): Promise<string> {
   try {
@@ -856,8 +855,53 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
   }
 
   try {
-    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    const match = await prisma.match.findUnique({ 
+      where: { id: matchId },
+      include: { challengerEngine: true, defenderEngine: true }
+    });
     if (!match) return res.status(404).json({ error: "Match not found" });
+
+    // --- Validation Logic ---
+    const getTag = (pgn: string, tag: string) => {
+      const regex = new RegExp(`\\[${tag} "(.*?)"\\]`);
+      const m = pgn.match(regex);
+      return m ? m[1] : null;
+    };
+
+    const pgnWhite = getTag(pgn, "White");
+    const pgnBlack = getTag(pgn, "Black");
+    const resultsCount = (pgn.match(/\[Result "(.*?)"\]/g) || []).length;
+
+    const challengerName = match.challengerEngine.name;
+    const defenderName = match.defenderEngine.name;
+
+    // Check 1: Identity (Self-Play detection)
+    if (pgnWhite === pgnBlack) {
+      return res.status(400).json({
+        error: "Validation Failed",
+        details: `PGN shows '${pgnWhite}' playing against itself. Expected '${challengerName}' vs '${defenderName}'.`,
+        suggestion: "Ensure your engine runner is correctly passing different names to the White and Black slots."
+      });
+    }
+
+    // Check 2: Player Matching
+    const names = [pgnWhite?.toLowerCase(), pgnBlack?.toLowerCase()];
+    if (!names.includes(challengerName.toLowerCase()) || !names.includes(defenderName.toLowerCase())) {
+      return res.status(400).json({
+        error: "Validation Failed",
+        details: `PGN Player names ('${pgnWhite}' vs '${pgnBlack}') do not match expected engines ('${challengerName}' vs '${defenderName}').`,
+        suggestion: "Verify that the PGN headers match the engine names provided in the job package."
+      });
+    }
+
+    // Check 3: Round Count
+    if (resultsCount !== match.gamesPlanned) {
+      return res.status(400).json({
+        error: "Validation Failed",
+        details: `PGN contains ${resultsCount} games, but match was configured for ${match.gamesPlanned} games.`,
+        suggestion: "Check if your runner is accidentally duplicating rounds or failing to finish them."
+      });
+    }
 
     // Store PGN
     const pgnKey = `matches/${matchId}/match.pgn`;
@@ -894,6 +938,7 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
     ]);
 
     console.log(`[Broker] Successfully processed result for match ${matchId}. Winner recorded.`);
+
     res.json({ success: true });
   } catch (error) {
     console.error("Broker submit error:", error);
