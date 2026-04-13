@@ -1156,7 +1156,7 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
     await notifyMatchResult(notifiedMatch, deltaA, deltaB, challengerWins, defenderWins, draws);
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Broker submit error:", error);
     res.status(500).json({ error: "Failed to submit result" });
   }
