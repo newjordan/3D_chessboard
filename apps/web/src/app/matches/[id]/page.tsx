@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   Zap,
   Clock,
-  Swords
+  Swords,
+  Download
 } from "lucide-react";
 import Link from "next/link";
 import { ReplayButton } from "@/components/replay/ReplayButton";
@@ -159,7 +160,17 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   <span className="flex items-center gap-2"><ShieldCheck size={12} /> SHA-256 Validated</span>
                   <span className="flex items-center gap-2"><FileText size={12} /> PGN Logs Ready</span>
                </div>
-               <ReplayButton matchId={match.id} />
+               <div className="flex items-center gap-2">
+                  <ReplayButton matchId={match.id} />
+                  <a 
+                    href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/matches/${match.id}/pgn`}
+                    download={`match-${match.id}.pgn`}
+                    className="flex items-center gap-2 px-4 py-2 border border-white/10 rounded-xl hover:bg-white/5 transition-all technical-label text-[10px] group/dl"
+                  >
+                    <Download size={12} className="group-hover/dl:text-accent transition-colors" />
+                    Download PGN
+                  </a>
+               </div>
             </div>
           </div>
 
