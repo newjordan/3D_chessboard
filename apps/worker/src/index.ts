@@ -177,6 +177,21 @@ async function handleValidation(payload: any) {
 
     // 5. Success! Update DB
     console.log(`Validation passed for ${storageKey}`);
+
+    const version = await prisma.engineVersion.findUnique({ 
+      where: { id: versionId },
+      include: { engine: true }
+    });
+    if (!version) return;
+
+    const ownerUserId = version.engine.ownerUserId;
+    const activeCount = await prisma.engine.count({
+      where: { ownerUserId, status: EngineStatus.active }
+    });
+
+    const shouldActivate = activeCount < 5;
+    const targetStatus = shouldActivate ? EngineStatus.active : EngineStatus.disabled_by_owner;
+
     await prisma.$transaction([
       prisma.engineVersion.update({
         where: { id: versionId },
@@ -190,17 +205,18 @@ async function handleValidation(payload: any) {
         data: { status: SubmissionStatus.validated },
       }),
       prisma.engine.update({
-        where: { id: (await prisma.engineVersion.findUnique({ where: { id: versionId } }))?.engineId },
-        data: { status: EngineStatus.active },
+        where: { id: version.engineId },
+        data: { status: targetStatus },
       }),
-      // Enqueue placement
-      prisma.job.create({
-        data: {
-          jobType: JobType.placement_prepare,
-          payloadJson: { submissionId, versionId },
-          status: JobStatus.pending,
-        },
-      }),
+      ...(shouldActivate ? [
+        prisma.job.create({
+          data: {
+            jobType: JobType.placement_prepare,
+            payloadJson: { submissionId, versionId },
+            status: JobStatus.pending,
+          },
+        })
+      ] : []),
     ]);
 
     // Send notification for new engine join

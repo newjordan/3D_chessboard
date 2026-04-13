@@ -105,4 +105,11 @@ export class ApiClient {
 
     return res.json();
   }
+
+  static async updateEngineStatus(id: string, status: string, userId: string) {
+    return this.request<any>(`/api/engines/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, userId }),
+    });
+  }
 }

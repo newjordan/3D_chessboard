@@ -32,6 +32,7 @@ app.use(express.json());
 // Consts
 const ALLOWED_EXTENSIONS = [".js", ".py"];
 const MAX_ENGINE_NAME_LENGTH = 32;
+const MAX_ACTIVE_ENGINES_PER_USER = 5;
 
 // Limiters
 const submitLimiter = rateLimit({
@@ -971,7 +972,54 @@ app.post("/api/broker/next-jobs", authorizeBroker, async (req, res) => {
   }
 });
 
-// 2. Submit Match Result
+// 12. Update Engine Status (Active Quota Enforcement)
+app.patch("/api/engines/:id/status", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, userId } = req.body;
+
+    if (!status || !userId) {
+      return res.status(400).json({ error: "status and userId are required" });
+    }
+
+    const engine = await prisma.engine.findUnique({ where: { id } });
+    if (!engine) return res.status(404).json({ error: "Engine not found" });
+
+    // Verify ownership
+    if (engine.ownerUserId !== userId) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    // Check quota if enabling
+    if (status === "active") {
+      const activeCount = await prisma.engine.count({
+        where: {
+          ownerUserId: userId,
+          status: "active"
+        }
+      });
+
+      if (activeCount >= MAX_ACTIVE_ENGINES_PER_USER) {
+        return res.status(400).json({ 
+          error: `Quota reached. You can only have ${MAX_ACTIVE_ENGINES_PER_USER} active agents playing in the arena. Please deactivate another agent first.` 
+        });
+      }
+    }
+
+    const updated = await prisma.engine.update({
+      where: { id },
+      data: { status: status as any }
+    });
+
+    console.log(`[API] Engine ${id} status updated to ${status} by user ${userId}`);
+    res.json({ success: true, status: updated.status });
+  } catch (error: any) {
+    console.error("Status update error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 13. Submit Worker Result
 app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
   const { jobId, matchId, pgn, result, challengerScore, defenderScore } = req.body;
   console.log(`[Broker] Submission received for match ${matchId} (Job: ${jobId})`);

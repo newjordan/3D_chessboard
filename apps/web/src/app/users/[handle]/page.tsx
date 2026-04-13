@@ -38,7 +38,10 @@ export default function UserProfilePage() {
     const topRating = s.peakRating || 1200;
     const winnings = (s.totalEarnings || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-    return { wins, losses, draws, totalMatches, winRate, topRating, winnings };
+    const activeEngines = user.engines.filter((e: any) => e.status === 'active' || e.status === 'pending').length;
+    const maxEngines = 5;
+
+    return { wins, losses, draws, totalMatches, winRate, topRating, winnings, activeEngines, maxEngines };
   }, [user]);
 
   if (isLoading) return (
@@ -201,12 +204,16 @@ export default function UserProfilePage() {
               ))}
             </div>
 
-            {user.engines.length === 0 && (
-              <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-center">
-                 <div className="text-muted text-sm mb-4 italic px-8">This developer has not yet deployed any active analytical agents to the arena.</div>
-                 <Link href="/engines/submit" className="text-accent technical-label text-xs hover:underline">Register New Agent</Link>
-              </div>
-            )}
+             {user.engines.length === 0 && (
+               <div className="py-24 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-center">
+                  <div className="text-muted text-sm mb-4 italic px-8">This developer has not yet deployed any active analytical agents to the arena.</div>
+                  {stats && stats.activeEngines < stats.maxEngines ? (
+                    <Link href="/submit" className="text-accent technical-label text-xs hover:underline">Register New Agent</Link>
+                  ) : (
+                    <span className="text-red-400 technical-label text-xs opacity-50 cursor-not-allowed">Quota Full (5/5)</span>
+                  )}
+               </div>
+             )}
             
           </div>
 
