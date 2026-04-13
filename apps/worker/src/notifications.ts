@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
+const BASE_URL = process.env.NEXTAUTH_URL || "https://chessagents.ai";
 
 export async function notifyMatchStarted(match: any) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;

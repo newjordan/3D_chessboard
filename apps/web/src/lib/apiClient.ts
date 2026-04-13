@@ -112,4 +112,44 @@ export class ApiClient {
       body: JSON.stringify({ status, userId }),
     });
   }
+
+  // --- ADMIN METHODS ---
+  private static async adminRequest<T>(path: string, userId: string, options: RequestInit = {}): Promise<T> {
+    return this.request<T>(path, {
+      ...options,
+      headers: {
+        ...options.headers,
+        "x-user-id": userId,
+      },
+    });
+  }
+
+  static async getAdminStats(userId: string) {
+    return this.adminRequest<any>("/api/admin/stats", userId);
+  }
+
+  static async getAdminUsers(userId: string) {
+    return this.adminRequest<any[]>("/api/admin/users", userId);
+  }
+
+  static async getAdminEngines(userId: string) {
+    return this.adminRequest<any[]>("/api/admin/engines", userId);
+  }
+
+  static async adminUpdateEngineStatus(id: string, status: string, userId: string) {
+    return this.adminRequest<any>(`/api/admin/engines/${id}/status`, userId, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  static async getAdminJobs(userId: string) {
+    return this.adminRequest<any[]>("/api/admin/jobs", userId);
+  }
+
+  static async retryJob(jobId: string, userId: string) {
+    return this.adminRequest<any>(`/api/admin/jobs/${jobId}/retry`, userId, {
+      method: "POST",
+    });
+  }
 }

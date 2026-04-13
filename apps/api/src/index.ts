@@ -1261,6 +1261,123 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
   }
 });
 
+// --- ADMIN API ---
+
+const authorizeAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const userId = req.headers['x-user-id'] as string;
+  if (!userId) return res.status(401).json({ error: "Unauthorized: Missing user identity" });
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: "Forbidden: Admin access required" });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Auth check failed" });
+  }
+};
+
+// 1. Get Admin Stats
+app.get("/api/admin/stats", authorizeAdmin, async (req, res) => {
+  try {
+    const [userCount, engineCount, matchCount, pendingSubmissions, activeJobs] = await Promise.all([
+      prisma.user.count(),
+      prisma.engine.count(),
+      prisma.match.count(),
+      prisma.submission.count({ where: { status: { in: ['uploaded', 'validating'] } } }),
+      prisma.job.count({ where: { status: 'pending' } })
+    ]);
+
+    res.json({
+      users: userCount,
+      engines: engineCount,
+      matches: matchCount,
+      pendingSubmissions,
+      activeJobs
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch stats" });
+  }
+});
+
+// 2. Get All Users
+app.get("/api/admin/users", authorizeAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { engines: true } } }
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// 3. Get All Engines
+app.get("/api/admin/engines", authorizeAdmin, async (req, res) => {
+  try {
+    const engines = await prisma.engine.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { 
+        owner: { select: { username: true, email: true } },
+        _count: { select: { versions: true, matchesChallenged: true, matchesDefended: true } }
+      }
+    });
+    res.json(engines);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch engines" });
+  }
+});
+
+// 4. Update Engine Status (Admin Override)
+app.patch("/api/admin/engines/:id/status", authorizeAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const updated = await prisma.engine.update({
+      where: { id },
+      data: { status: status as any }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update engine status" });
+  }
+});
+
+// 5. Get Recent Jobs
+app.get("/api/admin/jobs", authorizeAdmin, async (req, res) => {
+  try {
+    const jobs = await prisma.job.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50
+    });
+    res.json(jobs);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch jobs" });
+  }
+});
+
+// 6. Retry Job
+app.post("/api/admin/jobs/:id/retry", authorizeAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await prisma.job.update({
+      where: { id },
+      data: { 
+        status: 'pending',
+        attempts: 0,
+        runAt: new Date()
+      }
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to retry job" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend API listening at http://localhost:${port}`);
 });
