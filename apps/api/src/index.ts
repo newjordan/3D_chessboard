@@ -870,7 +870,7 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
 
     const pgnWhite = getTag(pgn, "White");
     const pgnBlack = getTag(pgn, "Black");
-    const resultsCount = (pgn.match(/\[Result "(.*?)"\]/g) || []).length;
+    const resultsCount = (pgn.match(/^\[Result "(.*?)"\]/gm) || []).length;
 
     const challengerName = match.challengerEngine.name;
     const defenderName = match.defenderEngine.name;
