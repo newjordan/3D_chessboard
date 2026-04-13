@@ -17,7 +17,7 @@ export function AgentManagement({ engineId, userId }: AgentManagementProps) {
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    console.log(`[AgentManagement] Attempting deletion for engine ${engineId} by user ${userId}`);
+    console.log(`[AgentManagement] Attempting deletion for engine ${engineId} by user ${userId} `);
     
     try {
       const resp = await ApiClient.deleteEngine(engineId, userId);
