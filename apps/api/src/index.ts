@@ -40,6 +40,85 @@ const submitLimiter = rateLimit({
   message: { error: "Too many submissions. Please wait 15 minutes." }
 });
 
+// --- ELO LOGIC ---
+function getExpectedScore(ratingA: number, ratingB: number): number {
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+}
+
+function calculateDelta(expectedScore: number, actualScore: number, totalGames: number, kFactor: number): number {
+  return Math.round(kFactor * totalGames * (actualScore - expectedScore));
+}
+
+function updateRatingsForMatch(
+  ratingA: number,
+  ratingB: number,
+  scoreA: number,
+  scoreB: number,
+  totalGames: number,
+  kA: number = 32,
+  kB: number = 32
+): { deltaA: number; deltaB: number } {
+  const expectedA = getExpectedScore(ratingA, ratingB);
+  const expectedB = 1 - expectedA;
+  const actualA = scoreA / totalGames;
+  const actualB = scoreB / totalGames;
+  const deltaA = calculateDelta(expectedA, actualA, totalGames, kA);
+  const deltaB = calculateDelta(expectedB, actualB, totalGames, kB);
+  return { deltaA, deltaB };
+}
+
+// --- NOTIFICATIONS ---
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const BASE_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+async function notifyMatchResult(match: any, deltaA: number, deltaB: number, challengerWins: number, defenderWins: number, draws: number) {
+  try {
+    const resultText = match.challengerScore > match.defenderScore 
+      ? `🏆 **${match.challengerEngine.name}** won the match!`
+      : match.defenderScore > match.challengerScore
+      ? `🏆 **${match.defenderEngine.name}** won the match!`
+      : "🤝 The match ended in a draw.";
+
+    const embed = {
+      title: "🏁 Match Completed",
+      description: resultText,
+      color: 0x2ecc71, // Green
+      fields: [
+        {
+          name: match.challengerEngine.name,
+          value: `Score: **${match.challengerScore}**\nRating: ${match.challengerEngine.currentRating + deltaA} (${deltaA > 0 ? "+" : ""}${deltaA})`,
+          inline: true
+        },
+        {
+          name: match.defenderEngine.name,
+          value: `Score: **${match.defenderScore}**\nRating: ${match.defenderEngine.currentRating + deltaB} (${deltaB > 0 ? "+" : ""}${deltaB})`,
+          inline: true
+        },
+        {
+          name: "Statistics",
+          value: `Wins: ${challengerWins} | Losses: ${defenderWins} | Draws: ${draws}`,
+          inline: false
+        }
+      ],
+      url: `${BASE_URL}/matches/${match.id}`,
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: `Match ID: ${match.id.substring(0, 8)}`
+      }
+    };
+
+    if (!DISCORD_WEBHOOK_URL) return;
+
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+  } catch (error) {
+    console.error("Failed to send Discord notification:", error);
+  }
+}
+
 // Helper: Slugify
 const slugify = (text: string) => {
   return text
@@ -912,7 +991,70 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
       ContentType: "application/x-chess-pgn",
     }));
 
-    // Atomically update Match, Job, and create Rating Job
+    // --- RE-IMPLEMENTING RATING LOGIC FROM WORKER ---
+    const getKFactor = (engine: any) => {
+      if (engine.gamesPlayed < 30) return 40;
+      if (engine.currentRating > 2400) return 16;
+      return 32;
+    };
+
+    const kA = getKFactor(match.challengerEngine);
+    const kB = getKFactor(match.defenderEngine);
+
+    const { deltaA, deltaB } = updateRatingsForMatch(
+       match.challengerEngine.currentRating,
+       match.defenderEngine.currentRating,
+       Number(challengerScore),
+       Number(defenderScore),
+       match.gamesPlanned,
+       kA,
+       kB
+    );
+
+    // Parse PGN to reconstruct individual games for DB
+    // Format: [Round "1"] [White "EngineA"] [Black "EngineB"] [Result "1-0"]
+    const rounds = pgn.split(/\[Event /).filter((r: string) => r.trim().length > 0);
+    const gameSubmissions = rounds.map((r: string, i: number) => {
+      const getGameTag = (text: string, tag: string) => {
+        const regex = new RegExp(`\\[${tag} "(.*?)"\\]`);
+        const m = text.match(regex);
+        return m ? m[1] : null;
+      };
+
+      const white = getGameTag(r, "White");
+      const black = getGameTag(r, "Black");
+      const res = getGameTag(r, "Result");
+      const termination = getGameTag(r, "Termination") || "Adjudication";
+
+      return {
+        matchId: match.id,
+        roundIndex: i + 1,
+        whiteEngineId: white?.toLowerCase() === challengerName.toLowerCase() ? match.challengerEngineId : match.defenderEngineId,
+        blackEngineId: white?.toLowerCase() === challengerName.toLowerCase() ? match.defenderEngineId : match.challengerEngineId,
+        result: res || "*",
+        termination,
+        pgnStorageKey: "" // Sub-PGNs not stored individually yet
+      };
+    });
+
+    // Calculate detailed stats
+    let challengerWins = 0;
+    let defenderWins = 0;
+    let draws = 0;
+
+    gameSubmissions.forEach((g: any) => {
+      if (g.result === "1-0") {
+        if (g.whiteEngineId === match.challengerEngineId) challengerWins++;
+        else defenderWins++;
+      } else if (g.result === "0-1") {
+        if (g.blackEngineId === match.challengerEngineId) challengerWins++;
+        else defenderWins++;
+      } else if (g.result === "1/2-1/2") {
+        draws++;
+      }
+    });
+
+    // Atomically update Match, Engines, Ratings, and Games
     await prisma.$transaction([
       prisma.match.update({
         where: { id: matchId },
@@ -928,16 +1070,65 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
         where: { id: jobId },
         data: { status: 'completed' as any, updatedAt: new Date() }
       }),
-      prisma.job.create({
+      prisma.engine.update({
+        where: { id: match.challengerEngineId },
         data: {
-          jobType: 'rating_apply' as any,
-          payloadJson: { matchId },
-          status: 'pending' as any
+          currentRating: { increment: deltaA },
+          gamesPlayed: { increment: match.gamesPlanned },
+          wins: { increment: challengerWins },
+          losses: { increment: defenderWins },
+          draws: { increment: draws },
+          updatedAt: new Date(),
         }
-      })
+      }),
+      prisma.engine.update({
+        where: { id: match.defenderEngineId },
+        data: {
+          currentRating: { increment: deltaB },
+          gamesPlayed: { increment: match.gamesPlanned },
+          wins: { increment: defenderWins },
+          losses: { increment: challengerWins },
+          draws: { increment: draws },
+          updatedAt: new Date(),
+        }
+      }),
+      prisma.rating.create({
+        data: {
+          engineId: match.challengerEngineId,
+          matchId: match.id,
+          ratingBefore: match.challengerEngine.currentRating,
+          ratingAfter: match.challengerEngine.currentRating + deltaA,
+          delta: deltaA,
+        }
+      }),
+      prisma.rating.create({
+        data: {
+          engineId: match.defenderEngineId,
+          matchId: match.id,
+          ratingBefore: match.defenderEngine.currentRating,
+          ratingAfter: match.defenderEngine.currentRating + deltaB,
+          delta: deltaB,
+        }
+      }),
+      ...gameSubmissions.map((g: any) => prisma.game.create({ data: g }))
     ]);
 
+    // Update global ranks asynchronously
+    prisma.$executeRawUnsafe(`
+      UPDATE "Engine" e
+      SET "currentRank" = ranked.rank
+      FROM (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY "currentRating" DESC) as rank
+        FROM "Engine"
+        WHERE status = 'active'
+      ) ranked
+      WHERE e.id = ranked.id
+    `).catch(err => console.error("Failed to update global ranks:", err));
+
     console.log(`[Broker] Successfully processed result for match ${matchId}. Winner recorded.`);
+
+    // 🔥 Fire the Webhook!
+    await notifyMatchResult(match, deltaA, deltaB, challengerWins, defenderWins, draws);
 
     res.json({ success: true });
   } catch (error) {
