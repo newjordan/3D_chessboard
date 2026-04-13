@@ -19,6 +19,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { AgentManagement } from "@/components/engines/AgentManagement";
 import { RatingHistogram } from "@/components/RatingHistogram";
+import { AssetUpload } from "@/components/engines/AssetUpload";
+import { Layout } from "lucide-react";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -86,19 +88,32 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight">{engine.name}</h1>
-              <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border border-border-custom ${
-                engine.status === 'active' ? 'text-accent' : 'text-muted'
-              }`}>
-                {engine.status}
-              </span>
-              {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/20 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-                  <span className="text-[10px] font-bold text-accent uppercase tracking-tighter italic">In Arena</span>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+              {engine.avatarUrl ? (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-accent/20 overflow-hidden shadow-2xl">
+                  <img src={engine.avatarUrl} alt={engine.name} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-white/5 bg-white/[0.02] flex items-center justify-center">
+                  <Cpu size={32} className="opacity-20" />
                 </div>
               )}
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <h1 className="text-3xl sm:text-5xl font-bold tracking-tight">{engine.name}</h1>
+                  <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border border-border-custom ${
+                    engine.status === 'active' ? 'text-accent' : 'text-muted'
+                  }`}>
+                    {engine.status}
+                  </span>
+                  {(Number((engine as any)._count?.matchesChallenged || 0) + Number((engine as any)._count?.matchesDefended || 0)) > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/20 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                      <span className="text-[10px] font-bold text-accent uppercase tracking-tighter italic">In Arena</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-4 sm:gap-8 text-sm text-muted">
@@ -233,9 +248,24 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
             </div>
           </div>
 
+          {/* Visual Identity - Owner Only */}
+          {isOwner && (
+            <div className="flex flex-col gap-6 p-8 border border-border-custom bg-white/[0.01] shadow-sm rounded-xl">
+              <h3 className="technical-label flex items-center gap-2">
+                <Layout size={12} /> Branding & Flavor
+              </h3>
+              <AssetUpload 
+                engineId={engine.id} 
+                userId={(session?.user as any)?.id} 
+                currentAvatar={engine.avatarUrl}
+                currentPiece={engine.pieceUrl}
+              />
+            </div>
+          )}
+
           {/* Management Tools - Owner Only & ONLY IF FAILED */}
           {isOwner && latestVersion?.validationStatus === 'failed' && (
-            <div className="flex flex-col gap-6 p-8 border border-red-900/10 bg-red-950/[0.02] shadow-sm">
+            <div className="flex flex-col gap-6 p-8 border border-red-900/10 bg-red-950/[0.02] shadow-sm rounded-xl">
               <h3 className="technical-label flex items-center gap-2 text-red-500/80">
                 <ShieldAlert size={12} /> Command Console
               </h3>

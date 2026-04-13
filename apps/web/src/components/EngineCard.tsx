@@ -15,11 +15,22 @@ export function EngineCard({ engine }: EngineCardProps) {
       className="border border-border-custom bg-white/[0.01] p-8 flex flex-col gap-8 transition-all relative hover:bg-white/[0.02]"
     >
       <div className="flex justify-between items-start">
-        <div className="flex flex-col gap-1">
-          <Link href={`/engines/${engine.slug}`} className="text-xl font-bold hover:underline tracking-tight">
-            {engine.name}
-          </Link>
-          <span className="technical-label opacity-40 text-[9px] lowercase">{engine.id.substring(0, 16)}</span>
+        <div className="flex items-center gap-4">
+          {engine.avatarUrl ? (
+            <div className="w-12 h-12 rounded-lg border border-accent/20 overflow-hidden shadow-lg">
+              <img src={engine.avatarUrl} alt={engine.name} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-lg border border-border-custom bg-white/5 flex items-center justify-center">
+              <span className="text-[10px] technical-label opacity-20 italic">CPU</span>
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <Link href={`/engines/${engine.slug}`} className="text-xl font-bold hover:underline tracking-tight">
+              {engine.name}
+            </Link>
+            <span className="technical-label opacity-40 text-[9px] lowercase">{engine.id.substring(0, 16)}</span>
+          </div>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">

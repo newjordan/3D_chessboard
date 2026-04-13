@@ -647,6 +647,109 @@ app.get("/api/submissions/:id", async (req, res) => {
   }
 });
 
+// 9. Upload Engine Assets (Avatar/Piece)
+app.post("/api/engines/:id/assets", upload.fields([{ name: "avatar", maxCount: 1 }, { name: "piece", maxCount: 1 }]), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+    if (!userId) return res.status(401).json({ error: "Authentication required" });
+
+    const engine = await prisma.engine.findUnique({ where: { id } });
+    if (!engine) return res.status(404).json({ error: "Agent not found" });
+    if (engine.ownerUserId !== userId) return res.status(403).json({ error: "Permission denied" });
+
+    const updates: any = {};
+
+    if (files.avatar && files.avatar[0]) {
+      const file = files.avatar[0];
+      const ext = path.extname(file.originalname).toLowerCase();
+      const key = `assets/engines/${id}/avatar${ext}`;
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }));
+      updates.avatarUrl = `/api/assets/${id}/avatar?v=${Date.now()}`;
+    }
+
+    if (files.piece && files.piece[0]) {
+      const file = files.piece[0];
+      const ext = path.extname(file.originalname).toLowerCase();
+      const key = `assets/engines/${id}/piece${ext}`;
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }));
+      updates.pieceUrl = `/api/assets/${id}/piece?v=${Date.now()}`;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await prisma.engine.update({
+        where: { id },
+        data: updates,
+      });
+    }
+
+    res.json({ success: true, ...updates });
+  } catch (error) {
+    console.error("Asset upload error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 10. Serve Engine Assets (Proxy)
+app.get("/api/assets/:engineId/:type", async (req, res) => {
+  try {
+    const { engineId, type } = req.params;
+    if (type !== 'avatar' && type !== 'piece') return res.status(400).json({ error: "Invalid asset type" });
+
+    const engine = await prisma.engine.findUnique({ 
+      where: { id: engineId },
+      select: { id: true, avatarUrl: true, pieceUrl: true }
+    });
+
+    if (!engine) return res.status(404).json({ error: "Agent not found" });
+
+    // We need to find the correct extension by listing or by trial/error, 
+    // but better to just use a fixed key pattern or check the DB if we stored the full key.
+    // For now, let's try common extensions if we don't store the exact key in DB.
+    // Actually, I should probably have stored the exact storageKey in DB.
+    // Let's refine: I'll try to find the object in S3.
+    
+    // Simplification: Let's assume common extensions or just use the one that exists.
+    const extensions = ['.png', '.jpg', '.jpeg', '.webp', '.svg'];
+    let foundObject: any = null;
+    let foundExt = '';
+
+    for (const ext of extensions) {
+      try {
+        const key = `assets/engines/${engineId}/${type}${ext}`;
+        const response = await s3Client.send(new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: key,
+        }));
+        foundObject = response;
+        foundExt = ext;
+        break;
+      } catch (e) {}
+    }
+
+    if (!foundObject) return res.status(404).json({ error: "Asset not found" });
+
+    res.setHeader("Content-Type", foundObject.ContentType || "image/png");
+    res.setHeader("Cache-Control", "public, max-age=3600"); // 1 hour cache
+    (foundObject.Body as any).pipe(res);
+  } catch (error) {
+    console.error("Asset serve error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // 8. Delete Engine (DISABLED)
 app.delete("/api/engines/:id", async (req, res) => {
   try {

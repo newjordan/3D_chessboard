@@ -73,6 +73,8 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
           pgn={pgnResult.pgn} 
           whiteName={match.challengerEngine.name}
           blackName={match.defenderEngine.name}
+          whitePieceUrl={match.challengerEngine.pieceUrl}
+          blackPieceUrl={match.defenderEngine.pieceUrl}
         />
       </main>
       

@@ -24,9 +24,17 @@ interface ReplayControllerProps {
   pgn: string;
   whiteName?: string;
   blackName?: string;
+  whitePieceUrl?: string;
+  blackPieceUrl?: string;
 }
 
-export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn, whiteName, blackName }) => {
+export const ReplayController: React.FC<ReplayControllerProps> = ({ 
+  pgn, 
+  whiteName, 
+  blackName,
+  whitePieceUrl,
+  blackPieceUrl
+}) => {
   const [selectedGameIndex, setSelectedGameIndex] = useState(0);
   const [currentPly, setCurrentPly] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -214,9 +222,14 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({ pgn, whiteNa
                   <Environment preset="night" />
                 </Canvas>
              ) : (
-               <div className="w-full h-full max-w-[600px] aspect-square">
-                 <Board2D board={boardState as any} lastMove={lastMove} />
-               </div>
+                <div className="w-full h-full max-w-[600px] aspect-square">
+                  <Board2D 
+                    board={boardState as any} 
+                    lastMove={lastMove} 
+                    whitePieceUrl={whitePieceUrl}
+                    blackPieceUrl={blackPieceUrl}
+                  />
+                </div>
              )}
 
               {/* Player Labels */}

@@ -92,4 +92,21 @@ export class ApiClient {
       method: "DELETE",
     });
   }
+  
+  static async uploadEngineAssets(engineId: string, userId: string, formData: FormData) {
+    // Append userId to formData
+    formData.append("userId", userId);
+    
+    const res = await fetch(`${API_BASE_URL}/api/engines/${engineId}/assets`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error(error.error || `HTTP error ${res.status}`);
+    }
+
+    return res.json();
+  }
 }

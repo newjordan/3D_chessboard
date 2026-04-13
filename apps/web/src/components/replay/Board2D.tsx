@@ -6,10 +6,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Board2DProps {
   board: ({ type: string; color: string } | null)[][];
   lastMove?: { from: string; to: string } | null;
+  whitePieceUrl?: string;
+  blackPieceUrl?: string;
 }
 
 // Minimalist, high-contrast SVG piece set
-const PieceImage = ({ color, type }: { color: string; type: string }) => {
+const PieceImage = ({ color, type, customUrl }: { color: string; type: string; customUrl?: string }) => {
+  if (customUrl) {
+    return (
+      <img 
+        src={customUrl} 
+        alt={`${color} ${type}`}
+        className="w-[80%] h-[80%] drop-shadow-md select-none pointer-events-none object-contain"
+      />
+    );
+  }
   const pieceNameMap: Record<string, string> = {
     'p': 'pawn',
     'r': 'rook',
@@ -31,11 +42,13 @@ const PieceImage = ({ color, type }: { color: string; type: string }) => {
   );
 };
 
-export const Board2D: React.FC<Board2DProps> = ({ board, lastMove }) => {
+export const Board2D: React.FC<Board2DProps> = ({ board, lastMove, whitePieceUrl, blackPieceUrl }) => {
   const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   
   return (
     <div className="w-full aspect-square bg-[#0a0a0a] border border-white/5 rounded-lg overflow-hidden relative group">
+      {/* Gloss overlay Effect */}
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/[0.04] to-transparent z-20" />
       <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
         {board.map((row, r) => 
           row.map((square, c) => {
@@ -66,7 +79,11 @@ export const Board2D: React.FC<Board2DProps> = ({ board, lastMove }) => {
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                       className="w-full h-full flex items-center justify-center z-10"
                     >
-                      <PieceImage color={square.color} type={square.type} />
+                      <PieceImage 
+                        color={square.color} 
+                        type={square.type} 
+                        customUrl={square.color === 'w' ? whitePieceUrl : blackPieceUrl} 
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -75,9 +92,6 @@ export const Board2D: React.FC<Board2DProps> = ({ board, lastMove }) => {
           })
         )}
       </div>
-      
-      {/* Gloss overlay Effect */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/[0.02] to-transparent" />
     </div>
   );
 };
