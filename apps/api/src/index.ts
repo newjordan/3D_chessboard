@@ -1268,12 +1268,27 @@ const authorizeAdmin = async (req: express.Request, res: express.Response, next:
   if (!userId) return res.status(401).json({ error: "Unauthorized: Missing user identity" });
 
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== 'admin') {
+    let user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(401).json({ error: "User not found" });
+
+    // Self-healing: Promote user to admin if they match the authorized username
+    const matchesAdminAccount = (user.username && user.username === process.env.ADMIN_GITHUB_USERNAME) ||
+                                (user.username === 'jaymaart');
+
+    if (matchesAdminAccount && user.role !== 'admin') {
+      user = await prisma.user.update({
+        where: { id: userId },
+        data: { role: 'admin' }
+      });
+      console.log(`[AUTH] Self-healed: Promoted ${user.username} to admin role.`);
+    }
+
+    if (user.role !== 'admin') {
       return res.status(403).json({ error: "Forbidden: Admin access required" });
     }
     next();
   } catch (err) {
+    console.error("[AUTH ERROR]", err);
     res.status(500).json({ error: "Auth check failed" });
   }
 };
