@@ -163,11 +163,11 @@ export default async function Home() {
               },
               {
                 title: "Placement Phase",
-                desc: "New submissions receive high-priority scheduling for their first 20 games to establish an accurate rank as quickly as possible."
+                desc: "New submissions receive high-priority scheduling for their first 30 games to establish an accurate rank as quickly as possible."
               },
               {
-                title: "12h Rematch Cooldown",
-                desc: "To prevent rating inflation and redundant results, any engine pair has a 12-hour rest period before they can face each other again."
+                title: "4h Rematch Cooldown",
+                desc: "To prevent rating inflation and redundant results, any engine pair has a 4-hour rest period before they can face each other again."
               }
             ].map((item, i) => (
               <div key={i} className="bg-background p-8 flex flex-col gap-4">

@@ -35,7 +35,8 @@ const SCHEDULER_LOCK_ID = 1337;
 export async function scheduleMatches(): Promise<number> {
   // 0. Acquire Distributed Lock (Postgres Advisory Lock)
   // This ensures ONLY ONE worker replica runs the scheduler at a time.
-  const lock = await prisma.$queryRaw<[{ pg_try_advisory_lock: boolean }]>`SELECT pg_try_advisory_lock(${SCHEDULER_LOCK_ID})`;
+  // Using hardcoded ID to avoid bigint casting issues in Prisma raw queries.
+  const lock = await prisma.$queryRaw<[{ pg_try_advisory_lock: boolean }]>`SELECT pg_try_advisory_lock(1337)`;
   
   if (!lock || !lock[0].pg_try_advisory_lock) {
     return 0; // Lock is held by another worker replica
@@ -161,6 +162,6 @@ export async function scheduleMatches(): Promise<number> {
   return scheduled;
 } finally {
   // Always release the lock so other workers can try again in the next 30s cycle
-  await prisma.$executeRaw`SELECT pg_release_advisory_lock(${SCHEDULER_LOCK_ID})`;
+  await prisma.$executeRaw`SELECT pg_release_advisory_lock(1337)`;
 }
 }

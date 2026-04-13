@@ -211,7 +211,10 @@ app.get("/api/leaderboard", async (req, res) => {
 
     const [engines, total] = await Promise.all([
       prisma.engine.findMany({
-        where: { status: "active" },
+        where: { 
+          status: "active",
+          gamesPlayed: { gt: 0 } 
+        },
         orderBy: { currentRating: "desc" },
         skip,
         take: limit,
@@ -225,7 +228,12 @@ app.get("/api/leaderboard", async (req, res) => {
           },
         },
       }),
-      prisma.engine.count({ where: { status: "active" } }),
+      prisma.engine.count({ 
+        where: { 
+          status: "active",
+          gamesPlayed: { gt: 0 } 
+        } 
+      }),
     ]);
 
     res.json({ engines, total, page, limit });
