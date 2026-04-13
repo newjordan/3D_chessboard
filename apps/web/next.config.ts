@@ -13,6 +13,17 @@ const nextConfig: NextConfig = {
     // Ignoring TS errors during build to handle missing Prisma types in the frontend
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    // Proxy all /api requests (except auth) to the API service
+    return [
+      {
+        source: "/api/:path((?!auth).*)",
+        destination: process.env.NODE_ENV === "production"
+          ? "http://chess-agents-api:8080/api/:path*"
+          : "http://localhost:3001/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

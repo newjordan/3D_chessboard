@@ -54,7 +54,7 @@ export function EloHistoryChart({ ratings }: EloHistoryChartProps) {
   };
 
   return (
-    <div className="w-full h-48 sm:h-64 relative pt-4">
+    <div className="w-full h-48 sm:h-64 min-h-[200px] relative pt-4 flex-1">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <defs>
