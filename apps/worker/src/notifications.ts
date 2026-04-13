@@ -114,15 +114,36 @@ export async function notifyGameResult(match: any, round: number, result: string
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   try {
     console.log(`[Notification] Sending Game Result for round ${round}...`);
-    const resultEmoji = result === "1-0" ? "⚪" : result === "0-1" ? "⚫" : "🤝";
+    
+    // Logic: Odd rounds = Challenger is White, Even rounds = Defender is White
+    const isChallengerWhite = round % 2 !== 0;
+    const whiteName = isChallengerWhite ? match.challengerEngine?.name : match.defenderEngine?.name;
+    const blackName = isChallengerWhite ? match.defenderEngine?.name : match.challengerEngine?.name;
+    
+    let winnerText = "🤝 The game ended in a draw.";
+    let resultEmoji = "🤝";
+    
+    if (result === "1-0") {
+      winnerText = `🏆 **${whiteName}** (White) won!`;
+      resultEmoji = "⚪";
+    } else if (result === "0-1") {
+      winnerText = `🏆 **${blackName}** (Black) won!`;
+      resultEmoji = "⚫";
+    }
+
     const embed = {
       title: `🎮 Game ${round} Finished`,
-      description: `${resultEmoji} Result: **${result}** (${termination})`,
+      description: `${resultEmoji} ${winnerText}\n**Result**: ${result} (${termination})`,
       color: 0xf1c40f, // Yellow/Gold
       fields: [
         {
-          name: "Matchup",
-          value: `${match.challengerEngine?.name || "Agent A"} vs ${match.defenderEngine?.name || "Agent B"}`,
+          name: "Challenger",
+          value: match.challengerEngine?.name || "Agent A",
+          inline: true
+        },
+        {
+          name: "Defender",
+          value: match.defenderEngine?.name || "Agent B",
           inline: true
         }
       ],
