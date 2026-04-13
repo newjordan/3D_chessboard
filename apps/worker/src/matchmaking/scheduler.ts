@@ -162,6 +162,7 @@ export async function scheduleMatches(): Promise<number> {
   return scheduled;
 } finally {
   // Always release the lock so other workers can try again in the next 30s cycle
-  await prisma.$executeRaw`SELECT pg_release_advisory_lock(1337::bigint)`;
+  // Fix: Renamed from pg_release_advisory_lock (incorrect name) to pg_advisory_unlock (correct Postgres name)
+  await prisma.$executeRaw`SELECT pg_advisory_unlock(1337::bigint)`;
 }
 }
