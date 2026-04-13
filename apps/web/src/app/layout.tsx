@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,6 +70,13 @@ export default function RootLayout({
           <main className="pt-24 min-h-screen">
             {children}
           </main>
+          <Toaster 
+            theme="dark" 
+            position="bottom-right" 
+            toastOptions={{
+              className: "bg-black/80 border border-white/10 backdrop-blur-xl text-white font-sans",
+            }}
+          />
         </Providers>
       </body>
     </html>

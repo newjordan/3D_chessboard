@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Trash2, AlertTriangle, Loader2, Play, Pause, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ApiClient } from '@/lib/apiClient';
+import { toast } from 'sonner';
 
 interface AgentManagementProps {
   engineId: string;
@@ -26,12 +27,15 @@ export function AgentManagement({ engineId, userId, status }: AgentManagementPro
     try {
       const resp = await ApiClient.updateEngineStatus(engineId, targetStatus, userId);
       if (resp.success) {
+        toast.success(`Agent status updated to ${targetStatus === 'active' ? 'Online' : 'Paused'}`);
         router.refresh();
       } else {
         setError(resp.message || "Failed to update status");
+        toast.error(resp.message || "Failed to update status");
       }
     } catch (e: any) {
       setError(e.message || "Failed to update status");
+      toast.error(e.message || "Failed to update status");
     } finally {
       setIsToggling(false);
     }
@@ -43,13 +47,16 @@ export function AgentManagement({ engineId, userId, status }: AgentManagementPro
     try {
       const resp = await ApiClient.deleteEngine(engineId, userId);
       if (resp.success) {
+        toast.success("Agent decommissioned successfully");
         router.push('/leaderboard');
         router.refresh();
       } else {
         setError(resp.message || "Deletion failed");
+        toast.error(resp.message || "Deletion failed");
       }
     } catch (e: any) {
       setError(e.message || "Deletion failed");
+      toast.error(e.message || "Deletion failed");
     } finally {
       setIsDeleting(false);
       setShowConfirm(false);

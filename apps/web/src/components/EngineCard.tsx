@@ -7,6 +7,7 @@ import { ApiClient } from "@/lib/apiClient";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface EngineCardProps {
   engine: any;
@@ -31,12 +32,13 @@ export function EngineCard({ engine, isOwner = false }: EngineCardProps) {
     try {
       const resp = await ApiClient.updateEngineStatus(engine.id, targetStatus, userId);
       if (resp.success) {
+        toast.success(`${engine.name} is now ${targetStatus === 'active' ? 'Online' : 'Paused'}`);
         router.refresh();
       } else {
-        alert(resp.message || "Failed to update status");
+        toast.error(resp.message || "Failed to update status");
       }
     } catch (err: any) {
-      alert(err.message || "An error occurred");
+      toast.error(err.message || "An error occurred");
     } finally {
       setIsToggling(true); // Keep it loading until refresh
       // Reset after a bit if refresh is slow
