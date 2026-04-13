@@ -1296,12 +1296,20 @@ const authorizeAdmin = async (req: express.Request, res: express.Response, next:
 // 1. Get Admin Stats
 app.get("/api/admin/stats", authorizeAdmin, async (req, res) => {
   try {
-    const [userCount, engineCount, matchCount, pendingSubmissions, activeJobs] = await Promise.all([
+    const [userCount, engineCount, matchCount, pendingSubmissions, activeJobs, recentMatches] = await Promise.all([
       prisma.user.count(),
       prisma.engine.count(),
       prisma.match.count(),
       prisma.submission.count({ where: { status: { in: ['uploaded', 'validating'] } } }),
-      prisma.job.count({ where: { status: 'pending' } })
+      prisma.job.count({ where: { status: 'pending' } }),
+      prisma.match.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          challengerEngine: { select: { name: true } },
+          defenderEngine: { select: { name: true } }
+        }
+      })
     ]);
 
     res.json({
@@ -1309,7 +1317,8 @@ app.get("/api/admin/stats", authorizeAdmin, async (req, res) => {
       engines: engineCount,
       matches: matchCount,
       pendingSubmissions,
-      activeJobs
+      activeJobs,
+      recentMatches
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch stats" });
@@ -1329,6 +1338,23 @@ app.get("/api/admin/users", authorizeAdmin, async (req, res) => {
   }
 });
 
+// Update User (Admin)
+app.patch("/api/admin/users/:id", authorizeAdmin, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const { role, username, name } = req.body;
+    
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { role, username, name }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
 // 3. Get All Engines
 app.get("/api/admin/engines", authorizeAdmin, async (req, res) => {
   try {
@@ -1342,6 +1368,23 @@ app.get("/api/admin/engines", authorizeAdmin, async (req, res) => {
     res.json(engines);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch engines" });
+  }
+});
+
+// Update Engine (General Admin Edit)
+app.patch("/api/admin/engines/:id", authorizeAdmin, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const updateData = req.body;
+
+    const updated = await prisma.engine.update({
+      where: { id },
+      data: updateData
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update engine" });
   }
 });
 
@@ -1362,7 +1405,26 @@ app.patch("/api/admin/engines/:id/status", authorizeAdmin, async (req, res) => {
   }
 });
 
-// 5. Get Recent Jobs
+// 5. Get Matches
+app.get("/api/admin/matches", authorizeAdmin, async (req, res) => {
+  try {
+    const matches = await prisma.match.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: {
+        challengerEngine: { select: { name: true } },
+        defenderEngine: { select: { name: true } },
+        challengerVersion: { select: { versionLabel: true } },
+        defenderVersion: { select: { versionLabel: true } }
+      }
+    });
+    res.json(matches);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch matches" });
+  }
+});
+
+// 6. Get Recent Jobs
 app.get("/api/admin/jobs", authorizeAdmin, async (req, res) => {
   try {
     const jobs = await prisma.job.findMany({
@@ -1375,7 +1437,7 @@ app.get("/api/admin/jobs", authorizeAdmin, async (req, res) => {
   }
 });
 
-// 6. Retry Job
+// 7. Retry Job
 app.post("/api/admin/jobs/:id/retry", authorizeAdmin, async (req, res) => {
   try {
     const id = req.params.id as string;

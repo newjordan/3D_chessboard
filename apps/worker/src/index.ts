@@ -275,7 +275,10 @@ async function handleMatchRun(payload: any) {
     // Set match to running status so it shows up in UI
     await prisma.match.update({
       where: { id: matchId },
-      data: { status: MatchStatus.running }
+      data: { 
+        status: MatchStatus.running,
+        processedBy: WORKER_ID
+      }
     });
 
     // 1. Download agents
@@ -359,6 +362,7 @@ async function handleMatchRun(payload: any) {
           gamesCompleted: totalGames,
           winnerEngineId,
           pgnStorageKey: pgnKey,
+          processedBy: WORKER_ID
         }
       }),
       ...result.games.map(g => {

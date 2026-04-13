@@ -70,27 +70,70 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Content Areas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="p-8 rounded-[2rem] bg-black/40 border border-white/5 backdrop-blur-xl hover:border-purple-500/30 transition-all group">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold">Recent Alerts</h3>
-            <Bell className="w-6 h-6 text-white/20 group-hover:text-purple-400 transition-colors" />
-          </div>
-          <div className="space-y-4">
-            {stats?.pendingSubmissions > 0 ? (
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-200">
-                <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
-                <p className="text-sm font-medium">{stats.pendingSubmissions} new submissions awaiting validation.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <div className="p-8 rounded-[2rem] bg-black/40 border border-white/5 backdrop-blur-xl hover:border-purple-500/30 transition-all group">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-bold">Recent Match Activity</h3>
+                <p className="text-xs text-white/30 mt-1">Latest matchups and results</p>
               </div>
-            ) : (
-              <p className="text-white/20 text-sm italic py-4">No active system alerts.</p>
-            )}
+              <Trophy className="w-6 h-6 text-white/20 group-hover:text-purple-400 transition-colors" />
+            </div>
+            
+            <div className="space-y-4">
+              {stats?.recentMatches?.length > 0 ? (
+                stats.recentMatches.map((match: any) => (
+                  <div key={match.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/[0.07] transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400 text-xs font-bold">
+                        VS
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold truncate max-w-[150px]">
+                          {match.challengerEngine.name} vs {match.defenderEngine.name}
+                        </p>
+                        <p className="text-[10px] text-white/20 uppercase tracking-widest">
+                          {new Date(match.createdAt).toLocaleTimeString()} • {match.status}
+                        </p>
+                      </div>
+                    </div>
+                    {match.processedBy && (
+                      <div className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[10px] text-green-400 font-mono">
+                        {match.processedBy}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-white/20 text-sm italic py-4 text-center">No recent matches found.</p>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="p-8 rounded-[2rem] bg-black/40 border border-white/5 backdrop-blur-xl flex flex-col items-center justify-center text-center space-y-4 opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-          <Terminal className="w-12 h-12 text-white/10" />
-          <p className="text-sm font-medium text-white/40 px-12">Performance analytics and charts will appear here as the season progresses.</p>
+        <div className="space-y-8">
+          <div className="p-8 rounded-[2rem] bg-black/40 border border-white/5 backdrop-blur-xl hover:border-blue-500/30 transition-all group">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-bold">System Alerts</h3>
+              <Bell className="w-6 h-6 text-white/20 group-hover:text-blue-400 transition-colors" />
+            </div>
+            <div className="space-y-4">
+              {stats?.pendingSubmissions > 0 ? (
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-200">
+                  <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
+                  <p className="text-sm font-medium">{stats.pendingSubmissions} new submissions awaiting validation.</p>
+                </div>
+              ) : (
+                <p className="text-white/20 text-sm italic py-4">No active system alerts.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="p-8 rounded-[2rem] bg-black/40 border border-white/5 backdrop-blur-xl flex flex-col items-center justify-center text-center space-y-4 opacity-50 hover:opacity-100 transition-all">
+            <Terminal className="w-8 h-8 text-white/10" />
+            <p className="text-[11px] font-medium text-white/30 px-6">Detailed performance analytics are being aggregated.</p>
+          </div>
         </div>
       </div>
     </div>

@@ -132,19 +132,37 @@ export class ApiClient {
     return this.adminRequest<any[]>("/api/admin/users", userId);
   }
 
-  static async getAdminEngines(userId: string) {
-    return this.adminRequest<any[]>("/api/admin/engines", userId);
-  }
-
-  static async adminUpdateEngineStatus(id: string, status: string, userId: string) {
-    return this.adminRequest<any>(`/api/admin/engines/${id}/status`, userId, {
-      method: "PATCH",
-      body: JSON.stringify({ status }),
+  static async updateAdminUser(adminUserId: string, targetUserId: string, data: any): Promise<any> {
+    return this.adminRequest(`/api/admin/users/${targetUserId}`, adminUserId, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
     });
   }
 
-  static async getAdminJobs(userId: string) {
-    return this.adminRequest<any[]>("/api/admin/jobs", userId);
+  static async getAdminEngines(adminUserId: string): Promise<any[]> {
+    return this.adminRequest('/api/admin/engines', adminUserId);
+  }
+
+  static async updateAdminEngine(adminUserId: string, engineId: string, data: any): Promise<any> {
+    return this.adminRequest(`/api/admin/engines/${engineId}`, adminUserId, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  }
+
+  static async setEngineStatus(adminUserId: string, engineId: string, status: string): Promise<any> {
+    return this.adminRequest(`/api/admin/engines/${engineId}/status`, adminUserId, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+  }
+
+  static async getAdminMatches(adminUserId: string): Promise<any[]> {
+    return this.adminRequest('/api/admin/matches', adminUserId);
+  }
+
+  static async getAdminJobs(adminUserId: string): Promise<any[]> {
+    return this.adminRequest('/api/admin/jobs', adminUserId);
   }
 
   static async retryJob(jobId: string, userId: string) {
