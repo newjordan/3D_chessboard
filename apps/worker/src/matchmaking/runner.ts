@@ -21,13 +21,13 @@ export interface AgentConfig {
   name: string;
 }
 
-const MOVE_REGEX = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
+const UCI_MOVE_REGEX = /[a-h][1-8][a-h][1-8][qrbn]?/;
 const MAX_PLIES = 500;
-const MOVE_TIMEOUT_MS = 10000; // Increased to 10s for stability during tests
+const MOVE_TIMEOUT_MS = 5000;
 
 /**
  * Manages the lifecycle of an engine process during a game.
- * Uses a "One-Shot" model (Fresh spawn + Stdin end) for maximum compatibility.
+ * Uses a "One-Shot" model for maximum compatibility across all agent styles.
  */
 class EngineController {
   private child: ChildProcess | null = null;
@@ -51,6 +51,7 @@ class EngineController {
     });
 
     this.child.stderr?.on("data", (data) => {
+      // Still log STDERR for debugging, it doesn't affect the game result
       console.error(`[${this.config.name} STDERR]: ${data}`);
     });
   }
@@ -71,12 +72,21 @@ class EngineController {
 
       const onData = (data: Buffer) => {
         stdout += data.toString();
+        // Look for any line that contains a UCI move
         if (!completed && stdout.includes("\n")) {
-          completed = true;
-          cleanup();
-          const endThink = performance.now();
-          console.log(`[${this.config.name}] Think time: ${(endThink - startThink).toFixed(2)}ms`);
-          resolve(stdout.split("\n")[0].trim());
+          const lines = stdout.split("\n");
+          for (const line of lines) {
+            const match = line.match(UCI_MOVE_REGEX);
+            if (match && !completed) {
+              completed = true;
+              cleanup();
+              const endThink = performance.now();
+              console.log(`[${this.config.name}] Think time: ${(endThink - startThink).toFixed(2)}ms`);
+              // Extract just the UCI part (e.g., e2e4)
+              resolve(match[0]);
+              return;
+            }
+          }
         }
       };
 
@@ -84,10 +94,12 @@ class EngineController {
         if (!completed) {
           completed = true;
           cleanup();
-          if (stdout.trim()) {
-            resolve(stdout.trim());
+          // Final check in case engine didn't send a newline
+          const match = stdout.match(UCI_MOVE_REGEX);
+          if (match) {
+            resolve(match[0]);
           } else {
-            reject(new Error(`engine exited with code ${code} without output`));
+            reject(new Error(`engine exited with code ${code} without a valid move`));
           }
         }
       };
@@ -134,7 +146,6 @@ class EngineController {
 
 /**
  * Runs a multi-game match between two agents.
- * Alternates colors each game.
  */
 export async function runMatch(
   agentA: AgentConfig,
@@ -195,19 +206,7 @@ async function runGame(
         };
       }
 
-      if (!MOVE_REGEX.test(move)) {
-        const loserColor = chess.turn();
-        termination = `invalid move format: ${move}`;
-        return {
-          round,
-          white: white.name,
-          black: black.name,
-          result: loserColor === "w" ? "0-1" : "1-0",
-          termination,
-          pgn: buildPgn(chess, white.name, black.name, round, loserColor === "w" ? "0-1" : "1-0", termination),
-        };
-      }
-
+      // Final safety check against the extracted move
       const moveResult = chess.move({
         from: move.slice(0, 2),
         to: move.slice(2, 4),
