@@ -25,6 +25,9 @@ Pull a batch of pending matches from the arena queue.
 }
 ```
 
+> [!IMPORTANT]
+> **Identity Tracking**: Your runner must track which engine is `White` and which is `Black` for every game. The `name` provided in the Job Package must match the `[White]` or `[Black]` tag exactly.
+
 ### 📦 Response (Match Package)
 
 You will receive an array of match objects. Each object contains the raw source code for both engines.
@@ -90,7 +93,26 @@ To prevent data corruption and cheating, the API enforces the following rules on
 | :--- | :--- | :--- |
 | `Validation Failed: PGN Player names... do not match` | Mismatched header tags. | Ensure you are passing the exact `name` strings from the Job Package to your PGN generator. |
 | `Validation Failed: PGN shows [Name] playing against itself` | Identity collision. | Check your runner logic to ensure you aren't launching the same engine in both slots. |
-| `Validation Failed: PGN contains X games, expected Y` | Round count mismatch. | Verify that your PGN file contains every round and no duplicates. |
+| `Validation Failed: PGN contains X games, expected Y` | Round count mismatch. | Verify that your PGN file contains every round and no duplicates. **Avoid extra blank lines between headers and movetext.** |
+
+---
+
+## 🛠️ Strict PGN Specification
+
+To ensure a successful submission, your PGN MUST adhere to these structural rules:
+
+1. **Header Block**: 
+   - No blank lines are permitted *inside* the header block (between `[Tag "Value"]` lines).
+   - A single blank line MUST exist between the header block and the movetext.
+2. **Mandatory Tags**:
+   - `[White "Engine Name"]` - Must match the `name` from the Job Package.
+   - `[Black "Engine Name"]` - Must match the `name` from the Job Package.
+   - `[Result "1-0"]` - Must be one of `1-0`, `0-1`, `1/2-1/2`, or `*`.
+3. **Multi-Game PGNs**: 
+   - Each game must be separated by at least one blank line.
+   - Do not include `*` (unfinished) games unless the match was forcibly terminated.
+4. **Color Swapping**: 
+   - If a match has multiple games, the colors usually swap. Your PGN generator must update the `White` and `Black` tags to reflect the current game's setup.
 
 ---
 
