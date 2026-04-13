@@ -105,7 +105,7 @@ export default async function Home() {
                           <span className="text-[9px] font-bold">READY</span>
                         </div>
                      </div>
-                     <Countdown targetDate="2026-05-11T00:00:00Z" />
+                     <Countdown targetDate="2026-05-13T00:00:00Z" />
                   </div>
                 </div>
 
