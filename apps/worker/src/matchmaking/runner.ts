@@ -49,19 +49,12 @@ class EngineController {
       this.isDead = true;
       this.child = null;
     });
-
-    this.child.stderr?.on("data", (data) => {
-      // Still log STDERR for debugging, it doesn't affect the game result
-      console.error(`[${this.config.name} STDERR]: ${data}`);
-    });
   }
 
   async getMove(fen: string): Promise<string> {
     const startBoot = performance.now();
     this.isDead = false;
     this.spawn();
-    const endBoot = performance.now();
-    console.log(`[${this.config.name}] Boot time: ${(endBoot - startBoot).toFixed(2)}ms`);
 
     const child = this.child!;
     const startThink = performance.now();
@@ -80,8 +73,6 @@ class EngineController {
             if (match && !completed) {
               completed = true;
               cleanup();
-              const endThink = performance.now();
-              console.log(`[${this.config.name}] Think time: ${(endThink - startThink).toFixed(2)}ms`);
               // Extract just the UCI part (e.g., e2e4)
               resolve(match[0]);
               return;

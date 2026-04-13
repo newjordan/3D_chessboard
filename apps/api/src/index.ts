@@ -251,16 +251,26 @@ app.get("/api/stats/rating-histogram", async (req, res) => {
       select: { currentRating: true }
     });
 
-    // Bin into 100-Elo buckets
+    // 1. Bin into 100-Elo buckets
     const bins: Record<number, number> = {};
+    let minBinCount = 800; // Standard floor
+    let maxBinCount = 1400; // Initial ceiling
+
     engines.forEach((e: any) => {
       const bin = Math.floor(e.currentRating / 100) * 100;
       bins[bin] = (bins[bin] || 0) + 1;
+      if (bin < minBinCount) minBinCount = bin;
+      if (bin > maxBinCount) maxBinCount = bin;
     });
 
-    const result = Object.entries(bins)
-      .map(([bin, count]) => ({ bin: parseInt(bin), count }))
-      .sort((a, b) => a.bin - b.bin);
+    // 2. Fill in gaps between min and max to ensure a continuous scale
+    const result = [];
+    for (let b = minBinCount; b <= maxBinCount; b += 100) {
+      result.push({
+        bin: b,
+        count: bins[b] || 0
+      });
+    }
 
     res.json(result);
   } catch (error) {

@@ -38,8 +38,8 @@ export function RatingHistogram({ data, currentRating }: RatingHistogramProps) {
               <div 
                 className={`w-full transition-all duration-300 relative ${
                   isHighlighted 
-                    ? "bg-accent shadow-[0_0_10px_rgba(var(--accent-rgb),0.3)]" 
-                    : "bg-white/10 group-hover/hist:opacity-40 group-hover/bar:bg-white/30 group-hover/bar:opacity-100"
+                    ? "bg-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.4)]" 
+                    : "bg-white/15 group-hover/hist:opacity-40 group-hover/bar:bg-white/30 group-hover/bar:opacity-100"
                 }`}
                 style={{ height: `${Math.max(4, height)}%` }}
               >

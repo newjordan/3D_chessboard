@@ -87,8 +87,6 @@ async function pollScheduler() {
     const scheduled = await scheduleMatches();
     if (scheduled > 0) {
       console.log(`[${new Date().toISOString()}] Scheduler queued ${scheduled} new match(es)`);
-    } else {
-      console.log(`[${new Date().toISOString()}] Scheduler polled: 0 matches queued. Engines verified against rules.`);
     }
   } catch (error) {
     console.error("Scheduler error:", error);
