@@ -25,14 +25,15 @@ export async function createPieces(scene, offset) {
         const geometries = [];
         gltf.scene.traverse((child) => {
           if (child.isMesh) {
-             geometries.push(child.geometry.clone()); 
+             child.updateMatrixWorld(true);
+             const geo = child.geometry.clone();
+             geo.applyMatrix4(child.matrixWorld);
+             geometries.push(geo); 
           }
         });
         
         if (geometries.length > 0) {
-          // Merge or process geometries? For Wireframe, we can just merge them if there are multiple.
-          // Or just take the first one if it's a single low poly mesh
-          let geometry = geometries[0]; // let's stick to first mesh assuming single export
+          let geometry = geometries[0];
           
           geometry.computeBoundingBox();
           
