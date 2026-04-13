@@ -1053,6 +1053,14 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
         draws++;
       }
     });
+    
+    // Determine winnerEngineId
+    let winnerEngineId = null;
+    if (Number(challengerScore) > Number(defenderScore)) {
+      winnerEngineId = match.challengerEngineId;
+    } else if (Number(defenderScore) > Number(challengerScore)) {
+      winnerEngineId = match.defenderEngineId;
+    }
 
     // Atomically update Match, Engines, Ratings, and Games
     await prisma.$transaction([
@@ -1063,6 +1071,8 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
           completedAt: new Date(),
           challengerScore: challengerScore,
           defenderScore: defenderScore,
+          gamesCompleted: gameSubmissions.length,
+          winnerEngineId,
           pgnStorageKey: pgnKey
         }
       }),
@@ -1128,7 +1138,12 @@ app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
     console.log(`[Broker] Successfully processed result for match ${matchId}. Winner recorded.`);
 
     // 🔥 Fire the Webhook!
-    await notifyMatchResult(match, deltaA, deltaB, challengerWins, defenderWins, draws);
+    const notifiedMatch = {
+      ...match,
+      challengerScore: Number(challengerScore),
+      defenderScore: Number(defenderScore)
+    };
+    await notifyMatchResult(notifiedMatch, deltaA, deltaB, challengerWins, defenderWins, draws);
 
     res.json({ success: true });
   } catch (error) {

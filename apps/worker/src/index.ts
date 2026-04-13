@@ -316,6 +316,14 @@ async function handleMatchRun(payload: any) {
       ContentType: "application/x-chess-pgn",
     }));
 
+    // Determine winnerEngineId
+    let winnerEngineId = null;
+    if (challengerScore > defenderScore) {
+      winnerEngineId = match.challengerEngineId;
+    } else if (defenderScore > challengerScore) {
+      winnerEngineId = match.defenderEngineId;
+    }
+
     // 5. Update Match results
     await prisma.$transaction([
       prisma.match.update({
@@ -325,6 +333,8 @@ async function handleMatchRun(payload: any) {
           completedAt: new Date(),
           challengerScore,
           defenderScore,
+          gamesCompleted: totalGames,
+          winnerEngineId,
           pgnStorageKey: pgnKey,
         }
       }),
@@ -391,8 +401,8 @@ async function handleRatingApply(payload: any) {
   const { deltaA, deltaB } = updateRatingsForMatch(
     match.challengerEngine.currentRating,
     match.defenderEngine.currentRating,
-    Number(match.challengerScore),
-    Number(match.defenderScore),
+    Number(match.challengerScore || 0),
+    Number(match.defenderScore || 0),
     match.gamesPlanned,
     kA,
     kB
