@@ -82,7 +82,7 @@ app.get("/api/matches/random", async (req, res) => {
       }
     });
     res.json(match);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Random match error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -167,7 +167,7 @@ app.get("/api/users/:handle", async (req, res) => {
         peakRating: Math.max(1200, ...user.engines.map((e: any) => e.currentRating))
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("User profile error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -237,44 +237,8 @@ app.get("/api/leaderboard", async (req, res) => {
     ]);
 
     res.json({ engines, total, page, limit });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Leaderboard error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Get Rating Distribution (Histogram)
-app.get("/api/stats/rating-histogram", async (req, res) => {
-  try {
-    const engines = await prisma.engine.findMany({
-      where: { status: "active" },
-      select: { currentRating: true }
-    });
-
-    // 1. Bin into 100-Elo buckets
-    const bins: Record<number, number> = {};
-    let minBinCount = 800; // Standard floor
-    let maxBinCount = 1400; // Initial ceiling
-
-    engines.forEach((e: any) => {
-      const bin = Math.floor(e.currentRating / 100) * 100;
-      bins[bin] = (bins[bin] || 0) + 1;
-      if (bin < minBinCount) minBinCount = bin;
-      if (bin > maxBinCount) maxBinCount = bin;
-    });
-
-    // 2. Fill in gaps between min and max to ensure a continuous scale
-    const result = [];
-    for (let b = minBinCount; b <= maxBinCount; b += 100) {
-      result.push({
-        bin: b,
-        count: bins[b] || 0
-      });
-    }
-
-    res.json(result);
-  } catch (error) {
-    console.error("Histogram error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -452,6 +416,14 @@ app.get("/api/engines/:slug", async (req, res) => {
           include: {
             challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
             defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
+          }
+        },
+        ratings: {
+          take: 100,
+          orderBy: { createdAt: "asc" },
+          select: {
+            ratingAfter: true,
+            createdAt: true
           }
         },
         _count: {
@@ -696,7 +668,7 @@ app.post("/api/engines/:id/assets", upload.fields([{ name: "avatar", maxCount: 1
     }
 
     res.json({ success: true, ...updates });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Asset upload error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -736,7 +708,7 @@ app.get("/api/assets/:engineId/:type", async (req, res) => {
         foundObject = response;
         foundExt = ext;
         break;
-      } catch (e) {}
+      } catch (e: any) {}
     }
 
     if (!foundObject) return res.status(404).json({ error: "Asset not found" });
@@ -744,7 +716,7 @@ app.get("/api/assets/:engineId/:type", async (req, res) => {
     res.setHeader("Content-Type", foundObject.ContentType || "image/png");
     res.setHeader("Cache-Control", "public, max-age=3600"); // 1 hour cache
     (foundObject.Body as any).pipe(res);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Asset serve error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -803,7 +775,7 @@ app.delete("/api/engines/:id", async (req, res) => {
     await prisma.engine.delete({ where: { id: engine.id } });
 
     res.json({ success: true, message: "Agent decommissioned successfully." });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Delete engine error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
