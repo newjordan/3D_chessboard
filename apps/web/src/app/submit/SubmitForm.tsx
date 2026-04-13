@@ -376,12 +376,12 @@ export function SubmitForm() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-16 max-w-4xl flex flex-col gap-16 text-white min-h-screen">
-      <div className="flex flex-col gap-6">
+    <div className="container mx-auto px-6 py-10 max-w-4xl flex flex-col gap-8 text-white min-h-screen">
+      <div className="flex flex-col gap-3">
         <div className="technical-label">V.03 / Registration</div>
-        <h1 className="text-5xl font-bold tracking-tight">Submit Agent</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Submit Agent</h1>
         {!session ? (
-          <div className="flex items-center gap-3 p-4 bg-accent/5 border border-accent/20 rounded-lg max-w-xl animate-in fade-in slide-in-from-left-2">
+          <div className="flex items-center gap-3 p-3 bg-accent/5 border border-accent/20 rounded-lg max-w-xl animate-in fade-in slide-in-from-left-2">
             <ShieldCheck size={16} className="text-accent shrink-0" />
             <p className="text-[11px] text-accent/80 leading-relaxed font-medium">
               You are currently viewing as a guest. You can prepare your submission now, but you'll need to sign in with GitHub to finalize it.
@@ -394,11 +394,11 @@ export function SubmitForm() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_300px] gap-20">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-12">
-          <div className="flex flex-col gap-10">
+      <div className="grid lg:grid-cols-[1fr_300px] gap-10">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+          <div className="flex flex-col gap-6">
             {userEngines.length > 0 && (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 <label className="technical-label text-white/40">Submission Type</label>
                 <div className="grid grid-cols-2 border border-border-custom p-1 bg-white/[0.02]">
                   <button
@@ -424,7 +424,7 @@ export function SubmitForm() {
             )}
 
             {submissionType === "update" && (
-              <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
+              <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
                 <label className="technical-label text-white/40">Select Agent to Update</label>
                 <select
                   value={selectedEngineId}
@@ -445,7 +445,7 @@ export function SubmitForm() {
               </div>
             )}
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               <label className="technical-label text-white/40">Engine Designation</label>
               <input
                 type="text"
@@ -462,9 +462,9 @@ export function SubmitForm() {
               )}
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               <label className="technical-label text-white/40">Generator Model</label>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
@@ -488,7 +488,7 @@ export function SubmitForm() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               <label className="technical-label text-white/40">Binary (.js or .py)</label>
               <div className="relative group">
                 <input
@@ -498,7 +498,7 @@ export function SubmitForm() {
                   required
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                 />
-                <div className={`w-full min-h-[160px] border border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-border-custom bg-white/[0.01] hover:bg-white/[0.03]'}`}>
+                <div className={`w-full min-h-[120px] border border-dashed flex flex-col items-center justify-center gap-4 transition-all ${file ? 'border-accent bg-accent/5' : 'border-border-custom bg-white/[0.01] hover:bg-white/[0.03]'}`}>
                   {file ? (
                     <>
                       <FileText size={32} className="text-accent" />
@@ -552,9 +552,9 @@ export function SubmitForm() {
           )}
         </form>
 
-        <div className="flex flex-col gap-10">
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between border-b border-border-custom pb-4 text-white/40">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-border-custom pb-3 text-white/40">
               <span className="technical-label">Technical Spec</span>
               <button
                 type="button"
@@ -564,8 +564,8 @@ export function SubmitForm() {
                 {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
               </button>
             </div>
-            <div className="bg-white/[0.02] border border-border-custom p-6">
-              <div className="text-[11px] font-mono text-white/40 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
+            <div className="bg-white/[0.02] border border-border-custom p-4">
+              <div className="text-[11px] font-mono text-white/40 whitespace-pre-wrap leading-relaxed max-h-[250px] overflow-y-auto">
                 {AGENT_PROMPT}
               </div>
             </div>
