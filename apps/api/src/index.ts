@@ -1575,15 +1575,16 @@ app.post("/api/admin/runners", authorizeAdmin, async (req, res) => {
       userId,
       label: label || null,
       publicKey: kp.publicKey,
-      privateKey: kp.privateKey,
       trusted: false,
     },
   });
 
   console.log(`[Admin] Runner key created for user ${userId} (key ${runnerKey.id})`);
 
+  // Private key returned once and never stored — client must save it
   res.json({
     ...runnerKey,
+    privateKey: kp.privateKey,
     privateKeyShownOnce: true,
   });
 });

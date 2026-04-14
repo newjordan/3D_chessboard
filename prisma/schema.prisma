@@ -265,7 +265,6 @@ model RunnerKey {
   userId        String
   label         String?
   publicKey     String    @db.Text
-  privateKey    String    @db.Text
   trusted       Boolean   @default(false)
   jobsProcessed Int       @default(0)
   createdAt     DateTime  @default(now())
