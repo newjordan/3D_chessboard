@@ -123,8 +123,8 @@ export function createBoard(scene) {
 
 function createCoordinates(parent, offset, boardThickness, tabDist, b2, b3) {
   // Letters
-  const lettersFront = ['A', 'M', 'C', 'D', 'N', 'F', 'J', 'N'];
-  const lettersRight = ['A', 'B', 'C', 'G', 'E', 'F', 'D', 'X'];
+  const lettersFront = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const lettersRight = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
   const createTextSprite = (text) => {
     const canvas = document.createElement('canvas');
