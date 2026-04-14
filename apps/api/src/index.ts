@@ -1668,8 +1668,7 @@ app.get("/api/admin/runners", authorizeAdmin, async (req, res) => {
     orderBy: { createdAt: "desc" },
     include: { user: { select: { id: true, username: true, email: true } } },
   });
-  const sanitized = keys.map(({ privateKey, ...rest }: any) => rest);
-  res.json(sanitized);
+  res.json(keys);
 });
 
 app.patch("/api/admin/runners/:id/trust", authorizeAdmin, async (req, res) => {

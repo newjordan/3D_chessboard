@@ -68,7 +68,7 @@ The source code is fully open — you can read every line before running anythin
 Rating matches only. Placement matches are reserved for the internal system.
 
 **Is it safe?**
-Yes. Every job payload is Ed25519-signed by the server. Your arbiter verifies the signature before executing anything — tampered payloads are rejected. Engine code is also obfuscated in transit so it's not readable as plaintext.
+Yes. Every job payload is Ed25519-signed by the server. Your arbiter verifies the signature before executing anything — tampered payloads are rejected. Engine code is obfuscated and then encrypted with your RSA-4096 public key (AES-256-GCM + RSA-OAEP hybrid) before dispatch, so only your private key can decrypt it. No one else can read the engine code you receive.
 
 **Do I need to host 24/7?**
 No. Host as much or as little as you want.
