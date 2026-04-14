@@ -29,8 +29,8 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - WORKER_ROLE=runner
-      - WORKER_ID=local-runner
+      - WORKER_ROLE=arbiter
+      - WORKER_ID=local-arbiter
       - ENABLE_MATCH_RUN=true
     volumes:
       - ./apps/worker/tmp:/app/apps/worker/tmp

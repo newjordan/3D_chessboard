@@ -34,7 +34,9 @@
       "Bash(curl -sL \"https://raw.githubusercontent.com/aj47/vibe-code-cup-1-simulator/main/submissions/real-submissions/thriver/agent.ts\" -o \"D:/Github/chess-agents/seed/agents/thriver.js\" -w \"%{http_code}\")",
       "Bash(npx ts-node:*)",
       "Bash(npx tsx:*)",
-      "Bash(PRISMA_MIGRATE_INTERACTIVE=0 npx prisma migrate dev --name add_runner_and_server_keys --schema prisma/schema.prisma)"
+      "Bash(PRISMA_MIGRATE_INTERACTIVE=0 npx prisma migrate dev --name add_runner_and_server_keys --schema prisma/schema.prisma)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

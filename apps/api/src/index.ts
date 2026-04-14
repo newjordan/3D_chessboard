@@ -1598,7 +1598,7 @@ app.get("/api/admin/runners", authorizeAdmin, async (req, res) => {
 });
 
 app.patch("/api/admin/runners/:id/trust", authorizeAdmin, async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { trusted } = req.body;
   if (typeof trusted !== "boolean") return res.status(400).json({ error: "trusted (boolean) required" });
 
@@ -1615,7 +1615,7 @@ app.patch("/api/admin/runners/:id/trust", authorizeAdmin, async (req, res) => {
 });
 
 app.delete("/api/admin/runners/:id", authorizeAdmin, async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const key = await prisma.runnerKey.findUnique({ where: { id } });
   if (!key) return res.status(404).json({ error: "Runner key not found" });
 

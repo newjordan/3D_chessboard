@@ -1,4 +1,4 @@
-# Decentralized Signed Match Runner — Design Spec
+# Decentralized Signed Match Arbiter — Design Spec
 
 **Date:** 2026-04-14  
 **Status:** Approved  
@@ -7,13 +7,13 @@
 
 ## Overview
 
-Introduces a secured, community-run match execution infrastructure. Trusted external runners can fetch and execute match jobs, with code integrity guaranteed by Ed25519 signatures and runner identity managed through server-generated keypairs tied to existing user accounts.
+Introduces a secured, community-hosted match arbitration infrastructure. Trusted external **Arbiters** can fetch and execute match bouts, with code integrity guaranteed by Ed25519 signatures and Arbiter identity managed through server-generated keypairs tied to existing user accounts.
 
 ---
 
 ## 1. Database Schema
 
-### New model: `RunnerKey`
+### New model: `RunnerKey` (Note: Schema model remains 'RunnerKey' for consistency)
 
 Tied to an existing `User`. Fields:
 
@@ -22,18 +22,18 @@ Tied to an existing `User`. Fields:
 | `id` | `String` (uuid) | PK |
 | `userId` | `String` | FK → User |
 | `label` | `String?` | Optional display name |
-| `publicKey` | `String` | PEM format, used to verify runner requests |
-| `privateKey` | `String` | PEM format, shown to runner once at creation |
-| `trusted` | `Boolean` | Default `false`. Must be set by admin before runner can fetch jobs |
-| `jobsProcessed` | `Int` | Default 0. Incremented on each successful result submission |
+| `publicKey` | `String` | PEM format, used to verify Arbiter requests |
+| `privateKey` | `String` | PEM format, shown to Arbiter once at creation |
+| `trusted` | `Boolean` | Default `false`. Must be set by admin before Arbiter can fetch bouts |
+| `jobsProcessed` | `Int` | Default 0. Bouts resolved count |
 | `createdAt` | `DateTime` | |
 | `revokedAt` | `DateTime?` | Nullable. Soft delete — revoked keys are rejected |
 
-`User` model gains a `runnerKeys RunnerKey[]` relation.
+`User` model gains a `runnerKeys RunnerKey[]` relation (Arbiter identities).
 
 ### New model: `ServerKey`
 
-Singleton. Holds the server's own signing keypair for job payload integrity.
+Singleton. Holds the server's own signing keypair for bounty payload integrity.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -82,9 +82,9 @@ On boot:
 ```
 GET /api/public-key
 ```
-Returns `{ publicKey: string }` — the server's Ed25519 public key in PEM format. No auth required. Used by runners to bootstrap signature verification.
+Returns `{ publicKey: string }` — the server's Ed25519 public key in PEM format. No auth required. Used by Arbiters to bootstrap signature verification.
 
-### 3.3 Runner Key Endpoints (admin-gated via `x-user-id` + role check)
+### 3.3 Arbiter Key Endpoints (admin-gated via `x-user-id` + role check)
 
 ```
 POST /api/admin/runners
@@ -119,10 +119,10 @@ Sets `revokedAt = now()`. Soft delete — key is permanently rejected from this 
 - Batch cap: `Math.min(10, count)`.  
 - Access: placement + rating matches.
 
-**Path B — Trusted runner (new)**  
+**Path B — Trusted Arbiter (new)**  
 Required headers:  
-- `x-worker-public-key`: runner's public key (PEM)  
-- `x-worker-signature`: Ed25519 signature of the raw request body string, signed with runner's private key  
+- `x-worker-public-key`: Arbiter's public key (PEM)  
+- `x-worker-signature`: Ed25519 signature of the raw request body string, signed with Arbiter's private key  
 
 Validation steps:
 1. Look up `RunnerKey` by `publicKey`.
@@ -130,7 +130,7 @@ Validation steps:
 3. Verify `x-worker-signature` against the request body using `verifyData`.
 4. If all pass, grant access.
 
-Batch cap for trusted runners: `Math.min(100, count)`.  
+Batch cap for trusted Arbiters: `Math.min(100, count)`.  
 Access: **`rating` matches only** (placement matches remain gated behind Path A).
 
 **Job payload additions (both paths):**
@@ -149,10 +149,10 @@ Access: **`rating` matches only** (placement matches remain gated behind Path A)
 
 ### 3.5 Updated `POST /api/broker/submit`
 
-Same dual-auth as `next-jobs`. For trusted runner submissions:
+Same dual-auth as `next-jobs`. For trusted Arbiter submissions:
 1. Verify `x-worker-signature` on request body.
 2. On success, increment `RunnerKey.jobsProcessed`.
-3. Store runner's public key in `Match.processedBy` for attribution.
+3. Store Arbiter's public key in `Match.processedBy` for attribution.
 
 ---
 
@@ -177,14 +177,14 @@ Same dual-auth as `next-jobs`. For trusted runner submissions:
 
 If any check fails:
 - Log the tamper attempt with full details.
-- Mark job as `failed` with error: `"Integrity check failed: job payload may have been tampered"`.
+- Mark job as `failed` with error: `"Integrity check failed: boutique payload may have been tampered"`.
 - Do not execute the engine code.
 
-If all checks pass, proceed to `runMatch` as normal.
+If all checks pass, proceed to `arbitrate` as normal.
 
 ---
 
-## 5. Web `/run` Page (`apps/web/src/app/run/page.tsx`)
+## 5. Web `/arbiter` Page (`apps/web/src/app/arbiter/page.tsx`)
 
 ### Visual Style
 
@@ -193,7 +193,7 @@ Matrix/terminal aesthetic: dark background (`#0a0a0a`), green monospace text (`#
 ### Public Section (all visitors)
 
 **Hero**  
-Tagline + short explanation: what community runners are, why they matter (decentralize compute, earn trust, power the arena).
+Tagline + short explanation: what community Arbiters are, why they matter (decentralize compute, earn trust, power the arena).
 
 **Quickstart**  
 Copy-pasteable Docker command:
@@ -208,69 +208,69 @@ docker run \
 **How It Works**  
 Step-by-step with inline ASCII flow diagram:
 ```
-[Runner] → POST /api/broker/next-jobs (signed)
-         ← Job payload + serverSignature
-[Runner] → Verify serverSignature ✓
-         → Verify code hashes ✓
-         → Run match
-         → POST /api/broker/submit (signed)
-[Server] → Verify worker signature ✓
-         → Record result + attribute to runner
+[Arbiter] → POST /api/broker/next-jobs (signed)
+          ← Job payload + serverSignature
+[Arbiter] → Verify serverSignature ✓
+          → Verify code hashes ✓
+          → Arbitrate bout
+          → POST /api/broker/submit (signed)
+[Server]  → Verify Arbiter signature ✓
+          → Record result + attribute to Arbiter
 ```
 
 **Requirements & Limits**
 - Account required (for key issuance)
 - Must be approved as trusted by admin
-- Max 100 jobs per batch request
+- Max 100 bouts per batch request
 - Supported languages: JavaScript, Python
 - Time control: standard arena settings
 
 **FAQ**
-- *Do I need an account?* Yes — your runner key is tied to your account.
-- *How do I get a key?* Sign up, then contact an admin to get issued a key.
+- *Do I need an account?* Yes — your Arbiter key is tied to your account.
+- *How do I get a key?* Sign up, then visit #become-an-arbiter to get issued a key.
 - *What hardware do I need?* Any machine that can run Docker and execute JS/Python.
 - *What if I submit a bad result?* Results are validated server-side. Repeated bad submissions can lead to key revocation.
 - *Is my private key safe?* The private key is shown once at issuance and stored server-side. Treat it like a password — if compromised, contact an admin to revoke and re-issue.
-- *What matches will I run?* Rating matches only. Placement matches are reserved for trusted internal runners.
-- *Will there be a leaderboard?* Runner stats (jobs processed) are tracked and displayed on this page.
+- *What bouts will I resolve?* Rating matches only. Placement bouts are reserved for trusted internal Arbiters.
+- *Will there be a leaderboard?* Arbiter stats (bouts resolved) are tracked and displayed on this page.
 
 **CTA**  
-"Get your runner key" → links to sign-in if unauthenticated, or scrolls to dashboard if authenticated.
+"Get your Arbiter key" → links to sign-in if unauthenticated, or scrolls to dashboard if authenticated.
 
-### Authenticated Runner Dashboard (signed-in users with a RunnerKey)
+### Authenticated Arbiter Dashboard (signed-in users with a RunnerKey)
 
 Shown only when: user is signed in AND has at least one `RunnerKey`.
 
 **Key status card:**
 - Public key (truncated with copy button for full value)
 - Trusted badge (green "Trusted" or amber "Pending Approval")
-- Jobs processed count
+- Bouts resolved count
 - Created date
 - Revoked status (if applicable)
 
 **No key yet:**  
-Message: "You don't have a runner key yet. Contact an admin to get registered."
+Message: "You don't have an Arbiter key yet. Visit #become-an-arbiter to get registered."
 
 **Pending trust:**  
-Message: "Your key is pending admin approval. Once approved, you can start fetching jobs."
+Message: "Your key is pending admin approval. Once approved, you can start hosting bouts."
 
 ---
 
-## 6. Admin Panel — Runners Tab
+## 6. Admin Panel — Arbiters Tab
 
 New page: `apps/web/src/app/admin/runners/page.tsx`  
 Added to the existing admin nav alongside Engines, Users, Matches, Jobs.
 
 ### Table View
 
-Columns: User (linked to profile), Label, Public Key (first 20 chars + `...`), Trusted (badge), Jobs Processed, Created, Status (Active / Revoked), Actions.
+Columns: User (linked to profile), Label, Public Key (first 20 chars + `...`), Trusted (badge), Bouts Resolved, Created, Status (Active / Revoked), Actions.
 
 ### Actions
 
 - **Toggle Trust** — `PATCH /api/admin/runners/:id/trust`. Flips trusted boolean.
 - **Revoke** — `DELETE /api/admin/runners/:id`. Confirmation prompt before firing.
 
-### Create Runner Key
+### Create Arbiter Key
 
 Form at top of page:
 - User selector (dropdown of existing users)
@@ -290,12 +290,12 @@ On success: **one-time modal** displaying the private key with:
 
 | Threat | Mitigation |
 |--------|-----------|
-| Malicious job injection | Server signs every payload; runner verifies before executing |
-| Code swap MITM | Runner re-hashes code and compares against signed hashes |
-| Key impersonation | Runner must sign every request with stored private key |
-| Untrusted runners | `trusted` flag must be set by admin before key grants access |
+| Malicious job injection | Server signs every payload; Arbiter verifies before executing |
+| Code swap MITM | Arbiter re-hashes code and compares against signed hashes |
+| Key impersonation | Arbiter must sign every request with stored private key |
+| Untrusted Arbiters | `trusted` flag must be set by admin before key grants access |
 | Compromised key | Admin can soft-revoke instantly; all future requests rejected |
-| Placement match exposure | Placement jobs never served to trusted runner path |
+| Placement match exposure | Placement bouts never served to trusted Arbiter path |
 
 ---
 
@@ -304,8 +304,8 @@ On success: **one-time modal** displaying the private key with:
 | Question | Decision |
 |----------|----------|
 | Shared package for crypto? | Duplicate `crypto.ts` in both apps — no shared package needed |
-| Match tier access? | Trusted runners: rating matches only. Placement: gated behind broker secret |
-| Runner key ownership? | Server generates + stores both keys. Runner receives private key once |
-| Runner registration? | Keys tied to existing user accounts. Admin issues keys and sets trusted flag |
-| Batch cap? | Trusted runners: 100. Secret-gated path: 10 |
-| Admin UI placement? | New `/admin/runners` tab in existing admin panel |
+| Match tier access? | Trusted Arbiters: rating matches only. Placement: gated behind broker secret |
+| Arbiter key ownership? | Server generates + stores both keys. Arbiter receives private key once |
+| Arbiter registration? | Keys tied to existing user accounts. Admin issues keys and sets trusted flag |
+| Batch cap? | Trusted Arbiters: 100. Secret-gated path: 10 |
+| Admin UI placement? | New `/admin/arbiters` tab in existing admin panel |

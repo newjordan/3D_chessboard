@@ -559,10 +559,10 @@ if (isPublicMode) {
 } else {
   const ROLES = (process.env.WORKER_ROLE || "all").toLowerCase().split(",");
 
-console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
+console.log(`Chess Agents Arbiter started with ID: ${WORKER_ID}`);
 console.log(`Assigned Roles: ${ROLES.join(", ")}`);
 
-if (ROLES.includes("all") || ROLES.includes("runner")) {
+if (ROLES.includes("all") || ROLES.includes("arbiter")) {
   pollJobs();
 }
 

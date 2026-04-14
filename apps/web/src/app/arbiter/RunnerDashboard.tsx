@@ -16,8 +16,8 @@ export function RunnerDashboard({ initialKey }: { initialKey: any }) {
     return (
       <div className="border border-[#00ff41]/10 rounded p-8 text-center space-y-3">
         <XCircle size={28} className="mx-auto text-[#00ff41]/20" />
-        <p className="text-[#00ff41]/50 text-sm">No runner key found for your account.</p>
-        <p className="text-[#00ff41]/30 text-xs">Contact an admin to get registered as a runner.</p>
+        <p className="text-[#00ff41]/50 text-sm">No Arbiter key found for your account.</p>
+        <p className="text-[#00ff41]/30 text-xs">Visit #become-an-arbiter to get registered.</p>
       </div>
     );
   }
@@ -38,7 +38,7 @@ export function RunnerDashboard({ initialKey }: { initialKey: any }) {
           </div>
         </div>
         <div className="border border-[#00ff41]/10 rounded p-5 space-y-1">
-          <div className="text-xs text-[#00ff41]/40 uppercase tracking-widest">Jobs Processed</div>
+          <div className="text-xs text-[#00ff41]/40 uppercase tracking-widest">Bouts Resolved</div>
           <div className="flex items-center gap-2 text-2xl font-bold text-[#00ff41]">
             <Zap size={18} className="text-[#00ff41]/50" />
             {initialKey.jobsProcessed}
@@ -69,7 +69,7 @@ export function RunnerDashboard({ initialKey }: { initialKey: any }) {
 
       {!initialKey.trusted && !initialKey.revokedAt && (
         <div className="border border-amber-400/20 bg-amber-400/5 rounded p-4 text-amber-400/80 text-xs">
-          Your runner key is pending admin approval. Once trusted, you can start fetching jobs using the commands above.
+          Your Arbiter key is pending admin approval. Once trusted, you can start hosting bouts using the instructions above.
         </div>
       )}
     </div>

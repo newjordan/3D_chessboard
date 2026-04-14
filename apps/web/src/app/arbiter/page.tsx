@@ -35,18 +35,18 @@ export default async function RunPage() {
             DECENTRALIZED COMPUTE NETWORK
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-[#00ff41] leading-tight">
-            Run the Arena.<br />
+            Host the Bouts.<br />
             <span className="text-[#00ff41]/40">Power the Competition.</span>
           </h1>
           <p className="text-[#00ff41]/60 text-lg max-w-2xl leading-relaxed">
-            Chess Agents runs 24/7 on community compute. Trusted runners fetch signed match jobs,
+            Chess Agents runs 24/7 on community compute. Trusted **Arbiters** fetch signed match jobs,
             execute them locally, and submit cryptographically-attributed results back to the arena.
-            Every job is tamper-proof. Every runner is accountable.
+            Every job is tamper-proof. Every Arbiter is accountable.
           </p>
           <div className="flex items-center gap-6 pt-2">
             {session ? (
               <a href="#dashboard" className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors">
-                View My Runner Key <ChevronRight size={14} />
+                View My Arbiter Key <ChevronRight size={14} />
               </a>
             ) : (
               <Link href="/api/auth/signin" className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors">
@@ -62,16 +62,16 @@ export default async function RunPage() {
             HOW IT WORKS
           </h2>
           <div className="bg-black/40 border border-[#00ff41]/10 rounded p-6 text-sm text-[#00ff41]/70 leading-loose">
-            <pre className="whitespace-pre-wrap">{`[Your Runner]  ──── POST /api/broker/next-jobs ────▶  [Arena API]
+            <pre className="whitespace-pre-wrap">{`[Your Arbiter]  ──── POST /api/broker/next-jobs ────▶  [Arena API]
                ◀─── Job + serverSignature ───────────
 
-[Your Runner]  ──── verifySignature(job) ──────────▶  ✓ or ✗
+[Your Arbiter]  ──── verifySignature(job) ──────────▶  ✓ or ✗
                ──── verifyCodeHashes(job) ──────────▶  ✓ or ✗
 
-[Your Runner]  ──── runMatch(challenger, defender) ─▶  [Local]
+[Your Arbiter]  ──── arbitrate(challenger, defender) ▶  [Local]
                ◀─── result (PGN + scores) ───────────
 
-[Your Runner]  ──── POST /api/broker/submit ────────▶  [Arena API]
+[Your Arbiter]  ──── POST /api/broker/submit ────────▶  [Arena API]
                ◀─── { success: true } ──────────────`}</pre>
           </div>
 
@@ -79,7 +79,7 @@ export default async function RunPage() {
             {[
               { icon: <Shield size={18} />, title: "Signed Jobs", desc: "Every job payload is Ed25519-signed by the server. Your runner verifies before executing — no tampered code ever runs." },
               { icon: <Code2 size={18} />, title: "Hash Verified", desc: "Engine code is SHA-256 hashed before dispatch. Your runner re-hashes on arrival and rejects any mismatch." },
-              { icon: <Server size={18} />, title: "Attributed Results", desc: "Every submitted result is signed with your runner key and tracked. Your contribution is permanently recorded." },
+              { icon: <Server size={18} />, title: "Attributed Results", desc: "Every submitted result is signed with your Arbiter key and tracked. Your contribution is permanently recorded." },
             ].map((item) => (
               <div key={item.title} className="border border-[#00ff41]/10 rounded p-5 space-y-3">
                 <div className="text-[#00ff41]/60">{item.icon}</div>
@@ -95,7 +95,7 @@ export default async function RunPage() {
           <h2 className="text-xs uppercase tracking-widest text-[#00ff41]/40 border-b border-[#00ff41]/10 pb-3">
             QUICKSTART
           </h2>
-          <p className="text-[#00ff41]/60 text-sm">Once you have a trusted runner key from an admin, run:</p>
+          <p className="text-[#00ff41]/60 text-sm">Once you have a trusted **Arbiter Key** from an admin, host with:</p>
           <pre className="bg-black border border-[#00ff41]/20 rounded p-5 text-[#00ff41] text-sm overflow-x-auto">
 {`docker run \\
   -e API_URL=https://api.chessagents.dev \\
@@ -119,8 +119,8 @@ node dist/index.js --mode public`}
           </h2>
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             {[
-              ["Account", "Required — runner key is tied to your user account"],
-              ["Admin Approval", "Your key must be marked trusted before jobs are served"],
+              ["Account", "Required — Arbiter key is tied to your user account"],
+              ["Admin Approval", "Your key must be marked trusted before bouts are served"],
               ["Max Batch Size", "100 jobs per request"],
               ["Supported Languages", "JavaScript (.js), Python (.py)"],
               ["Match Type", "Rating matches only (placement is reserved)"],
@@ -143,11 +143,11 @@ node dist/index.js --mode public`}
           </h2>
           <div className="space-y-4">
             {[
-              { q: "Do I need an account?", a: "Yes. Runner keys are tied to your Chess Agents account. Sign up, then contact an admin to request a runner key." },
-              { q: "How do I get a runner key?", a: "After signing up, reach out to an admin. They generate a keypair server-side and share your private key once — it is never shown again, so store it securely." },
+              { q: "Do I need an account?", a: "Yes. Arbiter keys are tied to your Chess Agents account. Sign up, then visit #become-an-arbiter to request a key." },
+              { q: "How do I get an Arbiter key?", a: "After signing up, reach out to an admin in Discord. They generate a keypair server-side and share your private key once — it is never shown again, so store it securely." },
               { q: "What hardware do I need?", a: "Anything that can run Docker or Node.js 18+. A basic VPS or spare laptop is sufficient. No GPU required." },
-              { q: "What matches will I run?", a: "Rating matches only. Placement matches (for newly validated engines) are reserved for the internal runner." },
-              { q: "What if my runner submits a bad result?", a: "The server validates all submissions — game count, player identity, and score integrity. Bad submissions are rejected. Repeated failures can result in key revocation." },
+              { q: "What matches will I arbitrate?", a: "Rating matches only. Placement matches (for newly validated engines) are reserved for the internal system." },
+              { q: "What if my node submits a bad result?", a: "The server validates all submissions — game count, player identity, and score integrity. Bad submissions are rejected. Repeated failures can result in key revocation." },
               { q: "Is my private key safe?", a: "Your private key is shown exactly once at issuance. Treat it like a password. If compromised, contact an admin to revoke and reissue." },
               { q: "What happens if someone tampers with my job?", a: "Your runner verifies the server signature and re-hashes engine code before executing. Any tampered payload is silently rejected." },
               { q: "Will there be a leaderboard?", a: "Your jobs processed count is tracked and shown on this page. A public leaderboard is planned for future releases." },
@@ -167,7 +167,7 @@ node dist/index.js --mode public`}
         {session && (
           <section id="dashboard" className="space-y-6">
             <h2 className="text-xs uppercase tracking-widest text-[#00ff41]/40 border-b border-[#00ff41]/10 pb-3">
-              YOUR RUNNER
+              YOUR ARBITER STATUS
             </h2>
             <RunnerDashboard initialKey={runnerKey} />
           </section>
@@ -176,8 +176,8 @@ node dist/index.js --mode public`}
         {!session && (
           <section className="border border-[#00ff41]/10 rounded p-8 text-center space-y-4">
             <Terminal size={32} className="mx-auto text-[#00ff41]/30" />
-            <h3 className="text-[#00ff41]/70 font-bold">Sign in to view your runner status</h3>
-            <p className="text-[#00ff41]/40 text-sm">Your runner key and stats are linked to your account.</p>
+            <h3 className="text-[#00ff41]/70 font-bold">Sign in to view your Arbiter status</h3>
+            <p className="text-[#00ff41]/40 text-sm">Your Arbiter key and stats are linked to your account.</p>
             <Link href="/api/auth/signin" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors mt-2">
               Sign In
             </Link>

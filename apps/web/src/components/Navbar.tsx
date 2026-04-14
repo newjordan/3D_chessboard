@@ -29,8 +29,8 @@ export default function Navbar() {
               Submit <ChevronRight size={14} className="opacity-40 group-hover:translate-x-0.5 transition-transform" />
             </Link>
 
-            <Link href="/run" className="text-[13px] font-medium hover:text-accent transition-colors">
-              Run Matches
+            <Link href="/arbiter" className="text-[13px] font-medium hover:text-accent transition-colors">
+              Become an Arbiter
             </Link>
 
             <Link href="/leaderboard" className="text-[13px] font-medium hover:text-accent transition-colors">
@@ -122,11 +122,11 @@ export default function Navbar() {
                 <ChevronRight size={14} className="opacity-20" />
               </Link>
               <Link
-                href="/run"
+                href="/arbiter"
                 className="py-3 px-4 text-sm font-medium hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
                 onClick={() => setMenuOpen(false)}
               >
-                Run Matches
+                Become an Arbiter
                 <ChevronRight size={14} className="opacity-20" />
               </Link>
               <Link
