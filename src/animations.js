@@ -31,6 +31,23 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
     cross.rotation.x = -Math.PI / 2;
     bGroup.add(cross);
     
+    // Rotating Dashed Targeting Ring
+    const borderMat = new THREE.LineDashedMaterial({ color: 0x00ffcc, dashSize: 0.1, gapSize: 0.05, transparent: true, opacity: 0.8, depthTest: false });
+    const circleGeo = new THREE.EdgesGeometry(new THREE.CircleGeometry(0.35, 32));
+    const ring = new THREE.LineSegments(circleGeo, borderMat);
+    ring.computeLineDistances();
+    ring.rotation.x = -Math.PI / 2;
+    
+    // Animate the ring spinning infinitely while the bracket is alive
+    gsap.to(ring.rotation, {
+      z: Math.PI * 2,
+      duration: 2.0,
+      ease: "none",
+      repeat: -1
+    });
+    
+    bGroup.add(ring);
+    
     return bGroup;
   };
 

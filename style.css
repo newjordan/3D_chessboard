@@ -22,23 +22,7 @@ body {
 }
 
 #ui-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 10;
-  display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  grid-template-rows: 60px 1fr 100px;
-  grid-template-areas: 
-    "header header header"
-    "left center right"
-    "footer footer footer";
-  padding: 40px;
-  box-sizing: border-box;
-  color: var(--neon-blue);
+  display: none;
 }
 
 /* Frame overlay matching Image 2 */
