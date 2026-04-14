@@ -25,7 +25,8 @@ function createBracket(): THREE.Group {
   const ring = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CircleGeometry(0.35, 32)), ringMat);
   ring.computeLineDistances();
   ring.rotation.x = -Math.PI / 2;
-  gsap.to(ring.rotation, { z: Math.PI * 2, duration: 2.0, ease: 'none', repeat: -1 });
+  const spinTween = gsap.to(ring.rotation, { z: Math.PI * 2, duration: 2.0, ease: 'none', repeat: -1 });
+  group.userData.spinTween = spinTween;
   group.add(ring);
 
   return group;
@@ -57,15 +58,15 @@ export function animateLightningStrike(
 
   const dx = end.x - start.x;
   const dz = end.z - start.z;
-  const snapX = start.x + (dx > 0 ? 0.5 : -0.5);
-  const snapZ = start.z + (dz > 0 ? 0.5 : -0.5);
+  const snapX = dx !== 0 ? start.x + (dx > 0 ? 0.5 : -0.5) : start.x;
+  const snapZ = dz !== 0 ? start.z + (dz > 0 ? 0.5 : -0.5) : start.z;
 
   tl.to(lineMat, { opacity: 0, duration: 0.1 }, '+=0.1');
   tl.to(bracket.children[1].scale, { x: 2, y: 2, z: 2, duration: 0.1 }, '<');
   tl.to(bracket.position, { x: snapX, z: snapZ, duration: 0.1, ease: 'power1.inOut' });
 
-  const targetX = end.x + (dx > 0 ? -0.5 : 0.5);
-  const targetZ = end.z + (dz > 0 ? -0.5 : 0.5);
+  const targetX = dx !== 0 ? end.x + (dx > 0 ? -0.5 : 0.5) : end.x;
+  const targetZ = dz !== 0 ? end.z + (dz > 0 ? -0.5 : 0.5) : end.z;
   const dist1 = Math.abs(snapZ - targetZ);
   const dist2 = Math.abs(snapX - targetX);
   const totalDist = dist1 + dist2;
@@ -122,7 +123,11 @@ export function animateLightningStrike(
   tl.to(lineMat, { opacity: 1, duration: 0.1 }, '<');
   tl.fromTo(bracket.scale, { x: 0.1, y: 0.1, z: 0.1 }, { x: 1, y: 1, z: 1, duration: 0.2, ease: 'back.out(2)' }, '<');
   tl.to([lineMat, dotMat], { opacity: 0, duration: 0.2 }, '+=0.2');
-  tl.call(() => { boardGroup.remove(bracket); boardGroup.remove(traceLine); });
+  tl.call(() => {
+    (bracket.userData.spinTween as gsap.core.Tween)?.kill();
+    boardGroup.remove(bracket);
+    boardGroup.remove(traceLine);
+  });
 }
 
 export function animateCapture(

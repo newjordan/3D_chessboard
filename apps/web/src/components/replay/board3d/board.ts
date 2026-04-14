@@ -86,7 +86,7 @@ function addCoordinates(parent: THREE.Group, whiteName: string, blackName: strin
 
   for (let i = 0; i < 8; i++) {
     const z = (OFFSET - 0.5) - i;
-    const tRight = createTextSprite(numbers[i]);
+    const tRight = createTextSprite(numbers[7 - i]);
     tRight.position.set(tabDist, yPos, z);
     tRight.rotation.x = -Math.PI / 2;
     tRight.rotation.z = Math.PI / 2;

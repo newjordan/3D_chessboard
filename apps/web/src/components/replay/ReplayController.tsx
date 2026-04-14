@@ -96,7 +96,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
 
     if (currentPly === prev + 1 && currentPly > 0) {
       const move = history[currentPly - 1];
-      board3dRef.current.applyMove(move.from, move.to, !!move.captured, move.promotion ?? undefined);
+      board3dRef.current.applyMove(move.from, move.to, !!move.captured, move.flags ?? '', move.promotion ?? undefined);
     } else {
       const temp = new Chess();
       for (let i = 0; i < currentPly; i++) temp.move(history[i]);

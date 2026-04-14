@@ -57,7 +57,7 @@ export async function loadPieceGeometries(): Promise<Geometries> {
           geometries[typeName] = geo;
         }
         resolve();
-      }, undefined, () => resolve());
+      }, undefined, (err) => { console.warn(`[Board3D] Failed to load FBX for ${typeName}:`, err); resolve(); });
     })
   ));
 
@@ -138,6 +138,18 @@ export function initPiecesFromFen(
 
 export function clearPieces(pieceMap: Map<string, PieceInstance>, piecesContainer: THREE.Group): void {
   pieceMap.forEach(({ group, haloGroup }) => {
+    const disposeObject = (obj: THREE.Object3D) => {
+      obj.traverse(child => {
+        const c = child as THREE.Mesh | THREE.LineSegments;
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) {
+          const mats = Array.isArray(c.material) ? c.material : [c.material];
+          mats.forEach(m => m.dispose());
+        }
+      });
+    };
+    disposeObject(group);
+    disposeObject(haloGroup);
     piecesContainer.remove(group);
     piecesContainer.remove(haloGroup);
   });

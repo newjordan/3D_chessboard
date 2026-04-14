@@ -7,6 +7,7 @@ import { setupScene } from './scene';
 import { createBoard } from './board';
 import { loadPieceGeometries, initPiecesFromFen, clearPieces, type Geometries } from './pieces';
 import { animateLightningStrike, animateCapture, animateJump } from './animations';
+import { squareToXZ } from './squareUtils';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -51,10 +52,26 @@ export function useBoard3D(whiteName: string, blackName: string) {
     tick();
 
     handleRef.current = {
-      applyMove(from, to, isCapture, _promotion) {
+      applyMove(from, to, isCapture, flags, _promotion) {
         if (!ready) return;
         const actor = pieceMap.get(from);
         if (!actor) return;
+
+        // Handle castling: teleport rook before king animation
+        if (flags.includes('k') || flags.includes('q')) {
+          const isKingside = flags.includes('k');
+          const rank = from[1]; // '1' for white, '8' for black
+          const rookFrom = (isKingside ? 'h' : 'a') + rank;
+          const rookTo = (isKingside ? 'f' : 'd') + rank;
+          const rook = pieceMap.get(rookFrom);
+          if (rook) {
+            const { x, z } = squareToXZ(rookTo);
+            rook.group.position.set(x, 0, z);
+            pieceMap.delete(rookFrom);
+            rook.square = rookTo;
+            pieceMap.set(rookTo, rook);
+          }
+        }
 
         animateLightningStrike(from, to, boardGroup, () => {
           const afterJump = () => {
@@ -64,7 +81,10 @@ export function useBoard3D(whiteName: string, blackName: string) {
           };
 
           if (isCapture) {
-            const victim = pieceMap.get(to);
+            // For en passant, the captured pawn is on the same file as `to` but same rank as `from`
+            const capturedSquare = flags.includes('e') ? to[0] + from[1] : to;
+            const victim = pieceMap.get(capturedSquare);
+            if (victim && capturedSquare !== to) pieceMap.delete(capturedSquare);
             if (victim) {
               pieceMap.delete(to);
               animateCapture(victim, boardGroup, piecesContainer, () => {

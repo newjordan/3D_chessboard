@@ -98,6 +98,8 @@ export function setupScene(canvas: HTMLCanvasElement): SceneContext {
     dispose() {
       ro.disconnect();
       controls.dispose();
+      composer.renderTarget1.dispose();
+      composer.renderTarget2.dispose();
       renderer.dispose();
     },
   };

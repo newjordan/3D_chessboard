@@ -3,7 +3,7 @@ import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectCom
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export interface Board3DHandle {
-  applyMove(from: string, to: string, isCapture: boolean, promotion?: string): void;
+  applyMove(from: string, to: string, isCapture: boolean, flags: string, promotion?: string): void;
   resetToPosition(fen: string): void;
   highlightSquare(square: string | null): void;
 }
