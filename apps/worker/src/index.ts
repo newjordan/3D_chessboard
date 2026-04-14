@@ -546,7 +546,19 @@ async function failSubmission(submissionId: string, versionId: string, reason: s
   ]);
 }
 
-console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
-pollJobs();
-pollScheduler();
-pollReaper();
+const isPublicMode = process.argv.includes("--mode") &&
+  process.argv[process.argv.indexOf("--mode") + 1] === "public";
+
+if (isPublicMode) {
+  import("./broker-runner").then(({ startBrokerRunner }) => {
+    startBrokerRunner().catch((err) => {
+      console.error("[Worker] Failed to start broker runner:", err);
+      process.exit(1);
+    });
+  });
+} else {
+  console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
+  pollJobs();
+  pollScheduler();
+  pollReaper();
+}
