@@ -43,7 +43,10 @@
       "Bash(cp D:/Github/chess-arbiter/src/crypto.ts D:/Github/chess-agents-arbiter/src/crypto.ts)",
       "Bash(cp D:/Github/chess-arbiter/README.md D:/Github/chess-agents-arbiter/README.md)",
       "Bash(cp D:/Github/chess-arbiter/Dockerfile D:/Github/chess-agents-arbiter/Dockerfile)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3)"
     ]
   }
 }

@@ -125,7 +125,7 @@ const MAX_ACTIVE_ENGINES_PER_USER = 5;
 const brokerLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60, // 1 request/sec average — well above the 2s poll interval
-  keyGenerator: (req) => (req.headers["x-worker-public-key"] as string) || ipKeyGenerator(req),
+  keyGenerator: (req) => (req.headers["x-worker-public-key"] as string) || ipKeyGenerator(req.ip ?? "unknown"),
   message: { error: "Too many broker requests — slow down" },
 });
 
@@ -1121,7 +1121,7 @@ app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async 
       return await tx.job.findMany({
         where: { id: { in: jobIds } }
       });
-    });
+    }, { timeout: 30000 });
 
     if (jobs.length === 0) return res.json([]);
 
