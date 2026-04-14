@@ -406,12 +406,16 @@ async function fetchEngineSource(key: string): Promise<string> {
 
 const OBFUSCATED_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 1 week — engine code rarely changes
 
-async function fetchOrCreateObfuscated(storageKey: string, language: string | null): Promise<string> {
-  const cacheKey = `obfuscated:${storageKey}`;
+// In-flight deduplication: if engine X is already being obfuscated, every caller
+// awaits the same promise instead of spawning duplicate CPU-blocking work.
+const obfuscationInFlight = new Map<string, Promise<string>>();
 
-  // 1. Redis cache hit
+async function fetchOrCreateObfuscated(storageKey: string, language: string | null): Promise<string> {
+  const redisCacheKey = `obfuscated:${storageKey}`;
+
+  // 1. Redis cache hit — fastest path, no CPU work
   try {
-    const cached = await redis.get(cacheKey);
+    const cached = await redis.get(redisCacheKey);
     if (cached) return cached;
   } catch {
     // Redis unavailable — continue
@@ -423,28 +427,42 @@ async function fetchOrCreateObfuscated(storageKey: string, language: string | nu
     const response = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key })) as any;
     const cached = await response.Body.transformToString();
     if (cached) {
-      try { await redis.setex(cacheKey, OBFUSCATED_CACHE_TTL_SECONDS, cached); } catch {}
+      try { await redis.setex(redisCacheKey, OBFUSCATED_CACHE_TTL_SECONDS, cached); } catch {}
       return cached;
     }
   } catch {
-    // Not cached in S3 yet — generate it
+    // Not cached in S3 yet — need to generate
   }
 
-  // 3. Generate, then cache in both Redis and S3
-  const source = await fetchEngineSource(storageKey);
-  const obfuscated = obfuscateCode(source, language);
+  // 3. Dedup: if another request is already generating this engine's obfuscation, wait for it
+  const existing = obfuscationInFlight.get(storageKey);
+  if (existing) {
+    console.log(`[Obfuscate] Waiting on in-flight obfuscation for ${storageKey}`);
+    return existing;
+  }
 
-  try { await redis.setex(cacheKey, OBFUSCATED_CACHE_TTL_SECONDS, obfuscated); } catch {}
-  try {
-    await s3Client.send(new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: s3Key,
-      Body: obfuscated,
-      ContentType: "text/plain",
-    }));
-  } catch {}
+  // 4. We're first — generate, cache, then let all waiters through
+  const work = (async () => {
+    const source = await fetchEngineSource(storageKey);
+    const obfuscated = obfuscateCode(source, language);
 
-  return obfuscated;
+    try { await redis.setex(redisCacheKey, OBFUSCATED_CACHE_TTL_SECONDS, obfuscated); } catch {}
+    try {
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+        Body: obfuscated,
+        ContentType: "text/plain",
+      }));
+    } catch {}
+
+    return obfuscated;
+  })().finally(() => {
+    obfuscationInFlight.delete(storageKey);
+  });
+
+  obfuscationInFlight.set(storageKey, work);
+  return work;
 }
 
 // --- SOCIAL & SHOWCASE ENDPOINTS (High Priority) ---
@@ -1168,8 +1186,12 @@ app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async 
 
     if (jobs.length === 0) return res.json([]);
 
-    // Hydrate jobs with match data and source code
-    const packages = await Promise.all(jobs.map(async (job: any) => {
+    // Hydrate jobs sequentially — obfuscation is CPU-bound and blocks the event loop,
+    // so running 30 in parallel would freeze the process for 60+ seconds.
+    // Sequential processing means each engine obfuscation completes before the next starts,
+    // keeping the total blocking time bounded and other requests able to interleave.
+    const packages: any[] = [];
+    for (const job of jobs) {
       const { matchId } = job.payloadJson as { matchId: string };
       
       const match = await prisma.match.findUnique({
@@ -1182,7 +1204,7 @@ app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async 
         }
       });
 
-      if (!match) return null;
+      if (!match) continue;
 
       // Fetch raw source for hashing (integrity), then get cached obfuscated versions
       const [challengerCode, defenderCode] = await Promise.all([
@@ -1222,7 +1244,7 @@ app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async 
         }
       }
 
-      return {
+      packages.push({
         jobId: job.id,
         matchId: match.id,
         matchType: match.matchType,
@@ -1244,8 +1266,8 @@ app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async 
         challengerHash,
         defenderHash,
         serverSignature,
-      };
-    }));
+      });
+    }
 
     const jobPackages = packages.filter(p => p !== null);
     console.log(`[Broker] Dispatched ${jobPackages.length} jobs to ${brokerId}: ${jobPackages.map(p => p?.matchId).join(', ')}`);
