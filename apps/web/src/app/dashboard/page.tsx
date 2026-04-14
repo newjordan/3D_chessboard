@@ -15,7 +15,12 @@ export default async function DashboardPage() {
   }
 
   const userId = (session.user as any).id;
-  const engines = await ApiClient.getEnginesByOwner(userId).catch(() => []);
+  const rawEngines = await ApiClient.getEnginesByOwner(userId).catch(() => []);
+  const engines = [...rawEngines].sort((a: any, b: any) => {
+    if (a.status === "active" && b.status !== "active") return -1;
+    if (b.status === "active" && a.status !== "active") return 1;
+    return 0;
+  });
 
   return (
     <div className="container mx-auto px-6 py-16 max-w-6xl flex flex-col gap-16">
