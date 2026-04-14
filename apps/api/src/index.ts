@@ -7,6 +7,7 @@ import crypto from "crypto";
 import path from "path";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import rateLimit from "express-rate-limit";
+import { generateKeyPair, hashData, signData, verifyData } from "./crypto";
 
 dotenv.config();
 
@@ -25,6 +26,10 @@ const s3Client = new S3Client({
 });
 
 const BUCKET_NAME = process.env.R2_BUCKET || "chess-agents";
+
+// Server keypair — loaded/generated at startup
+let serverPublicKey = "";
+let serverPrivateKey = "";
 
 app.use(cors());
 app.use(express.json());
@@ -173,6 +178,23 @@ const slugify = (text: string) => {
     .replace(/^-|-$/g, "");
 };
 
+async function initServerKey() {
+  const existing = await prisma.serverKey.findFirst();
+  if (existing) {
+    serverPublicKey = existing.publicKey;
+    serverPrivateKey = existing.privateKey;
+    console.log("[Crypto] Server key loaded from DB.");
+  } else {
+    const kp = generateKeyPair();
+    serverPublicKey = kp.publicKey;
+    serverPrivateKey = kp.privateKey;
+    await prisma.serverKey.create({
+      data: { publicKey: kp.publicKey, privateKey: kp.privateKey },
+    });
+    console.log("[Crypto] New server key generated and stored.");
+  }
+}
+
 // 1. Root
 app.get("/", (req, res) => {
   res.json({ status: "ok", service: "Chess Agents API" });
@@ -180,6 +202,10 @@ app.get("/", (req, res) => {
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "healthy" });
+});
+
+app.get("/api/public-key", (req, res) => {
+  res.json({ publicKey: serverPublicKey });
 });
 
 // --- BROKER MIDDLEWARE ---
@@ -1455,6 +1481,8 @@ app.post("/api/admin/jobs/:id/retry", authorizeAdmin, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Backend API listening at http://localhost:${port}`);
+initServerKey().then(() => {
+  app.listen(port, () => {
+    console.log(`Chess Agents API running on port ${port}`);
+  });
 });
