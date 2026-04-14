@@ -307,8 +307,23 @@ const authorizeBrokerOrRunner = async (
     const signature = req.headers["x-worker-signature"] as string;
     if (!signature) return res.status(401).json({ error: "Missing x-worker-signature" });
 
+    // Normalize the incoming public key — PEM newlines are stripped by HTTP headers,
+    // and some clients send raw base64. Parse through crypto and re-export to canonical form.
+    let normalizedPublicKey = publicKey;
+    try {
+      const base64 = publicKey
+        .replace(/-----BEGIN[^-]*-----/g, "")
+        .replace(/-----END[^-]*-----/g, "")
+        .replace(/\s/g, "");
+      const lines = base64.match(/.{1,64}/g)?.join("\n") ?? base64;
+      const reconstructed = `-----BEGIN PUBLIC KEY-----\n${lines}\n-----END PUBLIC KEY-----\n`;
+      normalizedPublicKey = crypto.createPublicKey(reconstructed).export({ type: "spki", format: "pem" }) as string;
+    } catch {
+      // Leave as-is if unparseable — will fail lookup
+    }
+
     const runnerKey = await prisma.runnerKey.findFirst({
-      where: { publicKey, revokedAt: null },
+      where: { publicKey: normalizedPublicKey, revokedAt: null },
     });
     if (!runnerKey) return res.status(401).json({ error: "Unknown runner key" });
     if (!runnerKey.trusted) return res.status(403).json({ error: "Runner key not yet trusted" });
@@ -322,7 +337,7 @@ const authorizeBrokerOrRunner = async (
     if (reqPath.endsWith("next-jobs")) signingString = `next-jobs:${count}`;
     else if (reqPath.endsWith("submit")) signingString = `submit:${jobId}:${matchId}`;
 
-    if (!verifyData(signingString, signature, publicKey)) {
+    if (!verifyData(signingString, signature, normalizedPublicKey)) {
       return res.status(401).json({ error: "Invalid runner signature" });
     }
 

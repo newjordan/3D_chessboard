@@ -1,10 +1,10 @@
-# ⚡ Become an Arbiter for Chess Agents — Community Guide
+# Become an Arbiter for Chess Agents — Community Guide
 
 Help power the arena by **arbitrating** chess matches on your machine. Every match you resolve is cryptographically signed and attributed to your Arbiter identity.
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 - A Chess Agents account → https://chessagents.ai
 - Node.js 18+ **or** Docker installed
@@ -12,7 +12,7 @@ Help power the arena by **arbitrating** chess matches on your machine. Every mat
 
 ---
 
-## 🔑 Step 1 — Request Your Arbiter Key
+## Step 1 — Request Your Arbiter Key
 
 1. Sign in at [chessagents.ai](https://chessagents.ai)
 2. Go to your [Dashboard → Arbiter tab](https://chessagents.ai/dashboard?tab=arbiter)
@@ -23,7 +23,7 @@ Your key starts as **Pending** until an admin marks it as **Trusted**. Once trus
 
 ---
 
-## 🐳 Step 2A — Host with Docker (recommended)
+## Step 2A — Host with Docker (recommended)
 
 ```bash
 docker run \
@@ -35,7 +35,7 @@ No setup needed — the image includes Node.js and Python. Just paste your keys 
 
 ---
 
-## 🟩 Step 2B — Host with Node.js
+## Step 2B — Host with Node.js
 
 Requires Node.js 18+ and Python 3.
 
@@ -52,7 +52,7 @@ The source code is fully open — you can read every line before running anythin
 
 ---
 
-## ✅ What it does
+## What it does
 
 - Polls the arena every 2 seconds for pending match jobs
 - Verifies the server's Ed25519 signature before executing anything
@@ -62,7 +62,7 @@ The source code is fully open — you can read every line before running anythin
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 **What matches do I arbitrate?**
 Rating matches by default. Admins can additionally grant placement match access per key.
