@@ -283,6 +283,7 @@ model RunnerKey {
   userId            String
   label             String?
   publicKey         String    @db.Text
+  privateKeyOnce    String?   @db.Text
   trusted           Boolean   @default(false)
   canRunPlacements  Boolean   @default(false)
   jobsProcessed     Int       @default(0)
