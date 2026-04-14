@@ -39,7 +39,7 @@ export default async function RunPage() {
             <span className="text-[#00ff41]/40">Power the Competition.</span>
           </h1>
           <p className="text-[#00ff41]/60 text-lg max-w-2xl leading-relaxed">
-            Chess Agents runs 24/7 on community compute. Trusted **Arbiters** fetch signed match jobs,
+            Chess Agents runs 24/7 on community compute. Trusted Arbiters fetch signed match jobs,
             execute them locally, and submit cryptographically-attributed results back to the arena.
             Every job is tamper-proof. Every Arbiter is accountable.
           </p>
@@ -95,20 +95,24 @@ export default async function RunPage() {
           <h2 className="text-xs uppercase tracking-widest text-[#00ff41]/40 border-b border-[#00ff41]/10 pb-3">
             QUICKSTART
           </h2>
-          <p className="text-[#00ff41]/60 text-sm">Once you have a trusted **Arbiter Key** from an admin, host with:</p>
+          <p className="text-[#00ff41]/60 text-sm">Once you have a trusted Arbiter Key from an admin, run with Docker (recommended):</p>
           <pre className="bg-black border border-[#00ff41]/20 rounded p-5 text-[#00ff41] text-sm overflow-x-auto">
 {`docker run \\
   -e API_URL=https://api.chessagents.dev \\
   -e WORKER_PUBLIC_KEY="<your-public-key>" \\
   -e WORKER_PRIVATE_KEY="<your-private-key>" \\
-  jaymaart/chess-worker --mode public`}
+  ghcr.io/jaymaart/chess-agents-arbiter:latest`}
           </pre>
-          <p className="text-[#00ff41]/60 text-sm">Or run directly with Node.js:</p>
+          <p className="text-[#00ff41]/60 text-sm">Or with Node.js 18+ and Python 3 (source is fully open at <a href="https://github.com/jaymaart/chess-agents-arbiter" target="_blank" className="underline hover:text-[#00ff41]">github.com/jaymaart/chess-agents-arbiter</a>):</p>
           <pre className="bg-black border border-[#00ff41]/20 rounded p-5 text-[#00ff41] text-sm overflow-x-auto">
-{`API_URL=https://api.chessagents.dev \\
-WORKER_PUBLIC_KEY="..." \\
-WORKER_PRIVATE_KEY="..." \\
-node dist/index.js --mode public`}
+{`git clone https://github.com/jaymaart/chess-agents-arbiter
+cd chess-arbiter
+npm install && npm run build
+
+API_URL=https://api.chessagents.dev \\
+WORKER_PUBLIC_KEY="<your-public-key>" \\
+WORKER_PRIVATE_KEY="<your-private-key>" \\
+node dist/index.js`}
           </pre>
         </section>
 
@@ -144,12 +148,13 @@ node dist/index.js --mode public`}
           <div className="space-y-4">
             {[
               { q: "Do I need an account?", a: "Yes. Arbiter keys are tied to your Chess Agents account. Sign up, then visit #become-an-arbiter to request a key." },
-              { q: "How do I get an Arbiter key?", a: "After signing up, reach out to an admin in Discord. They generate a keypair server-side and share your private key once — it is never shown again, so store it securely." },
+              { q: "How do I get an Arbiter key?", a: "After signing up, reach out to an admin in Discord. They generate a keypair — your private key is shown exactly once and never stored on the server, so copy it before closing. Your public key is what identifies you on the network." },
               { q: "What hardware do I need?", a: "Anything that can run Docker or Node.js 18+. A basic VPS or spare laptop is sufficient. No GPU required." },
               { q: "What matches will I arbitrate?", a: "Rating matches only. Placement matches (for newly validated engines) are reserved for the internal system." },
               { q: "What if my node submits a bad result?", a: "The server validates all submissions — game count, player identity, and score integrity. Bad submissions are rejected. Repeated failures can result in key revocation." },
-              { q: "Is my private key safe?", a: "Your private key is shown exactly once at issuance. Treat it like a password. If compromised, contact an admin to revoke and reissue." },
-              { q: "What happens if someone tampers with my job?", a: "Your runner verifies the server signature and re-hashes engine code before executing. Any tampered payload is silently rejected." },
+              { q: "Is my private key safe?", a: "Your private key is shown exactly once at issuance and never stored on the server. Treat it like a password. If compromised, contact an admin to revoke and reissue." },
+              { q: "What happens if someone tampers with my job?", a: "Your arbiter verifies the server signature and re-hashes engine code before executing. Any tampered payload is silently rejected." },
+              { q: "Can I see what code I'm running?", a: "Yes — the arbiter source is fully open at github.com/jaymaart/chess-agents-arbiter. The Docker image is built directly from that repo. Nothing hidden." },
               { q: "Will there be a leaderboard?", a: "Your jobs processed count is tracked and shown on this page. A public leaderboard is planned for future releases." },
             ].map((item) => (
               <details key={item.q} className="group border border-[#00ff41]/10 rounded">

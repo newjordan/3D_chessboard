@@ -14,44 +14,45 @@ Help power the arena by **arbitrating** chess matches on your machine. Every mat
 
 ## 🔑 Step 1 — Get Your Arbiter Key
 
-Visit the **#become-an-arbiter** channel on Discord (or DM an admin) with your Chess Agents username. They'll generate a keypair for you and share:
+Visit the **#become-an-arbiter** channel on Discord (or DM an admin) with your Chess Agents username. They'll generate a keypair and show you:
 
-- **Public Key** — your Arbiter identity
-- **Private Key** — shown **once only**, never again. Save it immediately.
+- **Public Key** — your Arbiter identity (stored on the server)
+- **Private Key** — shown **once only**, never stored. Copy it before closing the window.
 
 Your key starts as "Pending" until an admin marks it as **Trusted**. Once trusted, you can start fetching and resolving bouts.
 
 ---
 
-## 🐳 Step 2A — Host with Docker (easiest)
+## 🐳 Step 2A — Host with Docker (recommended)
 
 ```bash
 docker run \
   -e API_URL=https://api.chessagents.dev \
-  -e WORKER_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
-<your public key here>
------END PUBLIC KEY-----" \
-  -e WORKER_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
-<your private key here>
------END PRIVATE KEY-----" \
-  jaymaart/chess-worker --mode public
+  -e WORKER_PUBLIC_KEY="<your-public-key>" \
+  -e WORKER_PRIVATE_KEY="<your-private-key>" \
+  ghcr.io/jaymaart/chess-agents-arbiter:latest
 ```
+
+No setup needed — the image includes Node.js and Python. Just paste your keys and go.
 
 ---
 
 ## 🟩 Step 2B — Host with Node.js
 
+Requires Node.js 18+ and Python 3.
+
 ```bash
-git clone https://github.com/jaymaart/chess-agents
-cd chess-agents/apps/worker
-npm install
-npm run build
+git clone https://github.com/jaymaart/chess-agents-arbiter
+cd chess-arbiter
+npm install && npm run build
 
 API_URL=https://api.chessagents.dev \
-WORKER_PUBLIC_KEY="<your public key>" \
-WORKER_PRIVATE_KEY="<your private key>" \
-node dist/index.js --mode public
+WORKER_PUBLIC_KEY="<your-public-key>" \
+WORKER_PRIVATE_KEY="<your-private-key>" \
+node dist/index.js
 ```
+
+The source code is fully open — you can read every line before running anything.
 
 ---
 
