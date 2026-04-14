@@ -22,10 +22,13 @@ export default async function DashboardPage({
   const { tab } = await searchParams;
   const activeTab = tab === "arbiter" ? "arbiter" : "agents";
 
-  const [rawEngines, runnerKey] = await Promise.all([
+  const [rawEngines, runnerKey, runnerKeyRequest] = await Promise.all([
     ApiClient.getEnginesByOwner(userId).catch(() => []),
     activeTab === "arbiter"
       ? ApiClient.getMyRunnerKey(userId).catch(() => null)
+      : Promise.resolve(null),
+    activeTab === "arbiter"
+      ? ApiClient.getMyRunnerKeyRequest(userId).catch(() => null)
       : Promise.resolve(null),
   ]);
 
@@ -104,7 +107,7 @@ export default async function DashboardPage({
       )}
 
       {activeTab === "arbiter" && (
-        <ArbiterTab runnerKey={runnerKey} />
+        <ArbiterTab runnerKey={runnerKey} runnerKeyRequest={runnerKeyRequest} userId={userId} />
       )}
 
     </div>

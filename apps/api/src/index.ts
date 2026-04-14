@@ -1723,6 +1723,92 @@ app.get("/api/runners/me", async (req, res) => {
   res.json(key || null);
 });
 
+// Get current user's key request status
+app.get("/api/runner-key-requests/me", async (req, res) => {
+  const userId = req.headers["x-user-id"] as string;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const request = await prisma.runnerKeyRequest.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json(request || null);
+});
+
+// Submit a key request
+app.post("/api/runner-key-requests", async (req, res) => {
+  const userId = req.headers["x-user-id"] as string;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  // Don't allow a new request if one is already pending
+  const existing = await prisma.runnerKeyRequest.findFirst({
+    where: { userId, status: "pending" },
+  });
+  if (existing) return res.status(409).json({ error: "You already have a pending request" });
+
+  // Don't allow if they already have a key
+  const existingKey = await prisma.runnerKey.findFirst({
+    where: { userId, revokedAt: null },
+  });
+  if (existingKey) return res.status(409).json({ error: "You already have an Arbiter key" });
+
+  const { note } = req.body;
+  const request = await prisma.runnerKeyRequest.create({
+    data: { userId, note: note?.trim() || null },
+  });
+
+  console.log(`[Arbiter] Key request submitted by user ${userId}`);
+  res.json(request);
+});
+
+// Admin: list all key requests
+app.get("/api/admin/runner-key-requests", authorizeAdmin, async (req, res) => {
+  const requests = await prisma.runnerKeyRequest.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { id: true, username: true, email: true } } },
+  });
+  res.json(requests);
+});
+
+// Admin: fulfill a request (generates the key + marks fulfilled)
+app.post("/api/admin/runner-key-requests/:id/fulfill", authorizeAdmin, async (req, res) => {
+  const request = await prisma.runnerKeyRequest.findUnique({ where: { id: req.params.id } });
+  if (!request) return res.status(404).json({ error: "Request not found" });
+  if (request.status !== "pending") return res.status(409).json({ error: "Request already actioned" });
+
+  const { label } = req.body;
+  const kp = generateRSAKeyPair();
+
+  const [runnerKey] = await prisma.$transaction([
+    prisma.runnerKey.create({
+      data: { userId: request.userId, label: label || null, publicKey: kp.publicKey, trusted: false },
+    }),
+    prisma.runnerKeyRequest.update({
+      where: { id: request.id },
+      data: { status: "fulfilled" },
+    }),
+  ]);
+
+  console.log(`[Admin] Key request ${request.id} fulfilled — key created for user ${request.userId}`);
+  res.json({ ...runnerKey, privateKey: kp.privateKey, privateKeyShownOnce: true });
+});
+
+// Admin: reject a request
+app.post("/api/admin/runner-key-requests/:id/reject", authorizeAdmin, async (req, res) => {
+  const request = await prisma.runnerKeyRequest.findUnique({ where: { id: req.params.id } });
+  if (!request) return res.status(404).json({ error: "Request not found" });
+  if (request.status !== "pending") return res.status(409).json({ error: "Request already actioned" });
+
+  await prisma.runnerKeyRequest.update({
+    where: { id: request.id },
+    data: { status: "rejected" },
+  });
+
+  console.log(`[Admin] Key request ${request.id} rejected for user ${request.userId}`);
+  res.json({ success: true });
+});
+
 initServerKey().then(() => {
   app.listen(port, () => {
     console.log(`Chess Agents API running on port ${port}`);

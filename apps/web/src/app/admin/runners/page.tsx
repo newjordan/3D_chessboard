@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ApiClient } from "@/lib/apiClient";
 import { toast } from "sonner";
-import { Shield, ShieldOff, Trash2, Terminal, Copy, CheckCircle, XCircle, Plus, X } from "lucide-react";
+import { Shield, ShieldOff, Trash2, Terminal, Copy, CheckCircle, XCircle, Plus, X, Check, ChevronRight } from "lucide-react";
 
 export default function RunnersAdmin() {
   const { data: session } = useSession();
@@ -17,18 +17,23 @@ export default function RunnersAdmin() {
   const [oneTimeKey, setOneTimeKey] = useState<{ privateKey: string; label: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [fulfillingId, setFulfillingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   const userId = (session?.user as any)?.id;
 
   const fetchData = async () => {
     if (!userId) return;
     try {
-      const [runnersData, usersData] = await Promise.all([
+      const [runnersData, usersData, requestsData] = await Promise.all([
         ApiClient.getAdminRunners(userId),
         ApiClient.getAdminUsers(userId),
+        ApiClient.getAdminRunnerKeyRequests(userId),
       ]);
       setRunners(runnersData);
       setUsers(usersData);
+      setRequests(requestsData);
     } catch {
       toast.error("Failed to load runners");
     } finally {
@@ -76,6 +81,34 @@ export default function RunnersAdmin() {
     }
   };
 
+  const handleFulfill = async (requestId: string, requestUserId: string) => {
+    setFulfillingId(requestId);
+    try {
+      const result = await ApiClient.fulfillRunnerKeyRequest(userId, requestId);
+      setOneTimeKey({ privateKey: result.privateKey, label: result.label || result.id });
+      fetchData();
+      toast.success("Key generated and request fulfilled");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to fulfill request");
+    } finally {
+      setFulfillingId(null);
+    }
+  };
+
+  const handleReject = async (requestId: string) => {
+    if (!confirm("Reject this key request?")) return;
+    setRejectingId(requestId);
+    try {
+      await ApiClient.rejectRunnerKeyRequest(userId, requestId);
+      fetchData();
+      toast.success("Request rejected");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reject request");
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -99,6 +132,65 @@ export default function RunnersAdmin() {
         <h1 className="text-2xl font-bold text-white tracking-tight">Runner Keys</h1>
         <p className="text-white/40 text-sm mt-1 font-mono">Manage trusted community runner credentials</p>
       </div>
+
+      {/* Pending Key Requests */}
+      {requests.filter((r) => r.status === "pending").length > 0 && (
+        <div className="bg-amber-400/5 border border-amber-400/20 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-amber-400/10 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-amber-400/80 uppercase tracking-widest">
+              Pending Key Requests
+            </h2>
+            <span className="text-xs font-mono text-amber-400/60 bg-amber-400/10 px-2 py-0.5 rounded">
+              {requests.filter((r) => r.status === "pending").length}
+            </span>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-amber-400/10 text-amber-400/40 text-xs uppercase tracking-widest font-mono">
+                <th className="px-6 py-3 text-left">User</th>
+                <th className="px-6 py-3 text-left">Note</th>
+                <th className="px-6 py-3 text-left">Requested</th>
+                <th className="px-6 py-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.filter((r) => r.status === "pending").map((r: any) => (
+                <tr key={r.id} className="border-b border-amber-400/10 last:border-0">
+                  <td className="px-6 py-4 text-white/70 font-mono text-xs">
+                    {r.user?.username || r.user?.email || r.userId}
+                  </td>
+                  <td className="px-6 py-4 text-white/40 text-xs max-w-xs">
+                    {r.note ? <span className="italic">&ldquo;{r.note}&rdquo;</span> : <span className="opacity-30">—</span>}
+                  </td>
+                  <td className="px-6 py-4 text-white/40 font-mono text-xs">
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleFulfill(r.id, r.userId)}
+                        disabled={fulfillingId === r.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40"
+                      >
+                        <Check size={12} />
+                        {fulfillingId === r.id ? "Generating..." : "Issue Key"}
+                      </button>
+                      <button
+                        onClick={() => handleReject(r.id)}
+                        disabled={rejectingId === r.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40"
+                      >
+                        <XCircle size={12} />
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Create Form */}
       <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">

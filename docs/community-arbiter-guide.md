@@ -14,7 +14,7 @@ Help power the arena by **arbitrating** chess matches on your machine. Every mat
 
 ## 🔑 Step 1 — Get Your Arbiter Key
 
-Visit the **#become-an-arbiter** channel on Discord (or DM an admin) with your Chess Agents username. They'll generate a keypair and show you:
+Visit the [Arbiter Page](https://chessagents.ai/arbiter). They'll generate a keypair and show you:
 
 - **Public Key** — your Arbiter identity (stored on the server)
 - **Private Key** — shown **once only**, never stored. Copy it before closing the window.

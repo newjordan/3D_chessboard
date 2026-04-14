@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Copy, Check, CheckCircle, XCircle, Clock, Zap, AlertTriangle, ExternalLink } from "lucide-react";
+import {
+  Copy, Check, CheckCircle, XCircle, Clock,
+  Zap, AlertTriangle, ExternalLink, Send,
+} from "lucide-react";
+import { ApiClient } from "@/lib/apiClient";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -27,37 +31,146 @@ function StatusBadge({ runnerKey }: { runnerKey: any }) {
   return <span className="flex items-center gap-1.5 text-amber-400 text-sm"><Clock size={13} /> Pending Approval</span>;
 }
 
-export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
+function RequestForm({ userId, onSubmitted }: { userId: string; onSubmitted: (req: any) => void }) {
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      const req = await ApiClient.submitRunnerKeyRequest(userId, note || undefined);
+      onSubmitted(req);
+    } catch (err: any) {
+      setError(err.message || "Failed to submit request");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <label className="technical-label opacity-50">
+          Note for admins <span className="normal-case opacity-60">(optional)</span>
+        </label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Tell us a bit about yourself or your setup — not required but helpful."
+          rows={3}
+          className="bg-background border border-border-custom text-foreground text-sm px-4 py-3 resize-none focus:outline-none focus:border-foreground/30 placeholder:text-muted/40 font-mono"
+        />
+      </div>
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+      <div>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex items-center gap-2 px-6 py-2.5 bg-foreground text-background text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-40"
+        >
+          <Send size={13} />
+          {submitting ? "Submitting..." : "Request Arbiter Key"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function ArbiterTab({
+  runnerKey,
+  runnerKeyRequest: initialRequest,
+  userId,
+}: {
+  runnerKey: any;
+  runnerKeyRequest: any;
+  userId: string;
+}) {
+  const [request, setRequest] = useState(initialRequest);
+
+  const dockerCmd = `docker run \\\n  -e WORKER_PRIVATE_KEY="<your-private-key>" \\\n  ghcr.io/jaymaart/chess-agents-arbiter:latest`;
+  const nodeCmd = `git clone https://github.com/jaymaart/chess-agents-arbiter\ncd chess-agents-arbiter\nnpm install && npm run build\n\nWORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`;
+
+  // No key — show request form or pending/rejected state
   if (!runnerKey) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="border border-border-custom border-dashed p-24 text-center flex flex-col items-center gap-6 bg-white/[0.01]">
-          <span className="technical-label opacity-40">No Arbiter key found.</span>
-          <p className="text-muted text-sm max-w-sm">
-            Keys are issued by admins. Visit <span className="text-foreground">#become-an-arbiter</span> on Discord to request one.
-          </p>
-          <Link href="/arbiter" className="text-sm font-bold border-b border-foreground pb-1">
-            Read the Documentation &rarr;
+      <div className="flex flex-col gap-8 max-w-2xl">
+
+        {/* Pending */}
+        {request?.status === "pending" && (
+          <div className="flex items-start gap-3 border border-amber-400/20 bg-amber-400/5 p-5">
+            <Clock size={14} className="text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-amber-400/90 text-sm font-bold mb-1">Request pending</p>
+              <p className="text-amber-400/60 text-xs leading-relaxed">
+                Your request was submitted on{" "}
+                {new Date(request.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.
+                An admin will review it and generate your key. You&apos;ll see it here once issued.
+              </p>
+              {request.note && (
+                <p className="text-amber-400/40 text-xs mt-2 italic">&ldquo;{request.note}&rdquo;</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Rejected */}
+        {request?.status === "rejected" && (
+          <div className="flex items-start gap-3 border border-red-400/20 bg-red-400/5 p-5">
+            <XCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-400/90 text-sm font-bold mb-1">Request not approved</p>
+              <p className="text-red-400/60 text-xs leading-relaxed">
+                Your previous request was not approved. You may submit a new one below, or reach out on Discord.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* No request yet, or rejected (show form) */}
+        {(!request || request.status === "rejected") && (
+          <div className="border border-border-custom">
+            <div className="px-5 py-3 border-b border-border-custom bg-white/[0.01]">
+              <span className="technical-label">Request an Arbiter Key</span>
+            </div>
+            <div className="p-5 flex flex-col gap-5">
+              <p className="text-muted text-sm leading-relaxed">
+                Arbiter keys are issued by admins. Submit a request here and you&apos;ll be notified once it&apos;s ready.
+                You can also reach out directly in the{" "}
+                <span className="text-foreground">#become-an-arbiter</span> Discord channel.
+              </p>
+              <RequestForm userId={userId} onSubmitted={(req) => setRequest(req)} />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-6 text-xs text-muted pt-2">
+          <Link href="/arbiter" className="flex items-center gap-1 hover:text-foreground transition-colors">
+            <ExternalLink size={11} /> Documentation
           </Link>
+          <a href="https://github.com/jaymaart/chess-agents-arbiter" target="_blank" className="flex items-center gap-1 hover:text-foreground transition-colors">
+            <ExternalLink size={11} /> Source Code
+          </a>
         </div>
       </div>
     );
   }
 
-  const dockerCmd = `docker run \\\n  -e WORKER_PRIVATE_KEY="<your-private-key>" \\\n  ghcr.io/jaymaart/chess-agents-arbiter:latest`;
-  const nodeCmd = `git clone https://github.com/jaymaart/chess-agents-arbiter\ncd chess-agents-arbiter\nnpm install && npm run build\n\nWORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`;
-
+  // Has a key
   return (
     <div className="flex flex-col gap-8">
 
-      {/* Pending notice */}
+      {/* Pending trust notice */}
       {!runnerKey.trusted && !runnerKey.revokedAt && (
         <div className="flex items-start gap-3 border border-amber-400/20 bg-amber-400/5 p-5">
           <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-amber-400/90 text-sm font-bold mb-1">Awaiting admin approval</p>
             <p className="text-amber-400/60 text-xs leading-relaxed">
-              Your key exists but hasn&apos;t been marked trusted yet. Once an admin approves it, your node will start receiving match jobs automatically.
+              Your key has been issued but hasn&apos;t been marked trusted yet. Once an admin approves it,
+              your node will start receiving match jobs automatically.
             </p>
           </div>
         </div>
@@ -76,7 +189,7 @@ export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
         </div>
       )}
 
-      {/* Stats */}
+      {/* Overview */}
       <div>
         <div className="technical-label mb-4">Overview</div>
         <div className="grid grid-cols-3 gap-4">
@@ -116,7 +229,7 @@ export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
         </div>
       </div>
 
-      {/* Run Configuration — only show when trusted */}
+      {/* Run Configuration — only when trusted */}
       {runnerKey.trusted && (
         <div className="border border-border-custom">
           <div className="px-5 py-3 border-b border-border-custom bg-white/[0.01]">
@@ -124,7 +237,6 @@ export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
           </div>
           <div className="p-5 flex flex-col gap-8">
 
-            {/* Env vars */}
             <div>
               <div className="technical-label opacity-50 mb-3">Environment Variables</div>
               <div className="border border-border-custom text-sm">
@@ -137,7 +249,7 @@ export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
                   { name: "WORKER_PRIVATE_KEY", value: "Your RSA-4096 private key PEM — shown once at issuance", req: true },
                   { name: "API_URL", value: "https://chess-agents-api-production.up.railway.app", req: false },
                 ].map((row) => (
-                  <div key={row.name} className="grid grid-cols-[180px_1fr_80px] border-b border-border-custom last:border-b-0">
+                  <div key={row.name} className="grid grid-cols-[180px_1fr_80px] border-t border-border-custom">
                     <div className="px-4 py-3 font-mono text-xs text-foreground">{row.name}</div>
                     <div className="px-4 py-3 text-xs text-muted border-l border-border-custom">{row.value}</div>
                     <div className={`px-4 py-3 text-xs border-l border-border-custom ${row.req ? "text-foreground" : "text-muted/40"}`}>
@@ -148,7 +260,6 @@ export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
               </div>
             </div>
 
-            {/* Docker */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="technical-label opacity-50">Docker (recommended)</div>
@@ -157,7 +268,6 @@ export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
               <pre className="bg-black border border-border-custom p-4 text-xs text-muted font-mono overflow-x-auto">{dockerCmd}</pre>
             </div>
 
-            {/* Node */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="technical-label opacity-50">Node.js</div>
@@ -170,16 +280,11 @@ export function ArbiterTab({ runnerKey }: { runnerKey: any }) {
         </div>
       )}
 
-      {/* Footer */}
       <div className="flex items-center gap-6 text-xs text-muted">
         <Link href="/arbiter" className="flex items-center gap-1 hover:text-foreground transition-colors">
-          <ExternalLink size={11} /> Full Documentation
+          <ExternalLink size={11} /> Documentation
         </Link>
-        <a
-          href="https://github.com/jaymaart/chess-agents-arbiter"
-          target="_blank"
-          className="flex items-center gap-1 hover:text-foreground transition-colors"
-        >
+        <a href="https://github.com/jaymaart/chess-agents-arbiter" target="_blank" className="flex items-center gap-1 hover:text-foreground transition-colors">
           <ExternalLink size={11} /> Source Code
         </a>
       </div>

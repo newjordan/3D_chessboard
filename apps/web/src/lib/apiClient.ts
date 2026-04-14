@@ -179,6 +179,37 @@ export class ApiClient {
     });
   }
 
+  static async getMyRunnerKeyRequest(userId: string) {
+    return this.request<any | null>("/api/runner-key-requests/me", {
+      headers: { "x-user-id": userId },
+    });
+  }
+
+  static async submitRunnerKeyRequest(userId: string, note?: string) {
+    return this.request<any>("/api/runner-key-requests", {
+      method: "POST",
+      headers: { "x-user-id": userId },
+      body: JSON.stringify({ note }),
+    });
+  }
+
+  static async getAdminRunnerKeyRequests(adminUserId: string): Promise<any[]> {
+    return this.adminRequest("/api/admin/runner-key-requests", adminUserId);
+  }
+
+  static async fulfillRunnerKeyRequest(adminUserId: string, requestId: string, label?: string): Promise<any> {
+    return this.adminRequest(`/api/admin/runner-key-requests/${requestId}/fulfill`, adminUserId, {
+      method: "POST",
+      body: JSON.stringify({ label }),
+    });
+  }
+
+  static async rejectRunnerKeyRequest(adminUserId: string, requestId: string): Promise<any> {
+    return this.adminRequest(`/api/admin/runner-key-requests/${requestId}/reject`, adminUserId, {
+      method: "POST",
+    });
+  }
+
   static async getAdminRunners(adminUserId: string): Promise<any[]> {
     return this.adminRequest("/api/admin/runners", adminUserId);
   }
