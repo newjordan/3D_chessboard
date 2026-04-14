@@ -188,6 +188,39 @@ function createCoordinates(parent, offset, boardThickness, tabDist, b2, b3) {
     }
     if (hatchPts.length > 0) parent.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(hatchPts), lineMat));
   }
+
+  // Agent Name Plates (Back and Left Edges)
+  const createTitleSprite = (text) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.font = '700 64px "Orbitron", sans-serif';
+    ctx.fillStyle = '#66ccff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 12;
+    ctx.fillText(text, 512, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    return new THREE.Mesh(
+       new THREE.PlaneGeometry(6.0, 0.75), 
+       new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+  };
+
+  // Back Edge Title
+  const backTitle = createTitleSprite("OPPONENT AI: ROSE INDUSTRIES");
+  backTitle.position.set(0, yPos, -tabDist);
+  backTitle.rotation.x = -Math.PI / 2;
+  backTitle.rotation.z = Math.PI; // Bottom of text faces the board center
+  parent.add(backTitle);
+
+  // Left Edge Title
+  const leftTitle = createTitleSprite("UNIT: CORE AI");
+  leftTitle.position.set(-tabDist, yPos, 0);
+  leftTitle.rotation.x = -Math.PI / 2;
+  leftTitle.rotation.z = Math.PI / 2; // Bottom of text faces the board center
+  parent.add(leftTitle);
 }
 
 function addGridDecorations(parent, offset) {

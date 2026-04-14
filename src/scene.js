@@ -76,19 +76,29 @@ export function setupScene(container) {
   composer.addPass(bloomPass);
   composer.addPass(dotMatrixPass);
 
-  // Add Starry Background
+  // Add Structured 3D Dot-Matrix Background
   const starsGeometry = new THREE.BufferGeometry();
-  const starsCount = 2000;
-  const posArray = new Float32Array(starsCount * 3);
-  for (let i = 0; i < starsCount * 3; i++) {
-    posArray[i] = (Math.random() - 0.5) * 100;
+  const posArray = [];
+  const range = 50; 
+  const step = 4.0;
+  
+  for (let x = -range; x <= range; x += step) {
+    for (let y = -range; y <= range; y += step) {
+      for (let z = -range; z <= range; z += step) {
+        // Hollow out the central sphere so the dots don't obscure the actual chess board
+        const distToCenter = Math.sqrt(x*x + y*y + z*z);
+        if (distToCenter < 12) continue;
+        posArray.push(x, y, z);
+      }
+    }
   }
-  starsGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+  starsGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(posArray), 3));
   const starsMaterial = new THREE.PointsMaterial({
-    size: 0.05,
-    color: 0x88ccff,
+    size: 0.08,
+    color: 0x66aaff,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.4,
   });
   const starMesh = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starMesh);

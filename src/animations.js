@@ -214,6 +214,49 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       tl.to(piece.position, { y: -2, duration: 0.6, ease: "power3.in" }, 0.3);
       
+      // Particle Burst on Death
+      const particleGeo = new THREE.PlaneGeometry(0.08, 0.08); // small squares
+      const particleMat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 1, side: THREE.DoubleSide });
+      const particles = [];
+      const particleGroup = new THREE.Group();
+      particleGroup.position.set(px, 0.5, pz); // Burst from the center of the piece
+      
+      for(let i=0; i<15; i++) {
+         const mesh = new THREE.Mesh(particleGeo, particleMat);
+         // Random explosive trajectory
+         const theta = Math.random() * Math.PI * 2;
+         const phi = Math.acos((Math.random() * 2) - 1);
+         const speed = 1.0 + Math.random() * 2.0;
+         
+         const dx = Math.sin(phi) * Math.cos(theta) * speed;
+         const dy = Math.sin(phi) * Math.sin(theta) * speed;
+         const dz = Math.cos(phi) * speed;
+         
+         mesh.userData = { dx, dy, dz };
+         mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+         particleGroup.add(mesh);
+         particles.push(mesh);
+      }
+      boardGroup.add(particleGroup);
+      
+      const pProxy = { t: 0 };
+      tl.to(pProxy, {
+         t: 1,
+         duration: 0.6,
+         ease: "power2.out",
+         onUpdate: () => {
+             particles.forEach(p => {
+                p.position.x += p.userData.dx * 0.03;
+                p.position.y += p.userData.dy * 0.03;
+                p.position.z += p.userData.dz * 0.03;
+                p.rotation.x += 0.2;
+                p.rotation.y += 0.2;
+             });
+         }
+      }, 0.3); // Burst fires as piece starts dropping
+      
+      tl.to(particleMat, { opacity: 0, duration: 0.3 }, 0.6); // Fade out the particles mid-flight
+
       // Glitch Touch at lower Y border (wobbles the clipping plane dynamically)
       const glitchObj = { val: 0.5 };
       tl.to(glitchObj, {
@@ -233,6 +276,7 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
          piecesContainer.remove(piece);
          boardGroup.remove(border);
          boardGroup.remove(ghostRing);
+         boardGroup.remove(particleGroup);
       });
     },
 
