@@ -105,6 +105,7 @@ export async function createPieces(scene, offset) {
 
     // Double Ring Halo under the piece
     const haloGroup = new THREE.Group();
+    haloGroup.visible = false; // strictly invisible by default until simulation activates it
     const haloMat = activeMaterial.clone();
     haloMat.opacity = 0; // invisible by default
     haloMat.transparent = true;

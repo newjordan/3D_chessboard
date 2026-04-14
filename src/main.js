@@ -33,9 +33,13 @@ function animate() {
     if (p.userData.moveAge !== undefined && p.userData.moveAge <= 3) {
       const baseOpacities = [1.0, 0.5, 0.2, 0.05]; // Gradual static decay
       p.userData.haloMat.opacity = baseOpacities[p.userData.moveAge];
+      if (p.userData.haloGroup) p.userData.haloGroup.visible = true;
     } else {
       if (p.userData.haloMat) {
          p.userData.haloMat.opacity = 0;
+      }
+      if (p.userData.haloGroup) {
+         p.userData.haloGroup.visible = false;
       }
     }
   });
