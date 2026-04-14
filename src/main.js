@@ -24,6 +24,12 @@ function animate() {
 
   // Decaying timestamp effect on moved pieces (Static opacity, no flash)
   pieces.forEach(p => {
+    // Keep halo locked to piece's flat coordinates, letting piece fly overhead
+    if (p.userData.haloGroup) {
+       p.userData.haloGroup.position.x = p.position.x;
+       p.userData.haloGroup.position.z = p.position.z;
+    }
+    
     if (p.userData.moveAge !== undefined && p.userData.moveAge <= 3) {
       const baseOpacities = [1.0, 0.5, 0.2, 0.05]; // Gradual static decay
       p.userData.haloMat.opacity = baseOpacities[p.userData.moveAge];

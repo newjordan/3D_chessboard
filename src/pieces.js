@@ -116,21 +116,23 @@ export async function createPieces(scene, offset) {
     const ring2 = new THREE.LineLoop(rGeo2, haloMat);
     ring1.rotation.x = -Math.PI / 2;
     ring2.rotation.x = -Math.PI / 2;
-    ring1.position.y = 0.02;
-    ring2.position.y = 0.02;
+    
+    // Position slightly BELOW the grid plane so they lurk under the lattice
+    ring1.position.y = -0.05;
+    ring2.position.y = -0.05;
     
     haloGroup.add(ring1);
     haloGroup.add(ring2);
-    group.add(haloGroup);
+    
+    // Add to container independently so it doesn't fly into the air when the piece jumps!
+    piecesContainer.add(haloGroup);
 
     // Make knight face correct direction
     if (typeName === 'knight') {
-      // The original model might face Z or X. 
-      // User requested turning them 90 degrees clockwise to face the battle.
       group.rotation.y = (isWhite ? Math.PI : 0) - Math.PI / 2; 
     }
 
-    group.userData = { material, haloMat };
+    group.userData = { material, haloMat, haloGroup };
 
     return group;
   }
@@ -160,6 +162,8 @@ export async function createPieces(scene, offset) {
         const z = (offset - 0.5) - (rank * 1);
         
         piece.position.set(x, 0, z);
+        piece.userData.haloGroup.position.set(x, 0, z);
+        
         piece.userData.type = type;
         piece.userData.isWhite = isWhite;
         piece.userData.rank = rank;
