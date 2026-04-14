@@ -9,7 +9,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import https from "https";
 import Redis from "ioredis";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { generateKeyPair, generateRSAKeyPair, hashData, signData, verifyData, encryptForArbiter } from "./crypto";
 import JavaScriptObfuscator from "javascript-obfuscator";
 
@@ -125,7 +125,7 @@ const MAX_ACTIVE_ENGINES_PER_USER = 5;
 const brokerLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60, // 1 request/sec average — well above the 2s poll interval
-  keyGenerator: (req) => (req.headers["x-worker-public-key"] as string) || req.ip || "unknown",
+  keyGenerator: (req) => (req.headers["x-worker-public-key"] as string) || ipKeyGenerator(req),
   message: { error: "Too many broker requests — slow down" },
 });
 
