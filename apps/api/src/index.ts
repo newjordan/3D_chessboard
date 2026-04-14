@@ -20,26 +20,24 @@ function obfuscateCode(code: string, language: string | null): string {
     try {
       return JavaScriptObfuscator.obfuscate(code, {
         compact: true,
-        // Control flow — max flattening breaks automated reversers
+        // Control flow — 0.5 threshold gives strong protection without O(n²) cost
         controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 1,
-        // Dead code noise — makes output ~2x larger, much harder to follow
+        controlFlowFlatteningThreshold: 0.5,
+        // Dead code noise
         deadCodeInjection: true,
-        deadCodeInjectionThreshold: 0.4,
+        deadCodeInjectionThreshold: 0.2,
         // String transforms
         stringEncoding: true,
-        stringEncodingThreshold: 1,
+        stringEncodingThreshold: 0.75,
         stringArray: true,
         stringArrayEncoding: ["rc4"],
-        stringArrayThreshold: 1,
+        stringArrayThreshold: 0.75,
         stringArrayRotate: true,
         stringArrayShuffle: true,
         // Identifier mangling
         identifierNamesGenerator: "mangled-shuffled",
-        renameGlobals: false, // keep globals safe (process, Buffer, etc)
-        // Additional transforms that break deobfuscate.io patterns
+        renameGlobals: false,
         transformObjectKeys: true,
-        unicodeEscapeSequence: false, // skip — makes files huge with no benefit
         numbersToExpressions: true,
         splitStrings: true,
         splitStringsChunkLength: 5,
@@ -1794,7 +1792,7 @@ app.get("/api/admin/runner-key-requests", authorizeAdmin, async (req, res) => {
 
 // Admin: fulfill a request (generates the key + marks fulfilled)
 app.post("/api/admin/runner-key-requests/:id/fulfill", authorizeAdmin, async (req, res) => {
-  const request = await prisma.runnerKeyRequest.findUnique({ where: { id: req.params.id } });
+  const request = await prisma.runnerKeyRequest.findUnique({ where: { id: req.params.id as string } });
   if (!request) return res.status(404).json({ error: "Request not found" });
   if (request.status !== "pending") return res.status(409).json({ error: "Request already actioned" });
 
@@ -1817,7 +1815,7 @@ app.post("/api/admin/runner-key-requests/:id/fulfill", authorizeAdmin, async (re
 
 // Admin: reject a request
 app.post("/api/admin/runner-key-requests/:id/reject", authorizeAdmin, async (req, res) => {
-  const request = await prisma.runnerKeyRequest.findUnique({ where: { id: req.params.id } });
+  const request = await prisma.runnerKeyRequest.findUnique({ where: { id: req.params.id as string } });
   if (!request) return res.status(404).json({ error: "Request not found" });
   if (request.status !== "pending") return res.status(409).json({ error: "Request already actioned" });
 
