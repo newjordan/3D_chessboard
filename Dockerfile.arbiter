@@ -44,10 +44,11 @@ ENV NODE_ENV=production
 # Prisma client is imported at the top of index.ts and requires this var to init.
 ENV DATABASE_URL=postgresql://placeholder/placeholder
 
-# Runners supply these three vars via -e at runtime:
-#   API_URL            — e.g. https://chess-agents-api-production.up.railway.app
-#   WORKER_PUBLIC_KEY  — the public key shown in your dashboard
-#   WORKER_PRIVATE_KEY — your private key (shown once at key creation)
+# Default API URL — override with -e API_URL=... if self-hosting
+ENV API_URL=https://chess-agents-api-production.up.railway.app
+
+# Runners supply one var at runtime:
+#   WORKER_PRIVATE_KEY — your RSA-4096 private key (shown once at key creation)
 
 ENTRYPOINT ["node", "apps/worker/dist/index.js"]
 CMD ["--mode", "public"]

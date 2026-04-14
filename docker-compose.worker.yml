@@ -12,6 +12,7 @@ services:
       - NODE_ENV=production
       - WORKER_ROLE=scheduler,reaper
       - WORKER_ID=local-scheduler
+      - API_URL=http://chess-agents-api:8080
     volumes:
       - ./apps/worker/tmp:/app/apps/worker/tmp
     logging:
@@ -32,6 +33,8 @@ services:
       - WORKER_ROLE=arbiter
       - WORKER_ID=local-arbiter
       - ENABLE_MATCH_RUN=true
+      # Internal workers talk directly to the API service — never through the web frontend
+      - API_URL=http://chess-agents-api:8080
     volumes:
       - ./apps/worker/tmp:/app/apps/worker/tmp
     deploy:
