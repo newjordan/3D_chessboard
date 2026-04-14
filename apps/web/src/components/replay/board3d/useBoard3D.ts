@@ -128,6 +128,21 @@ export function useBoard3D(whiteName: string, blackName: string) {
           return;
         }
 
+        // Persistent "moving" highlight across the full move sequence.
+        const actorWire = actor.group.children.find((child) => child.type === 'LineSegments') as THREE.LineSegments | undefined;
+        const actorWireMat = actorWire?.material as THREE.LineBasicMaterial | undefined;
+        const actorOriginalColor = actorWireMat?.color.clone();
+        const actorOriginalOpacity = actorWireMat?.opacity;
+        if (actorWireMat) {
+          actorWireMat.color.setHex(0x7dff00);
+          actorWireMat.opacity = 1;
+        }
+        const restoreActorHighlight = () => {
+          if (!actorWireMat || !actorOriginalColor || actorOriginalOpacity == null) return;
+          actorWireMat.color.copy(actorOriginalColor);
+          actorWireMat.opacity = actorOriginalOpacity;
+        };
+
         // Handle castling: teleport rook before king animation
         if (flags.includes('k') || flags.includes('q')) {
           const isKingside = flags.includes('k');
@@ -147,12 +162,14 @@ export function useBoard3D(whiteName: string, blackName: string) {
         setReplayAnimationSpeed(speedMultiplier);
         animateLightningStrike(from, to, effectsGroup, () => {
           if (!isCurrentVersion(version)) {
+            restoreActorHighlight();
             resolve();
             return;
           }
 
           const finishActorMove = () => {
             if (!isCurrentVersion(version)) {
+              restoreActorHighlight();
               resolve();
               return;
             }
@@ -162,6 +179,7 @@ export function useBoard3D(whiteName: string, blackName: string) {
             if (shouldResyncAfterMove) {
               syncBoardToFen(targetFen);
             }
+            restoreActorHighlight();
             resolve();
           };
 

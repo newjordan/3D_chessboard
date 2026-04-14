@@ -221,6 +221,104 @@ export function animateJump(
   const { x, z } = squareToXZ(toSquare);
   const tl = gsap.timeline({ onComplete });
   tl.timeScale(replayAnimationSpeed);
+  const haloOriginalColor = instance.haloMat.color.clone();
+  const haloOriginalOpacity = instance.haloMat.opacity;
+
+  // Thin transient neon outline on the moving piece.
+  const sourceLine = instance.group.children.find((child) => child.type === 'LineSegments') as THREE.LineSegments | undefined;
+  const sourceMat = sourceLine?.material as THREE.LineBasicMaterial | undefined;
+  const sourceOriginalColor = sourceMat?.color.clone();
+  const sourceOriginalOpacity = sourceMat?.opacity ?? 1;
+  let outline: THREE.LineSegments | null = null;
+  let outlineMat: THREE.LineBasicMaterial | null = null;
+  let moveRing: THREE.LineLoop | null = null;
+  let moveRingMat: THREE.LineBasicMaterial | null = null;
+  if (sourceLine?.geometry) {
+    outlineMat = new THREE.LineBasicMaterial({
+      color: 0x7dff00,
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      blending: THREE.AdditiveBlending,
+    });
+    outline = new THREE.LineSegments(sourceLine.geometry, outlineMat);
+    outline.scale.setScalar(1.09);
+    outline.renderOrder = 10;
+    instance.group.add(outline);
+    tl.to(outlineMat, { opacity: 1.0, duration: 0.06, ease: 'power1.out' }, 0);
+  }
+
+  moveRingMat = new THREE.LineBasicMaterial({
+    color: 0x7dff00,
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+  });
+  moveRing = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+    Array.from({ length: 32 }, (_, i) => {
+      const a = (i / 32) * Math.PI * 2;
+      return new THREE.Vector3(Math.cos(a) * 0.36, 0.06, Math.sin(a) * 0.36);
+    })
+  ), moveRingMat);
+  moveRing.renderOrder = 11;
+  instance.group.add(moveRing);
+  tl.to(moveRingMat, { opacity: 1.0, duration: 0.08, ease: 'power1.out' }, 0);
+
+  instance.haloGroup.visible = true;
+  instance.haloMat.color.setHex(0x7dff00);
+  tl.to(instance.haloMat, { opacity: 1.0, duration: 0.08, ease: 'power1.out' }, 0);
+
+  if (sourceMat && sourceOriginalColor) {
+    tl.to(sourceMat.color, {
+      r: 0.0,
+      g: 1.0,
+      b: 0.4,
+      duration: 0.06,
+      ease: 'power1.out',
+    }, 0);
+    tl.to(sourceMat, { opacity: 1.0, duration: 0.06, ease: 'power1.out' }, 0);
+  }
+
   tl.to(instance.group.position, { x, z, duration: 0.5, ease: 'power1.inOut' }, 0);
   tl.to(instance.group.position, { y: 1.5, duration: 0.25, ease: 'power1.out', yoyo: true, repeat: 1 }, 0);
+  if (outlineMat) {
+    tl.to(outlineMat, { opacity: 0.95, duration: 1.6, ease: 'none' }, 0.06);
+    tl.to(outlineMat, { opacity: 0.0, duration: 0.9, ease: 'power1.in' }, 1.66);
+    tl.call(() => {
+      if (outline) instance.group.remove(outline);
+      outlineMat?.dispose();
+    });
+  }
+
+  if (moveRingMat) {
+    tl.to(moveRingMat, { opacity: 0.95, duration: 1.6, ease: 'none' }, 0.08);
+    tl.to(moveRingMat, { opacity: 0, duration: 0.9, ease: 'power1.in' }, 1.68);
+    tl.call(() => {
+      if (moveRing) {
+        instance.group.remove(moveRing);
+        moveRing.geometry.dispose();
+      }
+      moveRingMat?.dispose();
+    });
+  }
+
+  tl.to(instance.haloMat, { opacity: 0.95, duration: 1.6, ease: 'none' }, 0.08);
+  tl.to(instance.haloMat, { opacity: 0, duration: 0.9, ease: 'power1.in' }, 1.68);
+  tl.call(() => {
+    instance.haloGroup.visible = false;
+    instance.haloMat.color.copy(haloOriginalColor);
+    instance.haloMat.opacity = haloOriginalOpacity;
+  });
+
+  if (sourceMat && sourceOriginalColor) {
+    tl.to(sourceMat.color, {
+      r: sourceOriginalColor.r,
+      g: sourceOriginalColor.g,
+      b: sourceOriginalColor.b,
+      duration: 0.9,
+      ease: 'power1.in',
+    }, 1.68);
+    tl.to(sourceMat, { opacity: sourceOriginalOpacity, duration: 0.9, ease: 'power1.in' }, 1.68);
+  }
 }
