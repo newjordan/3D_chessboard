@@ -179,6 +179,13 @@ export class ApiClient {
     });
   }
 
+  static async acknowledgeRunnerKey(userId: string) {
+    return this.request<any>("/api/runners/me/key-viewed", {
+      method: "POST",
+      headers: { "x-user-id": userId },
+    });
+  }
+
   static async getMyRunnerKeyRequest(userId: string) {
     return this.request<any | null>("/api/runner-key-requests/me", {
       headers: { "x-user-id": userId },
