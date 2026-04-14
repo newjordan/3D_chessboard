@@ -766,6 +766,7 @@ app.get("/api/engines/:slug", async (req, res) => {
           include: {
             challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
             defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
+            ratings: { select: { engineId: true, delta: true } },
           }
         },
         matchesDefended: {
@@ -774,6 +775,7 @@ app.get("/api/engines/:slug", async (req, res) => {
           include: {
             challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
             defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
+            ratings: { select: { engineId: true, delta: true } },
           }
         },
         ratings: {

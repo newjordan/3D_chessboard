@@ -76,6 +76,13 @@ export function MatchRow({ match, engineName }: MatchRowProps) {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+        {match.status === 'completed' && match.eloDelta != null && (
+          <span className={`font-mono text-[11px] font-bold w-12 text-right hidden sm:block ${
+            match.eloDelta > 0 ? 'text-accent' : match.eloDelta < 0 ? 'text-red-400' : 'opacity-30'
+          }`}>
+            {match.eloDelta > 0 ? '+' : ''}{match.eloDelta}
+          </span>
+        )}
         <div className="font-mono text-sm font-bold flex gap-1">
           {match.status === 'completed' ? (
             <>
