@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     // Proxy all /api requests (except auth) to the API service
     return [
       {
-        source: "/api/:path((?!auth|broker|public-key|runner-key-requests).*)",
+        source: "/api/:path((?!auth|broker|public-key).*)",
         destination: process.env.NODE_ENV === "production"
           ? "http://chess-agents-api:8080/api/:path*"
           : "http://localhost:3001/api/:path*",

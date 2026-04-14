@@ -80,6 +80,27 @@ let serverPrivateKey = "";
 app.use(cors());
 app.use(express.json());
 
+// --- INTERNAL SECRET MIDDLEWARE ---
+// When INTERNAL_API_SECRET is set, all routes except intentionally public ones
+// require the x-internal-secret header. This prevents direct external abuse of
+// user-facing write endpoints (the Next.js proxy injects the secret server-side).
+const PUBLIC_GET_PREFIXES = ["/api/matches", "/api/leaderboard", "/api/users/", "/api/engines/", "/api/assets/"];
+
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const requiredSecret = process.env.INTERNAL_API_SECRET;
+  if (!requiredSecret) return next(); // Not configured — open (dev/unset)
+
+  if (req.path === "/" || req.path === "/api/health" || req.path === "/api/public-key") return next();
+  if (req.path.startsWith("/api/broker/")) return next(); // broker has its own auth
+  if (req.method === "GET" && PUBLIC_GET_PREFIXES.some((p) => req.path.startsWith(p))) return next();
+
+  const secret = req.headers["x-internal-secret"];
+  if (!secret || secret !== requiredSecret) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+});
+
 // Consts
 const ALLOWED_EXTENSIONS = [".js", ".py"];
 const MAX_ENGINE_NAME_LENGTH = 32;
