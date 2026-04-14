@@ -189,38 +189,38 @@ function createCoordinates(parent, offset, boardThickness, tabDist, b2, b3) {
     if (hatchPts.length > 0) parent.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(hatchPts), lineMat));
   }
 
-  // Agent Name Plates (Back and Left Edges)
-  const createTitleSprite = (text) => {
+  // Agent Name Plates (Situated on the left edge next to each player's respective side)
+  const createTitleSprite = (text, width=800) => {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024; canvas.height = 128;
+    canvas.width = width; canvas.height = 128;
     const ctx = canvas.getContext('2d');
-    ctx.font = '700 64px "Orbitron", sans-serif';
+    ctx.font = '700 60px "Orbitron", sans-serif';
     ctx.fillStyle = '#66ccff';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 12;
-    ctx.fillText(text, 512, 64);
+    ctx.fillText(text, width / 2, 64);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     return new THREE.Mesh(
-       new THREE.PlaneGeometry(6.0, 0.75), 
+       new THREE.PlaneGeometry((width/1024)*5.0, 0.75), 
        new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
     );
   };
 
-  // Back Edge Title
-  const backTitle = createTitleSprite("OPPONENT AI: ROSE INDUSTRIES");
-  backTitle.position.set(0, yPos, -tabDist);
-  backTitle.rotation.x = -Math.PI / 2;
-  backTitle.rotation.z = Math.PI; // Bottom of text faces the board center
-  parent.add(backTitle);
+  // Black's Edge Title
+  const blackTitle = createTitleSprite("OPPONENT AI: ROSE");
+  blackTitle.position.set(-tabDist, yPos, -2.3);
+  blackTitle.rotation.x = -Math.PI / 2;
+  blackTitle.rotation.z = Math.PI / 2; // Bottom of text faces the board center
+  parent.add(blackTitle);
 
-  // Left Edge Title
-  const leftTitle = createTitleSprite("UNIT: CORE AI");
-  leftTitle.position.set(-tabDist, yPos, 0);
-  leftTitle.rotation.x = -Math.PI / 2;
-  leftTitle.rotation.z = Math.PI / 2; // Bottom of text faces the board center
-  parent.add(leftTitle);
+  // White's Edge Title
+  const whiteTitle = createTitleSprite("UNIT: CORE AI", 512);
+  whiteTitle.position.set(-tabDist, yPos, 2.3);
+  whiteTitle.rotation.x = -Math.PI / 2;
+  whiteTitle.rotation.z = Math.PI / 2; // Bottom of text faces the board center
+  parent.add(whiteTitle);
 }
 
 function addGridDecorations(parent, offset) {

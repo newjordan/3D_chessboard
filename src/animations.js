@@ -214,26 +214,24 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       tl.to(piece.position, { y: -2, duration: 0.6, ease: "power3.in" }, 0.3);
       
-      // Particle Burst on Death
-      const particleGeo = new THREE.PlaneGeometry(0.08, 0.08); // small squares
-      const particleMat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 1, side: THREE.DoubleSide });
+      // Particle Burst on Death (Matrix dialtone drop)
+      const particleGeo = new THREE.PlaneGeometry(0.05, 0.05); // small rigid squares
+      const particleMat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
       const particles = [];
       const particleGroup = new THREE.Group();
-      particleGroup.position.set(px, 0.5, pz); // Burst from the center of the piece
+      particleGroup.position.set(px, 0, pz); // Set base at square center
       
-      for(let i=0; i<15; i++) {
+      for(let i=0; i<40; i++) {
          const mesh = new THREE.Mesh(particleGeo, particleMat);
-         // Random explosive trajectory
-         const theta = Math.random() * Math.PI * 2;
-         const phi = Math.acos((Math.random() * 2) - 1);
-         const speed = 1.0 + Math.random() * 2.0;
+         // Align securely to an invisible 0.15 interval grid inside the square
+         const gridX = (Math.floor(Math.random() * 7) - 3) * 0.12;
+         const gridZ = (Math.floor(Math.random() * 7) - 3) * 0.12;
+         const startY = 0.2 + Math.random() * 1.5;
          
-         const dx = Math.sin(phi) * Math.cos(theta) * speed;
-         const dy = Math.sin(phi) * Math.sin(theta) * speed;
-         const dz = Math.cos(phi) * speed;
+         mesh.position.set(gridX, startY, gridZ);
+         mesh.rotation.x = -Math.PI / 2; // Flat data squares parallel to board
+         mesh.userData = { speed: 3.0 + Math.random() * 4.0 }; // Extreme vertical speed
          
-         mesh.userData = { dx, dy, dz };
-         mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
          particleGroup.add(mesh);
          particles.push(mesh);
       }
@@ -242,20 +240,22 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       const pProxy = { t: 0 };
       tl.to(pProxy, {
          t: 1,
-         duration: 0.6,
-         ease: "power2.out",
+         duration: 0.8,
+         ease: "none",
          onUpdate: () => {
              particles.forEach(p => {
-                p.position.x += p.userData.dx * 0.03;
-                p.position.y += p.userData.dy * 0.03;
-                p.position.z += p.userData.dz * 0.03;
-                p.rotation.x += 0.2;
-                p.rotation.y += 0.2;
+                p.position.y -= p.userData.speed * 0.016; // Drop rigidly straight down
+                // Loop the "raindrops" if they pass the floor
+                if (p.position.y < -0.6) {
+                    p.position.y = 1.0 + Math.random() * 0.5;
+                }
+                // Dialtone Glitch scale flicker
+                p.scale.setScalar(Math.random() > 0.15 ? 1 : 0);
              });
          }
-      }, 0.3); // Burst fires as piece starts dropping
+      }, 0.2); // Dialtone fires up instantly as piece drops
       
-      tl.to(particleMat, { opacity: 0, duration: 0.3 }, 0.6); // Fade out the particles mid-flight
+      tl.to(particleMat, { opacity: 0, duration: 0.2 }, 0.8); // Snap-fade the stream mid-flight
 
       // Glitch Touch at lower Y border (wobbles the clipping plane dynamically)
       const glitchObj = { val: 0.5 };
