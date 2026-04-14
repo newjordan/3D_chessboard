@@ -22,14 +22,15 @@ function animate() {
 
   controls.update();
 
-  // Decaying timestamp pulse effect on moved pieces
+  // Decaying timestamp effect on moved pieces (Static opacity, no flash)
   pieces.forEach(p => {
     if (p.userData.moveAge !== undefined && p.userData.moveAge <= 3) {
-      const baseOpacities = [1.0, 0.6, 0.3, 0.1]; // Decay over 3 turns
-      const base = baseOpacities[p.userData.moveAge];
-      p.userData.haloMat.opacity = (base * 0.6) + (base * 0.4) * Math.sin(time * 6);
+      const baseOpacities = [1.0, 0.5, 0.2, 0.05]; // Gradual static decay
+      p.userData.haloMat.opacity = baseOpacities[p.userData.moveAge];
     } else {
-      if (p.userData.haloMat) p.userData.haloMat.opacity = 0;
+      if (p.userData.haloMat) {
+         p.userData.haloMat.opacity = 0;
+      }
     }
   });
 
