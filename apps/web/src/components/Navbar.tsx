@@ -29,7 +29,14 @@ export default function Navbar() {
               Submit <ChevronRight size={14} className="opacity-40 group-hover:translate-x-0.5 transition-transform" />
             </Link>
 
-            <Link href="/arbiter" className="text-[13px] font-medium hover:text-accent transition-colors">
+            <Link
+              href="/arbiter"
+              className="text-[13px] font-bold transition-all"
+              style={{
+                color: "#00ff41",
+                textShadow: "0 0 8px #00ff41, 0 0 20px #00ff4188",
+              }}
+            >
               Become an Arbiter
             </Link>
 
@@ -123,7 +130,8 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/arbiter"
-                className="py-3 px-4 text-sm font-medium hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
+                className="py-3 px-4 text-sm font-bold hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
+                style={{ color: "#00ff41", textShadow: "0 0 8px #00ff41, 0 0 20px #00ff4188" }}
                 onClick={() => setMenuOpen(false)}
               >
                 Become an Arbiter

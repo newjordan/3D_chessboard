@@ -1,0 +1,53 @@
+# Community Arbiter image — jaymaart/chess-worker
+# Build from repo root:
+#   docker build -f Dockerfile.arbiter -t jaymaart/chess-worker .
+#   docker push jaymaart/chess-worker
+
+# --- Build stage ---
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/worker apps/worker
+COPY prisma ./prisma
+
+# Workspace install hoists all deps to root node_modules
+RUN npm install --ignore-scripts
+
+# Generate Prisma client
+RUN npx prisma generate --schema /app/prisma/schema.prisma
+
+# Compile TypeScript
+WORKDIR /app/apps/worker
+RUN npm run build
+
+# --- Runtime stage ---
+FROM node:20-slim
+
+WORKDIR /app
+
+# python3 is required to execute .py chess agents at match time
+RUN apt-get update && apt-get install -y python3 --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Workspace node_modules are hoisted to root — this is all Node needs
+COPY --from=builder /app/node_modules ./node_modules
+
+# Worker compiled output
+COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
+COPY --from=builder /app/apps/worker/package.json ./apps/worker/package.json
+
+ENV NODE_ENV=production
+
+# Broker-runner mode never queries the database — it talks to the API over HTTP.
+# Prisma client is imported at the top of index.ts and requires this var to init.
+ENV DATABASE_URL=postgresql://placeholder/placeholder
+
+# Runners supply these three vars via -e at runtime:
+#   API_URL            — e.g. https://api.chessagents.dev
+#   WORKER_PUBLIC_KEY  — the public key shown in your dashboard
+#   WORKER_PRIVATE_KEY — your private key (shown once at key creation)
+
+ENTRYPOINT ["node", "apps/worker/dist/index.js"]
+CMD ["--mode", "public"]

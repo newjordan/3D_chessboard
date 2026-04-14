@@ -36,7 +36,9 @@
       "Bash(npx tsx:*)",
       "Bash(PRISMA_MIGRATE_INTERACTIVE=0 npx prisma migrate dev --name add_runner_and_server_keys --schema prisma/schema.prisma)",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "WebFetch(domain:chessagents.ai)",
+      "Bash(docker build:*)"
     ]
   }
 }
