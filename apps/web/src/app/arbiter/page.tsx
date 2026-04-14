@@ -1,9 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ApiClient } from "@/lib/apiClient";
-import { ChevronRight, Terminal, Shield, Code2, Server } from "lucide-react";
+import { ChevronRight, Shield, Code2, Server } from "lucide-react";
 import Link from "next/link";
-import { RunnerDashboard } from "./RunnerDashboard";
 import { CopyPromptButton } from "./CopyPromptButton";
 
 export const dynamic = "force-dynamic";
@@ -37,14 +35,8 @@ The source code is fully open at github.com/jaymaart/chess-agents-arbiter — no
 
 Please help me get set up. I'm running [YOUR OS / ENVIRONMENT]. I [do / don't] have Docker installed. My private key starts with: [paste the first line of your key, e.g. -----BEGIN PRIVATE KEY-----]`;
 
-export default async function RunPage() {
+export default async function ArbiterDocsPage() {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id;
-
-  let runnerKey = null;
-  if (userId) {
-    runnerKey = await ApiClient.getMyRunnerKey(userId).catch(() => null);
-  }
 
   return (
     <div className="min-h-screen bg-[#050505] text-[#00ff41] font-mono relative overflow-hidden">
@@ -73,16 +65,23 @@ export default async function RunPage() {
             execute them locally, and submit cryptographically-attributed results back to the arena.
             Every job is tamper-proof. Every Arbiter is accountable.
           </p>
-          <div className="flex items-center gap-6 pt-2">
+          <div className="flex items-center gap-4 pt-2 flex-wrap">
             {session ? (
-              <a href="#dashboard" className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors">
-                View My Arbiter Key <ChevronRight size={14} />
-              </a>
+              <Link href="/arbiter/dashboard" className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors">
+                My Dashboard <ChevronRight size={14} />
+              </Link>
             ) : (
               <Link href="/api/auth/signin" className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors">
                 Sign In to Get Started <ChevronRight size={14} />
               </Link>
             )}
+            <a
+              href="https://github.com/jaymaart/chess-agents-arbiter"
+              target="_blank"
+              className="flex items-center gap-2 px-5 py-2.5 border border-[#00ff41]/20 text-[#00ff41]/60 text-sm hover:border-[#00ff41]/50 hover:text-[#00ff41] transition-colors"
+            >
+              View Source
+            </a>
           </div>
         </section>
 
@@ -94,9 +93,10 @@ export default async function RunPage() {
           <div className="bg-black/40 border border-[#00ff41]/10 rounded p-6 text-sm text-[#00ff41]/70 leading-loose">
             <pre className="whitespace-pre-wrap">{`[Your Arbiter]  ──── POST /api/broker/next-jobs ────▶  [Arena API]
                ◀─── Job + serverSignature ───────────
+                    (engine code obfuscated + RSA-encrypted)
 
 [Your Arbiter]  ──── verifySignature(job) ──────────▶  ✓ or ✗
-               (engine code obfuscated in transit)
+               ──── decryptWithPrivateKey(code) ─────▶  [local]
 
 [Your Arbiter]  ──── arbitrate(challenger, defender) ▶  [Local]
                ◀─── result (PGN + scores) ───────────
@@ -134,7 +134,7 @@ export default async function RunPage() {
           <p className="text-[#00ff41]/60 text-sm">Or with Node.js 18+ and Python 3 (source is fully open at <a href="https://github.com/jaymaart/chess-agents-arbiter" target="_blank" className="underline hover:text-[#00ff41]">github.com/jaymaart/chess-agents-arbiter</a>):</p>
           <pre className="bg-black border border-[#00ff41]/20 rounded p-5 text-[#00ff41] text-sm overflow-x-auto">
 {`git clone https://github.com/jaymaart/chess-agents-arbiter
-cd chess-arbiter
+cd chess-agents-arbiter
 npm install && npm run build
 
 WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
@@ -147,9 +147,9 @@ WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
             SET UP WITH AI
           </h2>
           <p className="text-[#00ff41]/60 text-sm">
-            Most people use an AI assistant for setup. Copy this prompt and paste it into Claude, ChatGPT, or any other AI — it has everything needed to walk you through the process.
+            Paste this into Claude, ChatGPT, or any AI assistant — it includes everything needed to walk you through setup on your specific machine.
           </p>
-          <div className="relative">
+          <div>
             <pre className="bg-black border border-[#00ff41]/20 rounded p-5 text-[#00ff41]/70 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap">{AI_SETUP_PROMPT}</pre>
             <div className="mt-3">
               <CopyPromptButton text={AI_SETUP_PROMPT} />
@@ -170,7 +170,7 @@ WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
               ["Supported Languages", "JavaScript (.js), Python (.py)"],
               ["Match Type", "Rating matches only (placement is reserved)"],
               ["Hardware", "Any machine capable of running Node.js 18+ or Python 3.10+"],
-              ["Docker", "Optional — docker image available for easy setup"],
+              ["Docker", "Optional — image available at ghcr.io/jaymaart/chess-agents-arbiter"],
               ["Uptime", "No minimum — run as much or as little as you like"],
             ].map(([key, val]) => (
               <div key={key} className="flex gap-3 border border-[#00ff41]/10 rounded p-4">
@@ -188,16 +188,16 @@ WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
           </h2>
           <div className="space-y-4">
             {[
-              { q: "Do I need an account?", a: "Yes. Arbiter keys are tied to your Chess Agents account. Sign up, then visit #become-an-arbiter to request a key." },
+              { q: "Do I need an account?", a: "Yes. Arbiter keys are tied to your Chess Agents account. Sign up, then visit #become-an-arbiter on Discord to request a key." },
               { q: "How do I get an Arbiter key?", a: "After signing up, reach out to an admin in Discord. They generate a keypair — your private key is shown exactly once and never stored on the server, so copy it before closing. Your public key is what identifies you on the network." },
               { q: "What hardware do I need?", a: "Anything that can run Docker or Node.js 18+. A basic VPS or spare laptop is sufficient. No GPU required." },
               { q: "What matches will I arbitrate?", a: "Rating matches only. Placement matches (for newly validated engines) are reserved for the internal system." },
               { q: "What if my node submits a bad result?", a: "The server validates all submissions — game count, player identity, and score integrity. Bad submissions are rejected. Repeated failures can result in key revocation." },
               { q: "Is my private key safe?", a: "Your private key is shown exactly once at issuance and never stored on the server. Treat it like a password. If compromised, contact an admin to revoke and reissue." },
               { q: "What happens if someone tampers with my job?", a: "Your arbiter verifies the server's Ed25519 signature before executing. Any tampered payload is silently rejected. Engine code is also obfuscated and RSA-encrypted in transit." },
-              { q: "Can I see what code I'm running?", a: "Yes — the arbiter source is fully open at github.com/jaymaart/chess-agents-arbiter. The Docker image is built directly from that repo. Nothing hidden." },
               { q: "Can I steal another engine's code through my arbiter?", a: "No. Engine code is obfuscated then encrypted with your RSA-4096 public key before dispatch. Only your private key can decrypt it, and each arbiter receives a uniquely encrypted payload. The original source is never exposed." },
-              { q: "Will there be a leaderboard?", a: "Your jobs processed count is tracked and shown on this page. A public leaderboard is planned for future releases." },
+              { q: "Can I see what code I'm running?", a: "Yes — the arbiter source is fully open at github.com/jaymaart/chess-agents-arbiter. The Docker image is built directly from that repo. Nothing hidden." },
+              { q: "Will there be a leaderboard?", a: "Your jobs processed count is tracked and shown on your dashboard. A public leaderboard is planned for future releases." },
             ].map((item) => (
               <details key={item.q} className="group border border-[#00ff41]/10 rounded">
                 <summary className="px-5 py-4 text-sm text-[#00ff41]/80 cursor-pointer hover:text-[#00ff41] transition-colors list-none flex items-center justify-between">
@@ -210,26 +210,30 @@ WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
           </div>
         </section>
 
-        {/* Runner Dashboard (authenticated) */}
-        {session && (
-          <section id="dashboard" className="space-y-6">
-            <h2 className="text-xs uppercase tracking-widest text-[#00ff41]/40 border-b border-[#00ff41]/10 pb-3">
-              YOUR ARBITER STATUS
-            </h2>
-            <RunnerDashboard initialKey={runnerKey} />
-          </section>
-        )}
-
-        {!session && (
-          <section className="border border-[#00ff41]/10 rounded p-8 text-center space-y-4">
-            <Terminal size={32} className="mx-auto text-[#00ff41]/30" />
-            <h3 className="text-[#00ff41]/70 font-bold">Sign in to view your Arbiter status</h3>
-            <p className="text-[#00ff41]/40 text-sm">Your Arbiter key and stats are linked to your account.</p>
-            <Link href="/api/auth/signin" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors mt-2">
-              Sign In
-            </Link>
-          </section>
-        )}
+        {/* Dashboard CTA */}
+        <section className="border border-[#00ff41]/10 rounded p-8 text-center space-y-4">
+          {session ? (
+            <>
+              <p className="text-[#00ff41]/50 text-sm">View your key status, public identity, and run configuration.</p>
+              <Link
+                href="/arbiter/dashboard"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors"
+              >
+                Open Arbiter Dashboard <ChevronRight size={14} />
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-[#00ff41]/50 text-sm">Sign in to access your Arbiter dashboard — key status, identity, and configuration.</p>
+              <Link
+                href="/api/auth/signin"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors"
+              >
+                Sign In <ChevronRight size={14} />
+              </Link>
+            </>
+          )}
+        </section>
 
       </div>
     </div>
