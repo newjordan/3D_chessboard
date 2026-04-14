@@ -34,26 +34,71 @@ function animate() {
 
 animate();
 
-// Simulate some game action after 2 seconds for visual testing
-setTimeout(() => {
-  addMove(3, 'Na3', 'xa3'); // Mock move
-  
-  // Grab White Knight (Rank 7, File 1 OR 6, let's just find one)
-  const knight = pieces.find(p => p.userData.type === 'N' && p.userData.isWhite);
-  // Grab Black Pawn (Rank 1, File 0 or 1 or whatever)
-  const pawn = pieces.find(p => p.userData.type === 'P' && !p.userData.isWhite);
+// Automated Simulation Sequence
+const moves = [
+  // White Pawn e2-e4
+  { fR: 6, fF: 4, tR: 4, tF: 4, isCapture: false },
+  // Black Pawn e7-e5
+  { fR: 1, fF: 4, tR: 3, tF: 4, isCapture: false },
+  // White Knight g1-f3
+  { fR: 7, fF: 6, tR: 5, tF: 5, isCapture: false },
+  // Black Pawn d7-d5
+  { fR: 1, fF: 3, tR: 3, tF: 3, isCapture: false },
+  // White Pawn e4xd5 (Capture)
+  { fR: 4, fF: 4, tR: 3, tF: 3, isCapture: true },
+  // Black Queen d8xd5 (Capture)
+  { fR: 0, fF: 3, tR: 3, tF: 3, isCapture: true }
+];
 
-  if (knight && pawn) {
-    animCtx.animateLightningStrike(knight.userData.rank, knight.userData.file, pawn.userData.rank, pawn.userData.file, () => {
-      // 2. Erase the target piece to clear the square
-      animCtx.animateCapture(pawn, () => {
-         // 3. Jump the winning piece into the now-cleared square
-         animCtx.animateJump(knight, pawn.userData.rank, pawn.userData.file, () => {});
-      });
-    });
+let step = 0;
+
+function nextMove() {
+  if (step >= moves.length) {
+     setTimeout(() => {
+        // Reset or just stop
+        console.log("Simulation complete.");
+     }, 2000);
+     return;
   }
   
-}, 3000);
+  const m = moves[step];
+  const actor = pieces.find(p => p.userData.rank === m.fR && p.userData.file === m.fF);
+  const target = pieces.find(p => p.userData.rank === m.tR && p.userData.file === m.tF);
+  
+  if (!actor) {
+    console.error("Actor not found for move", m);
+    step++;
+    nextMove();
+    return;
+  }
+
+  // 1. Board calculates path
+  animCtx.animateLightningStrike(m.fR, m.fF, m.tR, m.tF, () => {
+     if (m.isCapture && target) {
+        // 2. Destroy victim if capture
+        animCtx.animateCapture(target, () => {
+           // Remove from local tracked array
+           const idx = pieces.indexOf(target);
+           if(idx > -1) pieces.splice(idx, 1);
+           
+           // 3. Jump to location
+           animCtx.animateJump(actor, m.tR, m.tF, () => {
+              step++;
+              setTimeout(nextMove, 800); // Wait 0.8s before next sequence
+           });
+        });
+     } else {
+        // 2. Just jump to location
+        animCtx.animateJump(actor, m.tR, m.tF, () => {
+           step++;
+           setTimeout(nextMove, 800); 
+        });
+     }
+  });
+}
+
+// Start simulation sequence after 2s
+setTimeout(nextMove, 2000);
 
 // Expose API module
 window.ChessVisualizer = {
