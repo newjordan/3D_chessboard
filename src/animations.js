@@ -110,7 +110,7 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       const traceMat = new THREE.ShaderMaterial({
         uniforms: {
            uProgress: { value: 0.0 },
-           uLength: { value: 0.35 }, // 35% trailing length
+           uLength: { value: 0.85 }, // 85% trailing length for massive electricity drag
            color: { value: new THREE.Color(0x00ffff) }
         },
         vertexShader: `
@@ -128,8 +128,10 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
            void main() {
              float dist = uProgress - vUv;
              if (dist >= 0.0 && dist <= uLength) {
-                float alpha = 1.0 - (dist / uLength);
-                gl_FragColor = vec4(color, alpha);
+                // Non-linear fade so the head is extremely bright and the tail lingers
+                float alpha = pow(1.0 - (dist / uLength), 1.5);
+                // Multiplying color by 3.0 to severely trigger the UnrealBloomPass
+                gl_FragColor = vec4(color * 3.0, alpha);
              } else {
                 gl_FragColor = vec4(0.0);
              }
@@ -145,7 +147,7 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       // Crawl slowly along the path
       tl.to(traceMat.uniforms.uProgress, {
-        value: 1.0 + 0.35, // 1.0 + length
+        value: 1.0 + 0.85, // 1.0 + new length
         duration: 1.2,
         ease: "power1.inOut"
       });
