@@ -54,30 +54,46 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           </p>
         </div>
 
-        {/* Prize Alert */}
-        <div className="border border-border-custom p-5 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 soft-shadow bg-white/[0.01]">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
-              <Wallet size={18} className="text-accent" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-col">
-                <span className="text-sm font-bold">Monthly Prize Disbursement</span>
-                <span className="technical-label text-[10px] opacity-60">Payout Cycle: Monthly / GMT-4</span>
+        {/* Prize Alert — Open division only */}
+        {division === "open" ? (
+          <div className="border border-border-custom p-5 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 soft-shadow bg-white/[0.01]">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
+                <Wallet size={18} className="text-accent" />
               </div>
-              <Countdown targetDate="2026-05-13T00:00:00Z" />
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold">Monthly Prize Disbursement</span>
+                  <span className="technical-label text-[10px] opacity-60">Payout Cycle: Monthly / GMT-4 · Open Division Only</span>
+                </div>
+                <Countdown targetDate="2026-05-13T00:00:00Z" />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+               <div className="text-right">
+                  <span className="font-mono text-sm font-bold">$150.00</span>
+                  <span className="technical-label ml-1 block opacity-40">Total</span>
+               </div>
+               <Link href="/submit" className="px-4 py-2 bg-foreground text-background font-bold text-xs uppercase tracking-tight whitespace-nowrap">
+                  Claim a Slot
+               </Link>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-             <div className="text-right">
-                <span className="font-mono text-sm font-bold">$150.00</span>
-                <span className="technical-label ml-1 block opacity-40">Total</span>
-             </div>
-             <Link href="/submit" className="px-4 py-2 bg-foreground text-background font-bold text-xs uppercase tracking-tight whitespace-nowrap">
-                Claim a Slot
-             </Link>
+        ) : (
+          <div className="border border-border-custom p-5 sm:p-8 flex items-center gap-4 bg-white/[0.01]">
+            <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-border-custom flex items-center justify-center shrink-0">
+              <Trophy size={18} className="text-white/20" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-bold text-white/60">No prize pool for this division</span>
+              <span className="technical-label text-[10px] opacity-40">
+                The $150 monthly prize applies to the{" "}
+                <Link href="/leaderboard?division=open" className="text-accent hover:underline">Open division</Link>{" "}
+                only.
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Division Tabs */}
         <div className="flex items-center gap-0 border border-border-custom w-fit">

@@ -92,7 +92,7 @@ export default async function Home() {
                   </div>
                   
                   <div className="relative flex flex-col gap-1">
-                    <span className="technical-label text-[10px] text-accent font-bold tracking-widest uppercase">Tournament Reward</span>
+                    <span className="technical-label text-[10px] text-accent font-bold tracking-widest uppercase">Tournament Reward · Open Division</span>
                     <div className="flex items-baseline gap-2">
                        <span className="text-5xl font-bold tracking-tight text-foreground">$150.00</span>
                     </div>
