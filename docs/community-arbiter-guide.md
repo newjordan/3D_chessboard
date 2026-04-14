@@ -27,8 +27,6 @@ Your key starts as "Pending" until an admin marks it as **Trusted**. Once truste
 
 ```bash
 docker run \
-  -e API_URL=https://api.chessagents.dev \
-  -e WORKER_PUBLIC_KEY="<your-public-key>" \
   -e WORKER_PRIVATE_KEY="<your-private-key>" \
   ghcr.io/jaymaart/chess-agents-arbiter:latest
 ```
@@ -46,8 +44,6 @@ git clone https://github.com/jaymaart/chess-agents-arbiter
 cd chess-arbiter
 npm install && npm run build
 
-API_URL=https://api.chessagents.dev \
-WORKER_PUBLIC_KEY="<your-public-key>" \
 WORKER_PRIVATE_KEY="<your-private-key>" \
 node dist/index.js
 ```

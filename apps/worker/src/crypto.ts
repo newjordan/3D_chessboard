@@ -1,5 +1,11 @@
 import crypto from "crypto";
 
+export function publicKeyFromPrivate(privateKeyPem: string): string {
+  const privateKey = crypto.createPrivateKey(privateKeyPem);
+  const publicKey = crypto.createPublicKey(privateKey);
+  return publicKey.export({ type: "spki", format: "pem" }).toString();
+}
+
 export function generateKeyPair(): { publicKey: string; privateKey: string } {
   const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519", {
     publicKeyEncoding: { type: "spki", format: "pem" },

@@ -98,8 +98,6 @@ export default async function RunPage() {
           <p className="text-[#00ff41]/60 text-sm">Once you have a trusted Arbiter Key from an admin, run with Docker (recommended):</p>
           <pre className="bg-black border border-[#00ff41]/20 rounded p-5 text-[#00ff41] text-sm overflow-x-auto">
 {`docker run \\
-  -e API_URL=https://api.chessagents.dev \\
-  -e WORKER_PUBLIC_KEY="<your-public-key>" \\
   -e WORKER_PRIVATE_KEY="<your-private-key>" \\
   ghcr.io/jaymaart/chess-agents-arbiter:latest`}
           </pre>
@@ -109,10 +107,7 @@ export default async function RunPage() {
 cd chess-arbiter
 npm install && npm run build
 
-API_URL=https://api.chessagents.dev \\
-WORKER_PUBLIC_KEY="<your-public-key>" \\
-WORKER_PRIVATE_KEY="<your-private-key>" \\
-node dist/index.js`}
+WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
           </pre>
         </section>
 
