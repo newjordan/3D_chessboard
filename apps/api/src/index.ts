@@ -1255,6 +1255,12 @@ app.post("/api/broker/submit", authorizeBrokerOrRunner, async (req, res) => {
       winnerEngineId = match.defenderEngineId;
     }
 
+    const brokerMode = (req as any).brokerMode;
+    const runnerKey = (req as any).runnerKey;
+    const processedByValue = brokerMode === "runner" && runnerKey
+      ? `runner:${runnerKey.publicKey.slice(27, 60)}`
+      : `broker-${req.body.brokerId || "external"}`;
+
     // Atomically update Match, Engines, Ratings, and Games
     await prisma.$transaction([
       prisma.match.update({
@@ -1266,7 +1272,8 @@ app.post("/api/broker/submit", authorizeBrokerOrRunner, async (req, res) => {
           defenderScore: defenderScore,
           gamesCompleted: gameSubmissions.length,
           winnerEngineId,
-          pgnStorageKey: pgnKey
+          pgnStorageKey: pgnKey,
+          processedBy: processedByValue,
         }
       }),
       prisma.job.update({
@@ -1315,6 +1322,13 @@ app.post("/api/broker/submit", authorizeBrokerOrRunner, async (req, res) => {
       }),
       ...gameSubmissions.map((g: any) => prisma.game.create({ data: g }))
     ]);
+
+    if (brokerMode === "runner" && runnerKey) {
+      await prisma.runnerKey.update({
+        where: { id: runnerKey.id },
+        data: { jobsProcessed: { increment: 1 } },
+      });
+    }
 
     // Update global ranks asynchronously
     prisma.$executeRawUnsafe(`
