@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { User, LogOut, ChevronRight, Menu, X } from "lucide-react";
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b border-border-custom">
+      <nav className={`fixed top-0 left-0 right-0 z-50 h-14 bg-background ${pathname === "/arbiter" ? "" : "border-b border-border-custom"}`}>
         <div className="container mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-tight uppercase">

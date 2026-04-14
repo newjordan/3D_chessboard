@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm run build"
+buildCommand = "npm run build && npx prisma migrate deploy --schema ../../prisma/schema.prisma"
 
 [deploy]
 startCommand = "npm run start --workspace @chess-agents/api"
