@@ -21,20 +21,28 @@ export async function createPieces(scene, offset) {
     return new Promise((resolve, reject) => {
       // URL references the local Vite public mappings
       loader.load(`/models/styles/classic-lowpoly/models/white/${type}.glb`, (gltf) => {
-        // Collect all meshes in the GLB
-        const geometries = [];
+        let geometry = null;
         gltf.scene.traverse((child) => {
-          if (child.isMesh) {
-             child.updateMatrixWorld(true);
-             const geo = child.geometry.clone();
-             geo.applyMatrix4(child.matrixWorld);
-             geometries.push(geo); 
+          if (child.isMesh && !geometry) {
+             geometry = child.geometry.clone();
           }
         });
         
-        if (geometries.length > 0) {
-          let geometry = geometries[0];
+        if (geometry) {
+          geometry.computeBoundingBox();
+          let xLen = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
+          let yLen = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
+          let zLen = geometry.boundingBox.max.z - geometry.boundingBox.min.z;
           
+          // Dynamically stand the piece upright based on its longest dimension
+          if (xLen > yLen && xLen > zLen) {
+             // Laying along X axis
+             geometry.rotateZ(-Math.PI / 2);
+          } else if (zLen > yLen && zLen > xLen) {
+             // Laying along Z axis
+             geometry.rotateX(-Math.PI / 2);
+          }
+          // Now compute the bounds again after rotation
           geometry.computeBoundingBox();
           
           // NEVER translate X and Z using bounding box center, because asymmetrical pieces (Knights) will have offset bases!
