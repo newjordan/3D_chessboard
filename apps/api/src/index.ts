@@ -20,12 +20,29 @@ function obfuscateCode(code: string, language: string | null): string {
     try {
       return JavaScriptObfuscator.obfuscate(code, {
         compact: true,
+        // Control flow — max flattening breaks automated reversers
         controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 0.5,
+        controlFlowFlatteningThreshold: 1,
+        // Dead code noise — makes output ~2x larger, much harder to follow
+        deadCodeInjection: true,
+        deadCodeInjectionThreshold: 0.4,
+        // String transforms
         stringEncoding: true,
-        stringEncodingThreshold: 0.75,
-        renameGlobals: false, // keep globals safe for chess.js etc
-        deadCodeInjection: false,
+        stringEncodingThreshold: 1,
+        stringArray: true,
+        stringArrayEncoding: ["rc4"],
+        stringArrayThreshold: 1,
+        stringArrayRotate: true,
+        stringArrayShuffle: true,
+        // Identifier mangling
+        identifierNamesGenerator: "mangled-shuffled",
+        renameGlobals: false, // keep globals safe (process, Buffer, etc)
+        // Additional transforms that break deobfuscate.io patterns
+        transformObjectKeys: true,
+        unicodeEscapeSequence: false, // skip — makes files huge with no benefit
+        numbersToExpressions: true,
+        splitStrings: true,
+        splitStringsChunkLength: 5,
       }).getObfuscatedCode();
     } catch {
       // If obfuscation fails (e.g. syntax error in engine), return as-is
