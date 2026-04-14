@@ -13,29 +13,37 @@ async function preparePlacementMatches(versionId) {
     });
     if (!version)
         throw new Error("Engine version not found");
-    const opponents = await db_1.prisma.engine.findMany({
+    const allOpponents = await db_1.prisma.engine.findMany({
         where: {
             id: { not: version.engineId },
             status: db_1.EngineStatus.active,
-        },
-        take: 3,
-        orderBy: {
-            currentRating: "desc",
+            versions: {
+                some: { validationStatus: "passed" }
+            }
         },
     });
-    console.log(`Preparing ${opponents.length} placement matches for ${version.engine.name}`);
+    // Shuffle and pick 10
+    const opponents = allOpponents
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 10);
+    console.log(`Preparing placement matches for ${version.engine.name} against ${opponents.length} valid opponents`);
     for (const opponent of opponents) {
+        const defenderVersion = await db_1.prisma.engineVersion.findFirst({
+            where: { engineId: opponent.id, validationStatus: "passed" },
+            orderBy: { submittedAt: "desc" },
+        });
+        if (!defenderVersion) {
+            console.warn(`Skipping opponent ${opponent.name} - no passed version found despite filter.`);
+            continue;
+        }
         const match = await db_1.prisma.match.create({
             data: {
                 challengerVersionId: version.id,
                 challengerEngineId: version.engineId,
                 defenderEngineId: opponent.id,
-                defenderVersionId: (await db_1.prisma.engineVersion.findFirst({
-                    where: { engineId: opponent.id, validationStatus: "passed" },
-                    orderBy: { submittedAt: "desc" },
-                }))?.id || "",
+                defenderVersionId: defenderVersion.id,
                 matchType: db_1.MatchType.placement,
-                gamesPlanned: 3,
+                gamesPlanned: 2, // Symmetric 2-game series
                 timeControl: "40/60",
             },
         });

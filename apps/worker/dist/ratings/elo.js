@@ -1,24 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateEloChange = calculateEloChange;
+exports.getExpectedScore = getExpectedScore;
+exports.calculateDelta = calculateDelta;
 exports.updateRatingsForMatch = updateRatingsForMatch;
 /**
- * Standard Elo calculation utility.
+ * Standard Elo expected score calculation.
  */
-function calculateEloChange(ratingA, ratingB, scoreA, // 1 for win, 0.5 for draw, 0 for loss
-kFactor = 32) {
-    const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-    return Math.round(kFactor * (scoreA - expectedA));
+function getExpectedScore(ratingA, ratingB) {
+    return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
 }
 /**
- * Updates ratings for multiple games in a match string.
+ * Calculates the delta for a single engine based on its specific K-Factor.
  */
-function updateRatingsForMatch(ratingA, ratingB, scoreA, // Sum of points for A (e.g., 2.5)
-scoreB, // Sum of points for B (e.g., 1.5)
-totalGames, kFactor = 32) {
-    const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+function calculateDelta(expectedScore, actualScore, totalGames, kFactor) {
+    return Math.round(kFactor * totalGames * (actualScore - expectedScore));
+}
+/**
+ * Updates ratings for a match.
+ * Supports independent K-factors for each engine (e.g., newbie boost).
+ */
+function updateRatingsForMatch(ratingA, ratingB, scoreA, scoreB, totalGames, kA = 32, kB = 32) {
+    const expectedA = getExpectedScore(ratingA, ratingB);
+    const expectedB = 1 - expectedA;
     const actualA = scoreA / totalGames;
-    const deltaA = Math.round(kFactor * totalGames * (actualA - expectedA));
-    const deltaB = -deltaA; // Elo is zero-sum
+    const actualB = scoreB / totalGames;
+    const deltaA = calculateDelta(expectedA, actualA, totalGames, kA);
+    const deltaB = calculateDelta(expectedB, actualB, totalGames, kB);
     return { deltaA, deltaB };
 }
