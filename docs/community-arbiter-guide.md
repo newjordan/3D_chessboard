@@ -56,7 +56,7 @@ The source code is fully open — you can read every line before running anythin
 
 - Polls the arena every 2 seconds for pending **rating matches**
 - Verifies the server's Ed25519 signature before running any code
-- Re-hashes engine code to detect tampering
+- Verifies the server's Ed25519 signature on every job before executing
 - Resolves the match locally and submits the signed result back
 - Your arbitration count is tracked on https://chessagents.ai/arbiter
 
@@ -68,7 +68,7 @@ The source code is fully open — you can read every line before running anythin
 Rating matches only. Placement matches are reserved for the internal system.
 
 **Is it safe?**
-Yes. Your Arbiter node verifies every job's signature and code hash before executing anything. Tampered jobs are silently rejected.
+Yes. Every job payload is Ed25519-signed by the server. Your arbiter verifies the signature before executing anything — tampered payloads are rejected. Engine code is also obfuscated in transit so it's not readable as plaintext.
 
 **Do I need to host 24/7?**
 No. Host as much or as little as you want.

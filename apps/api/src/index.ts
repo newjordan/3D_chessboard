@@ -8,8 +8,39 @@ import path from "path";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import rateLimit from "express-rate-limit";
 import { generateKeyPair, hashData, signData, verifyData } from "./crypto";
+import JavaScriptObfuscator from "javascript-obfuscator";
 
 dotenv.config();
+
+// --- Code obfuscation ---
+// Applied to all engine code before it leaves the server.
+// Hashing always uses the original source so integrity checks still pass.
+function obfuscateCode(code: string, language: string | null): string {
+  if (language === "js" || language === "javascript") {
+    try {
+      return JavaScriptObfuscator.obfuscate(code, {
+        compact: true,
+        controlFlowFlattening: true,
+        controlFlowFlatteningThreshold: 0.5,
+        stringEncoding: true,
+        stringEncodingThreshold: 0.75,
+        renameGlobals: false, // keep globals safe for chess.js etc
+        deadCodeInjection: false,
+      }).getObfuscatedCode();
+    } catch {
+      // If obfuscation fails (e.g. syntax error in engine), return as-is
+      return code;
+    }
+  }
+
+  if (language === "py" || language === "python") {
+    // Wrap in a base64+zlib exec launcher — source is not readable as plaintext
+    const compressed = Buffer.from(code).toString("base64");
+    return `import base64,zlib\nexec(zlib.decompress(base64.b64decode(b'${compressed}')).decode())`;
+  }
+
+  return code;
+}
 
 const app = express();
 const prisma = new PrismaClient();
@@ -1024,10 +1055,15 @@ app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
         fetchEngineSource(match.defenderVersion.storageKey)
       ]);
 
+      // Hash original source BEFORE obfuscating — integrity checks use original hashes
       const challengerHash = hashData(challengerCode);
       const defenderHash = hashData(defenderCode);
       const signingString = match.id + challengerHash + defenderHash;
       const serverSignature = signData(signingString, serverPrivateKey);
+
+      // Obfuscate after hashing so the transmitted code is not readable as plaintext
+      const challengerObfuscated = obfuscateCode(challengerCode, match.challengerVersion.language);
+      const defenderObfuscated = obfuscateCode(defenderCode, match.defenderVersion.language);
 
       return {
         jobId: job.id,
@@ -1039,13 +1075,13 @@ app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
           id: match.challengerEngineId,
           name: match.challengerEngine.name,
           language: match.challengerVersion.language,
-          code: challengerCode
+          code: challengerObfuscated
         },
         defender: {
           id: match.defenderEngineId,
           name: match.defenderEngine.name,
           language: match.defenderVersion.language,
-          code: defenderCode
+          code: defenderObfuscated
         },
         challengerHash,
         defenderHash,

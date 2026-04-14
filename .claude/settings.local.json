@@ -38,7 +38,11 @@
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
       "WebFetch(domain:chessagents.ai)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(cp D:/Github/chess-arbiter/src/broker-runner.ts D:/Github/chess-agents-arbiter/src/broker-runner.ts)",
+      "Bash(cp D:/Github/chess-arbiter/src/crypto.ts D:/Github/chess-agents-arbiter/src/crypto.ts)",
+      "Bash(cp D:/Github/chess-arbiter/README.md D:/Github/chess-agents-arbiter/README.md)",
+      "Bash(cp D:/Github/chess-arbiter/Dockerfile D:/Github/chess-agents-arbiter/Dockerfile)"
     ]
   }
 }

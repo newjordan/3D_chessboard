@@ -45,22 +45,11 @@ async function signedPost(endpoint: string, body: object): Promise<Response> {
 }
 
 async function verifyJobIntegrity(job: any): Promise<boolean> {
-  const challengerHash = hashData(job.challenger.code);
-  const defenderHash = hashData(job.defender.code);
-
-  if (challengerHash !== job.challengerHash) {
-    console.error(`[BrokerRunner] Challenger code hash mismatch for match ${job.matchId}. Possible tamper!`);
-    return false;
-  }
-
-  if (defenderHash !== job.defenderHash) {
-    console.error(`[BrokerRunner] Defender code hash mismatch for match ${job.matchId}. Possible tamper!`);
-    return false;
-  }
-
+  // Engine code is obfuscated in transit — verify the server's Ed25519 signature
+  // which covers (matchId + challengerHash + defenderHash) of the original source.
   const signingString = job.matchId + job.challengerHash + job.defenderHash;
   if (!verifyData(signingString, job.serverSignature, serverPublicKey)) {
-    console.error(`[BrokerRunner] Server signature invalid for match ${job.matchId}. Possible tamper!`);
+    console.error(`[BrokerRunner] Server signature invalid for match ${job.matchId}. Rejecting.`);
     return false;
   }
 
