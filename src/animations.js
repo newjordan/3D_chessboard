@@ -164,13 +164,30 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       boardGroup.add(traceLine);
 
       // Crawl slowly along the path
-      tl.to(traceMat.uniforms.uProgress, {
-        value: 1.0 + 0.85, // 1.0 + length
+      const proxy = { p: 0 };
+      tl.to(proxy, {
+        p: 1.0 + 0.85, // 1.0 + uLength
         duration: 1.2,
-        ease: "power1.inOut"
+        ease: "power1.inOut",
+        onUpdate: () => {
+           traceMat.uniforms.uProgress.value = proxy.p;
+           // Circle tracks the exact head of the bolt which rests at 1.0
+           let head = Math.min(proxy.p, 1.0);
+           
+           if (totalDist > 0) {
+               const split = dist1 / totalDist;
+               if (head <= split) {
+                   const t = (split === 0) ? 1 : head / split;
+                   bracket.position.x = snapCornerX;
+                   bracket.position.z = THREE.MathUtils.lerp(snapCornerZ, targetCornerZ, t);
+               } else {
+                   const t = (head - split) / (1.0 - split);
+                   bracket.position.x = THREE.MathUtils.lerp(snapCornerX, targetCornerX, t);
+                   bracket.position.z = targetCornerZ;
+               }
+           }
+        }
       });
-
-      tl.to(bracket.position, { x: targetCornerX, z: targetCornerZ, duration: 1.2, ease: "power1.inOut" }, "<");
 
       // 5. Target Lock (Destination Bracket explodes out)
       tl.to(bracket.position, { x: endPos.x, z: endPos.z, duration: 0.1, ease: "power1.inOut" });
