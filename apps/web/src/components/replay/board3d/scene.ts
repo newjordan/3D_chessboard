@@ -58,7 +58,8 @@ export function setupScene(canvas: HTMLCanvasElement): SceneContext {
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.22, 0.3, 0.25));
+  // Keep the neon style, but avoid over-blooming bright cyan highlights.
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.1, 0.18, 0.55));
   const dotPass = new ShaderPass(DotMatrixShader);
   dotPass.uniforms.resolution.value.set(w, h);
   composer.addPass(dotPass);

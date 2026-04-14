@@ -6,6 +6,70 @@ const B1 = OFFSET + 0.08;
 const B2 = OFFSET + 0.3;
 const B3 = B2 + 0.6;
 
+function createBoardSurface(): THREE.Mesh {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      darkColor: { value: new THREE.Color(0x020914) },
+      lightColor: { value: new THREE.Color(0x061223) },
+      accentColor: { value: new THREE.Color(0x49b7ff) },
+      dotDensity: { value: 34.0 }, // per square, tuned for a fine micro-matrix
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 darkColor;
+      uniform vec3 lightColor;
+      uniform vec3 accentColor;
+      uniform float dotDensity;
+      varying vec2 vUv;
+
+      float edgePulse(float d, float width) {
+        return 1.0 - smoothstep(width, width + 0.01, d);
+      }
+
+      void main() {
+        vec2 board = vUv * 8.0;
+        vec2 square = floor(board);
+        vec2 squareUv = fract(board);
+        float parity = mod(square.x + square.y, 2.0);
+
+        vec3 base = mix(darkColor, lightColor, parity);
+
+        vec2 cell = fract(board * dotDensity);
+        float dist = length(cell - 0.5);
+        float aa = fwidth(dist);
+        float microDot = 1.0 - smoothstep(0.16 - aa, 0.33 + aa, dist);
+
+        float gx = min(squareUv.x, 1.0 - squareUv.x);
+        float gy = min(squareUv.y, 1.0 - squareUv.y);
+        float majorGrid = max(edgePulse(gx, 0.02), edgePulse(gy, 0.02));
+
+        vec2 centerUv = vUv * 2.0 - 1.0;
+        float centerFalloff = 1.0 - clamp(dot(centerUv, centerUv) * 0.22, 0.0, 0.24);
+
+        vec3 color = base;
+        color *= 0.90 + microDot * 0.16;
+        color += accentColor * (microDot * 0.11 + majorGrid * 0.22) * centerFalloff;
+
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+    transparent: false,
+    depthWrite: true,
+  });
+
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 8, 1, 1), material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = -0.01;
+  mesh.renderOrder = -1;
+  return mesh;
+}
+
 function pushBox(s: number): THREE.Vector3[] {
   return [
     new THREE.Vector3(-s, 0, -s), new THREE.Vector3(s, 0, -s),
@@ -113,6 +177,9 @@ function addCoordinates(parent: THREE.Group, whiteName: string, blackName: strin
 export function createBoard(scene: THREE.Scene, whiteName: string, blackName: string): { boardGroup: THREE.Group } {
   const masterGroup = new THREE.Group();
   const boardGroup = new THREE.Group();
+
+  // Shader-first board substrate with fine dot-matrix detail.
+  boardGroup.add(createBoardSurface());
 
   // Grid lines
   const gridPts: THREE.Vector3[] = [];

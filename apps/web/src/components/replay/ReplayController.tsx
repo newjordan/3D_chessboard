@@ -36,11 +36,12 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   const [selectedGameIndex, setSelectedGameIndex] = useState(0);
   const [currentPly, setCurrentPly] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1000);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [viewMode, setViewMode] = useState<'2D' | '3D'>('2D');
   const moveListRef = useRef<HTMLDivElement>(null);
   const board3dRef = useRef<Board3DHandle>(null);
   const prevPlyRef = useRef(0);
+  const speedOptions = [1, 2, 3, 4] as const;
 
   const gamesList = useMemo(() => {
     if (!pgn) return [];
@@ -97,13 +98,20 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
 
     if (currentPly === prev + 1 && currentPly > 0) {
       const move = history[currentPly - 1];
-      board3dRef.current.applyMove(move.from, move.to, !!move.captured, move.flags ?? '', move.promotion ?? undefined);
+      board3dRef.current.applyMove(
+        move.from,
+        move.to,
+        !!move.captured,
+        move.flags ?? '',
+        move.promotion ?? undefined,
+        playbackRate
+      );
     } else {
       const temp = new Chess();
       for (let i = 0; i < currentPly; i++) temp.move(history[i]);
       board3dRef.current.resetToPosition(temp.fen());
     }
-  }, [currentPly, viewMode, history]);
+  }, [currentPly, viewMode, history, playbackRate]);
 
   // Sync 3D board when switching to 3D view
   useEffect(() => {
@@ -117,18 +125,19 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const nextMove = history[currentPly];
+    const requestedPlaybackMs = 1000 / playbackRate;
     const minimum3DDelay = nextMove?.captured
-      ? BOARD3D_CAPTURE_DURATION_MS
-      : BOARD3D_MOVE_DURATION_MS;
+      ? BOARD3D_CAPTURE_DURATION_MS / playbackRate
+      : BOARD3D_MOVE_DURATION_MS / playbackRate;
     const effectivePlaybackSpeed = viewMode === '3D'
-      ? Math.max(playbackSpeed, minimum3DDelay)
-      : playbackSpeed;
+      ? Math.max(requestedPlaybackMs, minimum3DDelay)
+      : requestedPlaybackMs;
 
     if (isPlaying && currentPly < history.length) {
       interval = setInterval(() => setCurrentPly((prev) => prev + 1), effectivePlaybackSpeed);
     } else { setIsPlaying(false); }
     return () => clearInterval(interval);
-  }, [isPlaying, currentPly, history, playbackSpeed, viewMode]);
+  }, [isPlaying, currentPly, history, playbackRate, viewMode]);
 
   const boardState = useMemo(() => {
     const tempChess = new Chess();
@@ -247,21 +256,19 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
-               {viewMode === '3D' ? (
-                 <div className="text-[10px] technical-label opacity-40 uppercase tracking-widest">
-                   Animation-Locked
-                 </div>
-               ) : (
-                 <select 
-                   value={playbackSpeed} 
-                   onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                   className="bg-transparent border-none text-[10px] technical-label cursor-pointer hover:text-white transition-colors outline-none"
-                 >
-                   <option value={2000}>0.5x</option>
-                   <option value={1000}>1.0x</option>
-                   <option value={500}>2.0x</option>
-                 </select>
-               )}
+               <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 rounded-md p-1">
+                 {speedOptions.map((speed) => (
+                   <button
+                     key={speed}
+                     onClick={() => setPlaybackRate(speed)}
+                     className={`px-2 py-1 text-[9px] technical-label rounded transition-colors ${
+                       playbackRate === speed ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
+                     }`}
+                   >
+                     {speed}x
+                   </button>
+                 ))}
+               </div>
                <div className="font-mono text-[11px] font-bold opacity-40">
                  {currentPly}<span className="opacity-20 mx-1">/</span>{history.length}
                </div>

@@ -3,6 +3,12 @@ import { gsap } from 'gsap';
 import type { PieceInstance } from './types';
 import { squareToXZ } from './squareUtils';
 
+let replayAnimationSpeed = 1;
+
+export function setReplayAnimationSpeed(speedMultiplier: number): void {
+  replayAnimationSpeed = Math.max(speedMultiplier, 0.25);
+}
+
 function createBracket(): THREE.Group {
   const group = new THREE.Group();
   const mat = new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 1, depthTest: false });
@@ -41,6 +47,7 @@ export function animateLightningStrike(
   const start = squareToXZ(fromSquare);
   const end = squareToXZ(toSquare);
   const tl = gsap.timeline({ onComplete });
+  tl.timeScale(replayAnimationSpeed);
 
   const bracket = createBracket();
   bracket.position.set(start.x, 0.1, start.z);
@@ -139,6 +146,7 @@ export function animateCapture(
   const px = instance.group.position.x;
   const pz = instance.group.position.z;
   const tl = gsap.timeline({ onComplete });
+  tl.timeScale(replayAnimationSpeed);
 
   const borderMat = new THREE.LineBasicMaterial({ color: 0x00ff77, opacity: 0, transparent: true });
   const border = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.9, 0.9)), borderMat);
@@ -185,6 +193,7 @@ export function animateCapture(
     const dist1p = 0.5 + Math.floor(Math.random() * 2);
     const dist2p = 1.0 + Math.floor(Math.random() * 3);
     const pTl = gsap.timeline();
+    pTl.timeScale(replayAnimationSpeed);
     pTl.to(mesh.position, { x: d1.x * dist1p, z: d1.z * dist1p, duration: dist1p * 0.15, ease: 'none' }, Math.random() * 0.2);
     pTl.to(mesh.position, { x: d1.x * dist1p + d2.x * dist2p, z: d1.z * dist1p + d2.z * dist2p, duration: dist2p * 0.15, ease: 'none' });
     pTl.to(pMat, { opacity: 0, duration: 0.3 }, '-=0.3');
@@ -211,6 +220,7 @@ export function animateJump(
 ): void {
   const { x, z } = squareToXZ(toSquare);
   const tl = gsap.timeline({ onComplete });
+  tl.timeScale(replayAnimationSpeed);
   tl.to(instance.group.position, { x, z, duration: 0.5, ease: 'power1.inOut' }, 0);
   tl.to(instance.group.position, { y: 1.5, duration: 0.25, ease: 'power1.out', yoyo: true, repeat: 1 }, 0);
 }

@@ -30,6 +30,8 @@
     "three": "^0.183.2"
   },
   "devDependencies": {
+    "@next/swc-linux-x64-gnu": "^15.1.4",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -7,7 +7,7 @@ import type { Board3DHandle, PieceInstance } from './types';
 import { setupScene } from './scene';
 import { createBoard } from './board';
 import { loadPieceGeometries, initPiecesFromFen, clearPieces, type Geometries } from './pieces';
-import { animateLightningStrike, animateCapture, animateJump } from './animations';
+import { animateLightningStrike, animateCapture, animateJump, setReplayAnimationSpeed } from './animations';
 import { squareToXZ } from './squareUtils';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -88,6 +88,7 @@ export function useBoard3D(whiteName: string, blackName: string) {
       isCapture: boolean,
       flags: string,
       promotion: string | undefined,
+      speedMultiplier: number,
       version: number
     ) =>
       new Promise<void>((resolve) => {
@@ -143,6 +144,7 @@ export function useBoard3D(whiteName: string, blackName: string) {
           }
         }
 
+        setReplayAnimationSpeed(speedMultiplier);
         animateLightningStrike(from, to, effectsGroup, () => {
           if (!isCurrentVersion(version)) {
             resolve();
@@ -217,13 +219,13 @@ export function useBoard3D(whiteName: string, blackName: string) {
     tick();
 
     handleRef.current = {
-      applyMove(from, to, isCapture, flags, _promotion) {
+      applyMove(from, to, isCapture, flags, _promotion, speedMultiplier = 1) {
         const version = queueVersion;
         moveChain = moveChain
           .catch(() => undefined)
           .then(async () => {
             await readyPromise;
-            return runMove(from, to, isCapture, flags, _promotion, version);
+            return runMove(from, to, isCapture, flags, _promotion, speedMultiplier, version);
           });
       },
 
