@@ -191,7 +191,7 @@ WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
               { q: "Do I need an account?", a: "Yes. Arbiter keys are tied to your Chess Agents account. Sign up, then visit #become-an-arbiter on Discord to request a key." },
               { q: "How do I get an Arbiter key?", a: "After signing up, reach out to an admin in Discord. They generate a keypair — your private key is shown exactly once and never stored on the server, so copy it before closing. Your public key is what identifies you on the network." },
               { q: "What hardware do I need?", a: "Anything that can run Docker or Node.js 18+. A basic VPS or spare laptop is sufficient. No GPU required." },
-              { q: "What matches will I arbitrate?", a: "Rating matches only. Placement matches (for newly validated engines) are reserved for the internal system." },
+              { q: "What matches will I arbitrate?", a: "Rating matches by default. Admins can additionally grant placement match access to specific Arbiter keys." },
               { q: "What if my node submits a bad result?", a: "The server validates all submissions — game count, player identity, and score integrity. Bad submissions are rejected. Repeated failures can result in key revocation." },
               { q: "Is my private key safe?", a: "Your private key is shown exactly once at issuance and never stored on the server. Treat it like a password. If compromised, contact an admin to revoke and reissue." },
               { q: "What happens if someone tampers with my job?", a: "Your arbiter verifies the server's Ed25519 signature before executing. Any tampered payload is silently rejected. Engine code is also obfuscated and RSA-encrypted in transit." },

@@ -8,18 +8,18 @@ Help power the arena by **arbitrating** chess matches on your machine. Every mat
 
 - A Chess Agents account → https://chessagents.ai
 - Node.js 18+ **or** Docker installed
-- Get your **Arbiter Key** issued in the Discord channel
+- Request your **Arbiter Key** via the dashboard (https://chessagents.ai/dashboard?tab=arbiter)
 
 ---
 
-## 🔑 Step 1 — Get Your Arbiter Key
+## 🔑 Step 1 — Request Your Arbiter Key
 
-Visit the [Arbiter Page](https://chessagents.ai/arbiter). They'll generate a keypair and show you:
+1. Sign in at [chessagents.ai](https://chessagents.ai)
+2. Go to your [Dashboard → Arbiter tab](https://chessagents.ai/dashboard?tab=arbiter)
+3. Submit a key request (optional note helps admins approve faster)
+4. An admin will review and generate your keypair. Your **private key is shown once only** — copy it before closing.
 
-- **Public Key** — your Arbiter identity (stored on the server)
-- **Private Key** — shown **once only**, never stored. Copy it before closing the window.
-
-Your key starts as "Pending" until an admin marks it as **Trusted**. Once trusted, you can start fetching and resolving bouts.
+Your key starts as **Pending** until an admin marks it as **Trusted**. Once trusted, your node will automatically start receiving match jobs.
 
 ---
 
@@ -41,7 +41,7 @@ Requires Node.js 18+ and Python 3.
 
 ```bash
 git clone https://github.com/jaymaart/chess-agents-arbiter
-cd chess-arbiter
+cd chess-agents-arbiter
 npm install && npm run build
 
 WORKER_PRIVATE_KEY="<your-private-key>" \
@@ -54,18 +54,18 @@ The source code is fully open — you can read every line before running anythin
 
 ## ✅ What it does
 
-- Polls the arena every 2 seconds for pending **rating matches**
-- Verifies the server's Ed25519 signature before running any code
-- Verifies the server's Ed25519 signature on every job before executing
+- Polls the arena every 2 seconds for pending match jobs
+- Verifies the server's Ed25519 signature before executing anything
+- Decrypts engine code using your RSA-4096 private key
 - Resolves the match locally and submits the signed result back
-- Your arbitration count is tracked on https://chessagents.ai/arbiter
+- Your bouts resolved count is tracked on your [dashboard](https://chessagents.ai/dashboard?tab=arbiter)
 
 ---
 
 ## ❓ FAQ
 
 **What matches do I arbitrate?**
-Rating matches only. Placement matches are reserved for the internal system.
+Rating matches by default. Admins can additionally grant placement match access per key.
 
 **Is it safe?**
 Yes. Every job payload is Ed25519-signed by the server. Your arbiter verifies the signature before executing anything — tampered payloads are rejected. Engine code is obfuscated and then encrypted with your RSA-4096 public key (AES-256-GCM + RSA-OAEP hybrid) before dispatch, so only your private key can decrypt it. No one else can read the engine code you receive.
