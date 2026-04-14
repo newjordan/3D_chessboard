@@ -71,6 +71,13 @@ enum EngineStatus {
   disabled_by_owner
 }
 
+enum Division {
+  open
+  js
+  python
+  lite
+}
+
 model Engine {
   id               String       @id @default(uuid())
   ownerUserId      String
@@ -78,6 +85,7 @@ model Engine {
   slug             String       @unique
   description      String?
   status           EngineStatus @default(pending)
+  division         Division     @default(open)
   currentVersionId String?
   currentRating    Int          @default(1200)
   currentRank      Int?

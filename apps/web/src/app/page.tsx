@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const leaderboardData = await Promise.race([
-    ApiClient.getLeaderboard(1, 5),
+    ApiClient.getLeaderboard(1, 5, "open"),
     new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
   ]).catch(() => ({ engines: [], total: 0, page: 1, limit: 5 }));
   const topEngines = leaderboardData.engines || [];

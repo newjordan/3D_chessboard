@@ -615,12 +615,17 @@ app.get("/api/leaderboard", async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
     const skip = (page - 1) * limit;
+    const VALID_DIVISIONS = ["open", "js", "python", "lite"];
+    const divisionFilter = req.query.division && VALID_DIVISIONS.includes(req.query.division as string)
+      ? { division: req.query.division as any }
+      : {};
 
     const [engines, total] = await Promise.all([
       prisma.engine.findMany({
-        where: { 
+        where: {
           status: "active",
-          gamesPlayed: { gt: 0 } 
+          gamesPlayed: { gt: 0 },
+          ...divisionFilter,
         },
         orderBy: { currentRating: "desc" },
         skip,
@@ -635,11 +640,12 @@ app.get("/api/leaderboard", async (req, res) => {
           },
         },
       }),
-      prisma.engine.count({ 
-        where: { 
+      prisma.engine.count({
+        where: {
           status: "active",
-          gamesPlayed: { gt: 0 } 
-        } 
+          gamesPlayed: { gt: 0 },
+          ...divisionFilter,
+        },
       }),
     ]);
 
@@ -801,12 +807,16 @@ const upload = multer({ storage: multer.memoryStorage() });
 // 7. Submit Engine
 app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req, res) => {
   try {
-    const { name, ownerUserId, ownerUsername, ownerName, ownerEmail, ownerImage, generationModel } = req.body;
+    const { name, ownerUserId, ownerUsername, ownerName, ownerEmail, ownerImage, generationModel, division } = req.body;
     const file = req.file;
 
     if (!file || !name || !ownerUserId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+
+    const VALID_DIVISIONS = ["open", "js", "python", "lite"] as const;
+    type DivisionType = typeof VALID_DIVISIONS[number];
+    const resolvedDivision: DivisionType = VALID_DIVISIONS.includes(division) ? division : "open";
 
     // Validate file type
     const ext = path.extname(file.originalname).toLowerCase();
@@ -817,6 +827,17 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
     // Validate engine name
     if (typeof name !== "string" || name.trim().length === 0 || name.length > MAX_ENGINE_NAME_LENGTH) {
       return res.status(400).json({ error: `Engine name must be 1-${MAX_ENGINE_NAME_LENGTH} characters` });
+    }
+
+    // Validate division rules
+    if (resolvedDivision === "js" && ext !== ".js") {
+      return res.status(400).json({ error: "The JS division only accepts .js files." });
+    }
+    if (resolvedDivision === "python" && ext !== ".py") {
+      return res.status(400).json({ error: "The Python division only accepts .py files." });
+    }
+    if (resolvedDivision === "lite" && file.size > 200 * 1024) {
+      return res.status(400).json({ error: "The Lite division only accepts files under 200KB." });
     }
 
     const buffer = file.buffer;
@@ -888,6 +909,7 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
           slug,
           ownerUserId,
           status: "active",
+          division: resolvedDivision,
         },
       });
     }

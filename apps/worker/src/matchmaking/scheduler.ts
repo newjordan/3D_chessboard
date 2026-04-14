@@ -64,6 +64,14 @@ export async function scheduleMatches(): Promise<number> {
 
     if (activeEngines.length < 2) return 0;
 
+    // Group engines by division — matches only happen within the same division
+    const byDivision = new Map<string, typeof activeEngines>();
+    for (const engine of activeEngines) {
+      const div = (engine as any).division ?? "open";
+      if (!byDivision.has(div)) byDivision.set(div, []);
+      byDivision.get(div)!.push(engine);
+    }
+
   // Check how many pending/processing jobs exist
   const activeJobs = await prisma.job.count({
     where: {
@@ -77,11 +85,12 @@ export async function scheduleMatches(): Promise<number> {
 
   const candidates: EnginePairCandidate[] = [];
 
-  // 1. Generate all technically valid pairs
-  for (let i = 0; i < activeEngines.length; i++) {
-    for (let j = i + 1; j < activeEngines.length; j++) {
-      const a = activeEngines[i];
-      const b = activeEngines[j];
+  // 1. Generate all technically valid pairs — only within the same division
+  for (const divisionEngines of byDivision.values()) {
+  for (let i = 0; i < divisionEngines.length; i++) {
+    for (let j = i + 1; j < divisionEngines.length; j++) {
+      const a = divisionEngines[i];
+      const b = divisionEngines[j];
 
       // Anti-win-trading
       if (a.ownerUserId === b.ownerUserId) continue;
@@ -99,6 +108,7 @@ export async function scheduleMatches(): Promise<number> {
       candidates.push({ engineA: a, engineB: b, score });
     }
   }
+  } // end byDivision loop
 
   // 2. Sort by score descending
   candidates.sort((a, b) => b.score - a.score);

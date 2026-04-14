@@ -13,10 +13,26 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
 
-export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+const DIVISIONS = [
+  { value: "open",   label: "Open" },
+  { value: "js",     label: "JS" },
+  { value: "python", label: "Python" },
+  { value: "lite",   label: "Lite" },
+] as const;
+
+type DivisionValue = typeof DIVISIONS[number]["value"];
+
+export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ page?: string; division?: string }> }) {
   const params = await searchParams;
   const currentPage = Math.max(1, parseInt(params.page || "1"));
-  const { engines, total, page, limit } = await ApiClient.getLeaderboard(currentPage, PAGE_SIZE).catch(() => ({
+  const division: DivisionValue = (DIVISIONS.map(d => d.value) as string[]).includes(params.division ?? "")
+    ? (params.division as DivisionValue)
+    : "open";
+
+  const { engines, total, page, limit } = await Promise.race([
+    ApiClient.getLeaderboard(currentPage, PAGE_SIZE, division),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+  ]).catch(() => ({
     engines: [],
     total: 0,
     page: 1,
@@ -63,9 +79,26 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           </div>
         </div>
 
+        {/* Division Tabs */}
+        <div className="flex items-center gap-0 border border-border-custom w-fit">
+          {DIVISIONS.map((d) => (
+            <Link
+              key={d.value}
+              href={`/leaderboard?division=${d.value}`}
+              className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider transition-all border-r border-border-custom last:border-r-0 ${
+                division === d.value
+                  ? "bg-foreground text-background"
+                  : "hover:bg-white/[0.04] text-white/50"
+              }`}
+            >
+              {d.label}
+            </Link>
+          ))}
+        </div>
+
         {/* Stats bar */}
         <div className="flex items-center justify-between text-[10px] technical-label opacity-40 px-1">
-          <span>{total} agents registered</span>
+          <span>{total} agents in {DIVISIONS.find(d => d.value === division)?.label} division</span>
           <span>Page {page} of {totalPages}</span>
         </div>
 

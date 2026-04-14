@@ -53,6 +53,14 @@ export function SubmitForm() {
   const [submissionType, setSubmissionType] = useState<"new" | "update">("new");
   const [userEngines, setUserEngines] = useState<any[]>([]);
   const [selectedEngineId, setSelectedEngineId] = useState("");
+  const [division, setDivision] = useState<"open" | "js" | "python" | "lite">("open");
+
+  const DIVISIONS = [
+    { value: "open", label: "Open", desc: "Any language, any size. Default arena." },
+    { value: "js", label: "JS Only", desc: "JavaScript engines only (.js files)." },
+    { value: "python", label: "Python Only", desc: "Python engines only (.py files)." },
+    { value: "lite", label: "Lite (< 200KB)", desc: "Either language, file must be under 200KB." },
+  ] as const;
 
   const [validation, setValidation] = useState<ValidationState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -170,6 +178,7 @@ export function SubmitForm() {
       formData.append("file", file);
       formData.append("name", engineName);
       formData.append("generationModel", finalModel);
+      formData.append("division", division);
       if (submissionType === "update" && selectedEngineId) {
         formData.append("engineId", selectedEngineId);
       }
@@ -442,6 +451,42 @@ export function SubmitForm() {
                     <option key={eng.id} value={eng.id} className="bg-black">{eng.name} (Elo: {eng.currentRating})</option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {submissionType === "new" && (
+              <div className="flex flex-col gap-3">
+                <label className="technical-label text-white/40">Division</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {DIVISIONS.map((d) => (
+                    <button
+                      key={d.value}
+                      type="button"
+                      onClick={() => setDivision(d.value)}
+                      className={`flex flex-col gap-1 p-3 border text-left transition-all ${
+                        division === d.value
+                          ? "border-accent bg-accent/10"
+                          : "border-border-custom hover:bg-white/[0.03]"
+                      }`}
+                    >
+                      <span className={`font-bold text-[11px] uppercase tracking-wider ${division === d.value ? "text-accent" : "text-white/60"}`}>
+                        {d.label}
+                      </span>
+                      <span className="text-[10px] text-white/30 leading-snug">{d.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {submissionType === "update" && selectedEngineId && (
+              <div className="flex flex-col gap-1">
+                <label className="technical-label text-white/40">Division</label>
+                <p className="text-[11px] text-white/30 italic">
+                  Division is locked to <span className="text-white/50 font-bold">
+                    {DIVISIONS.find(d => d.value === (userEngines.find(e => e.id === selectedEngineId)?.division ?? "open"))?.label ?? "Open"}
+                  </span> and cannot be changed.
+                </p>
               </div>
             )}
 

@@ -12,10 +12,13 @@ export async function preparePlacementMatches(versionId: string) {
 
   if (!version) throw new Error("Engine version not found");
 
+  const engineDivision = (version.engine as any).division ?? "open";
+
   const allOpponents = await prisma.engine.findMany({
     where: {
       id: { not: version.engineId },
       status: EngineStatus.active,
+      division: engineDivision,
       versions: {
         some: { validationStatus: "passed" }
       }

@@ -33,9 +33,9 @@ export class ApiClient {
     return res.json();
   }
 
-  static async getLeaderboard(page: number = 1, limit: number = 25) {
+  static async getLeaderboard(page: number = 1, limit: number = 25, division: string = "open") {
     return this.request<{ engines: any[]; total: number; page: number; limit: number }>(
-      `/api/leaderboard?page=${page}&limit=${limit}`
+      `/api/leaderboard?page=${page}&limit=${limit}&division=${division}`
     );
   }
 
