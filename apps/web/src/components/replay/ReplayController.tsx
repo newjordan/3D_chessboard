@@ -1,9 +1,10 @@
 "use client";
 
-import { Chess, Square } from 'chess.js';
+import { Chess } from 'chess.js';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Board3DScene } from './Board3DScene';
 import type { Board3DHandle } from './board3d/types';
+import { BOARD3D_CAPTURE_DURATION_MS, BOARD3D_MOVE_DURATION_MS } from './board3d/constants';
 import { Board2D } from './Board2D';
 import { 
   Play, 
@@ -115,11 +116,19 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    const nextMove = history[currentPly];
+    const minimum3DDelay = nextMove?.captured
+      ? BOARD3D_CAPTURE_DURATION_MS
+      : BOARD3D_MOVE_DURATION_MS;
+    const effectivePlaybackSpeed = viewMode === '3D'
+      ? Math.max(playbackSpeed, minimum3DDelay)
+      : playbackSpeed;
+
     if (isPlaying && currentPly < history.length) {
-      interval = setInterval(() => setCurrentPly((prev) => prev + 1), playbackSpeed);
+      interval = setInterval(() => setCurrentPly((prev) => prev + 1), effectivePlaybackSpeed);
     } else { setIsPlaying(false); }
     return () => clearInterval(interval);
-  }, [isPlaying, currentPly, history.length, playbackSpeed]);
+  }, [isPlaying, currentPly, history, playbackSpeed, viewMode]);
 
   const boardState = useMemo(() => {
     const tempChess = new Chess();
@@ -238,15 +247,21 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
-               <select 
-                 value={playbackSpeed} 
-                 onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                 className="bg-transparent border-none text-[10px] technical-label cursor-pointer hover:text-white transition-colors outline-none"
-               >
-                 <option value={2000}>0.5x</option>
-                 <option value={1000}>1.0x</option>
-                 <option value={500}>2.0x</option>
-               </select>
+               {viewMode === '3D' ? (
+                 <div className="text-[10px] technical-label opacity-40 uppercase tracking-widest">
+                   Animation-Locked
+                 </div>
+               ) : (
+                 <select 
+                   value={playbackSpeed} 
+                   onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+                   className="bg-transparent border-none text-[10px] technical-label cursor-pointer hover:text-white transition-colors outline-none"
+                 >
+                   <option value={2000}>0.5x</option>
+                   <option value={1000}>1.0x</option>
+                   <option value={500}>2.0x</option>
+                 </select>
+               )}
                <div className="font-mono text-[11px] font-bold opacity-40">
                  {currentPly}<span className="opacity-20 mx-1">/</span>{history.length}
                </div>

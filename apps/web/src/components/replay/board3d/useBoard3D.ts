@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Chess } from 'chess.js';
 import * as THREE from 'three';
 import type { Board3DHandle, PieceInstance } from './types';
 import { setupScene } from './scene';
@@ -27,35 +28,104 @@ export function useBoard3D(whiteName: string, blackName: string) {
     const { boardGroup } = createBoard(ctx.scene, whiteName, blackName);
     const piecesContainer = new THREE.Group();
     ctx.scene.add(piecesContainer);
+    const effectsGroup = new THREE.Group();
+    boardGroup.add(effectsGroup);
 
     const pieceMap = new Map<string, PieceInstance>();
     let geos: Geometries = {};
     let ready = false;
-
-    loadPieceGeometries().then(loaded => {
-      geos = loaded;
-      const initial = initPiecesFromFen(START_FEN, geos, piecesContainer);
-      initial.forEach((v, k) => pieceMap.set(k, v));
-      ready = true;
+    let disposed = false;
+    let queueVersion = 0;
+    let logicalChess = new Chess(START_FEN);
+    let pendingFen: string | null = START_FEN;
+    let moveChain = Promise.resolve();
+    let resolveReady: (() => void) | null = null;
+    const readyPromise = new Promise<void>((resolve) => {
+      resolveReady = resolve;
     });
 
-    let animId: number;
-    const tick = () => {
-      animId = requestAnimationFrame(tick);
-      ctx.controls.update();
-      pieceMap.forEach(inst => {
-        inst.haloGroup.position.x = inst.group.position.x;
-        inst.haloGroup.position.z = inst.group.position.z;
-      });
-      ctx.composer.render();
-    };
-    tick();
+    const clearEffects = () => {
+      effectsGroup.traverse((child) => {
+        const c = child as THREE.Object3D & {
+          geometry?: THREE.BufferGeometry;
+          material?: THREE.Material | THREE.Material[];
+          userData?: { spinTween?: { kill?: () => void } };
+        };
 
-    handleRef.current = {
-      applyMove(from, to, isCapture, flags, _promotion) {
-        if (!ready) return;
+        c.userData?.spinTween?.kill?.();
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) {
+          const mats = Array.isArray(c.material) ? c.material : [c.material];
+          mats.forEach((m) => m.dispose());
+        }
+      });
+
+      effectsGroup.clear();
+    };
+
+    const syncBoardToFen = (fen: string) => {
+      clearEffects();
+      clearPieces(pieceMap, piecesContainer);
+      const fresh = initPiecesFromFen(fen, geos, piecesContainer);
+      fresh.forEach((v, k) => pieceMap.set(k, v));
+    };
+
+    const setLogicalPosition = (fen: string) => {
+      logicalChess = new Chess(fen);
+      pendingFen = fen;
+
+      if (!ready) return;
+
+      syncBoardToFen(fen);
+      pendingFen = null;
+    };
+
+    const isCurrentVersion = (version: number) => !disposed && version === queueVersion;
+
+    const runMove = (
+      from: string,
+      to: string,
+      isCapture: boolean,
+      flags: string,
+      promotion: string | undefined,
+      version: number
+    ) =>
+      new Promise<void>((resolve) => {
+        if (!isCurrentVersion(version) || !ready) {
+          resolve();
+          return;
+        }
+
+        let logicalMove: ReturnType<Chess['move']>;
+        try {
+          logicalMove = logicalChess.move({
+            from,
+            to,
+            promotion: promotion?.toLowerCase() as 'q' | 'r' | 'b' | 'n' | undefined,
+          });
+        } catch (error) {
+          console.warn(`[Board3D] Illegal move ${from}${to}; resetting visual board to the last known good position.`, error);
+          syncBoardToFen(logicalChess.fen());
+          resolve();
+          return;
+        }
+
+        if (!logicalMove) {
+          console.warn(`[Board3D] Move ${from}${to} could not be applied; resetting visual board to the last known good position.`);
+          syncBoardToFen(logicalChess.fen());
+          resolve();
+          return;
+        }
+
+        const targetFen = logicalChess.fen();
+        const shouldResyncAfterMove = Boolean(logicalMove.promotion);
         const actor = pieceMap.get(from);
-        if (!actor) return;
+        if (!actor) {
+          console.warn(`[Board3D] Missing piece at ${from}; resyncing the visual board to preserve replay fidelity.`);
+          syncBoardToFen(targetFen);
+          resolve();
+          return;
+        }
 
         // Handle castling: teleport rook before king animation
         if (flags.includes('k') || flags.includes('q')) {
@@ -73,11 +143,24 @@ export function useBoard3D(whiteName: string, blackName: string) {
           }
         }
 
-        animateLightningStrike(from, to, boardGroup, () => {
-          const afterJump = () => {
+        animateLightningStrike(from, to, effectsGroup, () => {
+          if (!isCurrentVersion(version)) {
+            resolve();
+            return;
+          }
+
+          const finishActorMove = () => {
+            if (!isCurrentVersion(version)) {
+              resolve();
+              return;
+            }
             pieceMap.delete(from);
             actor.square = to;
             pieceMap.set(to, actor);
+            if (shouldResyncAfterMove) {
+              syncBoardToFen(targetFen);
+            }
+            resolve();
           };
 
           if (isCapture) {
@@ -87,23 +170,67 @@ export function useBoard3D(whiteName: string, blackName: string) {
             if (victim && capturedSquare !== to) pieceMap.delete(capturedSquare);
             if (victim) {
               pieceMap.delete(to);
-              animateCapture(victim, boardGroup, piecesContainer, () => {
-                animateJump(actor, to, afterJump);
+              animateCapture(victim, effectsGroup, piecesContainer, () => {
+                if (!isCurrentVersion(version)) {
+                  resolve();
+                  return;
+                }
+                animateJump(actor, to, finishActorMove);
               });
             } else {
-              animateJump(actor, to, afterJump);
+              animateJump(actor, to, finishActorMove);
             }
           } else {
-            animateJump(actor, to, afterJump);
+            animateJump(actor, to, finishActorMove);
           }
         });
+      });
+
+    loadPieceGeometries().then(loaded => {
+      if (disposed) return;
+      geos = loaded;
+      ready = true;
+      syncBoardToFen(pendingFen ?? START_FEN);
+      pendingFen = null;
+      resolveReady?.();
+      resolveReady = null;
+    }).catch((error) => {
+      if (disposed) return;
+      console.warn('[Board3D] Geometry load failed; using fallback wireframes only.', error);
+      ready = true;
+      syncBoardToFen(pendingFen ?? START_FEN);
+      pendingFen = null;
+      resolveReady?.();
+      resolveReady = null;
+    });
+
+    let animId: number;
+    const tick = () => {
+      animId = requestAnimationFrame(tick);
+      ctx.controls.update();
+      pieceMap.forEach(inst => {
+        inst.haloGroup.position.x = inst.group.position.x;
+        inst.haloGroup.position.z = inst.group.position.z;
+      });
+      ctx.composer.render();
+    };
+    tick();
+
+    handleRef.current = {
+      applyMove(from, to, isCapture, flags, _promotion) {
+        const version = queueVersion;
+        moveChain = moveChain
+          .catch(() => undefined)
+          .then(async () => {
+            await readyPromise;
+            return runMove(from, to, isCapture, flags, _promotion, version);
+          });
       },
 
       resetToPosition(fen) {
-        if (!ready) return;
-        clearPieces(pieceMap, piecesContainer);
-        const fresh = initPiecesFromFen(fen, geos, piecesContainer);
-        fresh.forEach((v, k) => pieceMap.set(k, v));
+        queueVersion += 1;
+        moveChain = Promise.resolve();
+        setLogicalPosition(fen);
       },
 
       highlightSquare(square) {
@@ -134,7 +261,10 @@ export function useBoard3D(whiteName: string, blackName: string) {
     };
 
     return () => {
+      disposed = true;
+      queueVersion += 1;
       cancelAnimationFrame(animId);
+      clearEffects();
       clearPieces(pieceMap, piecesContainer);
       ctx.dispose();
     };
