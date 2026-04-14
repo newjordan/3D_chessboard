@@ -1752,6 +1752,7 @@ app.get("/api/runners/me", async (req, res) => {
       id: true,
       label: true,
       publicKey: true,
+      privateKeyOnce: true,
       trusted: true,
       canRunPlacements: true,
       jobsProcessed: true,
@@ -1761,6 +1762,19 @@ app.get("/api/runners/me", async (req, res) => {
   });
 
   res.json(key || null);
+});
+
+// User acknowledges they have copied their private key — clears it from DB
+app.post("/api/runners/me/key-viewed", async (req, res) => {
+  const userId = req.headers["x-user-id"] as string;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  await prisma.runnerKey.updateMany({
+    where: { userId, revokedAt: null, NOT: { privateKeyOnce: null } },
+    data: { privateKeyOnce: null },
+  });
+
+  res.json({ success: true });
 });
 
 // Get current user's key request status
@@ -1811,7 +1825,7 @@ app.get("/api/admin/runner-key-requests", authorizeAdmin, async (req, res) => {
   res.json(requests);
 });
 
-// Admin: fulfill a request (generates the key + marks fulfilled)
+// Admin: fulfill a request (generates the key + stores private key for user to collect once)
 app.post("/api/admin/runner-key-requests/:id/fulfill", authorizeAdmin, async (req, res) => {
   const request = await prisma.runnerKeyRequest.findUnique({ where: { id: req.params.id as string } });
   if (!request) return res.status(404).json({ error: "Request not found" });
@@ -1820,9 +1834,9 @@ app.post("/api/admin/runner-key-requests/:id/fulfill", authorizeAdmin, async (re
   const { label } = req.body;
   const kp = generateRSAKeyPair();
 
-  const [runnerKey] = await prisma.$transaction([
+  await prisma.$transaction([
     prisma.runnerKey.create({
-      data: { userId: request.userId, label: label || null, publicKey: kp.publicKey, trusted: false },
+      data: { userId: request.userId, label: label || null, publicKey: kp.publicKey, privateKeyOnce: kp.privateKey, trusted: false },
     }),
     prisma.runnerKeyRequest.update({
       where: { id: request.id },
@@ -1830,8 +1844,8 @@ app.post("/api/admin/runner-key-requests/:id/fulfill", authorizeAdmin, async (re
     }),
   ]);
 
-  console.log(`[Admin] Key request ${request.id} fulfilled — key created for user ${request.userId}`);
-  res.json({ ...runnerKey, privateKey: kp.privateKey, privateKeyShownOnce: true });
+  console.log(`[Admin] Key request ${request.id} fulfilled — key stored for user ${request.userId} to collect`);
+  res.json({ success: true });
 });
 
 // Admin: reject a request
