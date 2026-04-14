@@ -26,6 +26,7 @@ model User {
   createdAt     DateTime  @default(now())
   engines       Engine[]
   submissions   Submission[]
+  runnerKeys    RunnerKey[]
 
   // NextAuth
   accounts      Account[]
@@ -257,4 +258,25 @@ model Job {
   updatedAt   DateTime  @updatedAt
 
   @@index([status, runAt])
+}
+
+model RunnerKey {
+  id            String    @id @default(uuid())
+  userId        String
+  label         String?
+  publicKey     String    @db.Text
+  privateKey    String    @db.Text
+  trusted       Boolean   @default(false)
+  jobsProcessed Int       @default(0)
+  createdAt     DateTime  @default(now())
+  revokedAt     DateTime?
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ServerKey {
+  id         String   @id @default(uuid())
+  publicKey  String   @db.Text
+  privateKey String   @db.Text
+  createdAt  DateTime @default(now())
 }
