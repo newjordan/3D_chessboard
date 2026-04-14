@@ -85,43 +85,72 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
         ease: "power1.inOut"
       });
 
-      // 4. Grid Crawl (Manhattan routing)
+      // 4. Grid Crawl (Manhattan routing with dragging tail Shader)
       const targetCornerX = endPos.x + (dx > 0 ? 0.5 : -0.5);
       const targetCornerZ = endPos.z + (dz > 0 ? 0.5 : -0.5);
 
-      // Tracing line
-      const traceGeo = new THREE.BufferGeometry();
-      const traceMat = new THREE.LineBasicMaterial({ color: 0x00ffcc, linewidth: 2 });
+      const dist1 = Math.abs(targetCornerZ - snapCornerZ);
+      const dist2 = Math.abs(targetCornerX - snapCornerX);
+      const totalDist = dist1 + dist2;
+
+      const tracePoints = [
+        new THREE.Vector3(snapCornerX, 0, snapCornerZ),
+        new THREE.Vector3(snapCornerX, 0, targetCornerZ),
+        new THREE.Vector3(targetCornerX, 0, targetCornerZ)
+      ];
+
+      const traceGeo = new THREE.BufferGeometry().setFromPoints(tracePoints);
+      const uvs = new Float32Array([
+        0, 0,
+        (totalDist === 0) ? 0 : (dist1/totalDist), 0,
+        1, 0
+      ]);
+      traceGeo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
+      const traceMat = new THREE.ShaderMaterial({
+        uniforms: {
+           uProgress: { value: 0.0 },
+           uLength: { value: 0.35 }, // 35% trailing length
+           color: { value: new THREE.Color(0x00ffff) }
+        },
+        vertexShader: `
+           varying float vUv;
+           void main() {
+             vUv = uv.x;
+             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+           }
+        `,
+        fragmentShader: `
+           uniform float uProgress;
+           uniform float uLength;
+           uniform vec3 color;
+           varying float vUv;
+           void main() {
+             float dist = uProgress - vUv;
+             if (dist >= 0.0 && dist <= uLength) {
+                float alpha = 1.0 - (dist / uLength);
+                gl_FragColor = vec4(color, alpha);
+             } else {
+                gl_FragColor = vec4(0.0);
+             }
+           }
+        `,
+        transparent: true,
+        depthTest: false
+      });
+
       const traceLine = new THREE.Line(traceGeo, traceMat);
       traceLine.position.y = 0.05;
       boardGroup.add(traceLine);
 
-      let tracePoints = [new THREE.Vector3(snapCornerX, 0, snapCornerZ)];
-      traceGeo.setFromPoints(tracePoints);
-
-      // Trace logic
-      const proxy = { x: snapCornerX, z: snapCornerZ };
-
-      const traceUpdate = () => {
-         tracePoints.push(new THREE.Vector3(proxy.x, 0, proxy.z));
-         traceGeo.setFromPoints(tracePoints);
-      };
-
-      // Crawl Z first, then X (or parallel/staggered)
-      tl.to(proxy, {
-        z: targetCornerZ,
-        duration: 0.2,
-        ease: "none",
-        onUpdate: traceUpdate
-      });
-      tl.to(proxy, {
-        x: targetCornerX,
-        duration: 0.2,
-        ease: "none",
-        onUpdate: traceUpdate
+      // Crawl slowly along the path
+      tl.to(traceMat.uniforms.uProgress, {
+        value: 1.0 + 0.35, // 1.0 + length
+        duration: 1.2,
+        ease: "power1.inOut"
       });
 
-      tl.to(bracket.position, { x: targetCornerX, z: targetCornerZ, duration: 0.4, ease: "none" }, "-=0.4");
+      tl.to(bracket.position, { x: targetCornerX, z: targetCornerZ, duration: 1.2, ease: "power1.inOut" }, "<");
 
       // 5. Target Lock (Destination Bracket explodes out)
       tl.to(bracket.position, { x: endPos.x, z: endPos.z, duration: 0.1, ease: "power1.inOut" });
