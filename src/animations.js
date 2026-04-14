@@ -102,13 +102,14 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
         ease: "power1.inOut"
       });
 
-      // 4. Grid Crawl: Double Pincer Path (Going Wide & Converging)
-      const targetCornerX = endPos.x + (dx > 0 ? 0.5 : -0.5);
-      const targetCornerZ = endPos.z + (dz > 0 ? 0.5 : -0.5);
+      // 4. Grid Crawl: Double Pincer Path (Ride the closest rail into town!)
+      // The target corner MUST be the PRECEDING edge relative to travel direction, not the far edge!
+      const targetCornerX = endPos.x + (dx > 0 ? -0.5 : 0.5);
+      const targetCornerZ = endPos.z + (dz > 0 ? -0.5 : 0.5);
 
       let p1 = [], p2 = [];
       if (Math.abs(dx) > 0.1 && Math.abs(dz) > 0.1) {
-          // Diagonal/Knight: Trace exact rectangular perimeter. No overshooting.
+          // Diagonal/Knight: Trace exact rectangular perimeter using the near/inside rails!
           p1 = [
              new THREE.Vector3(snapCornerX, 0, snapCornerZ),
              new THREE.Vector3(snapCornerX, 0, targetCornerZ),
@@ -120,32 +121,28 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
              new THREE.Vector3(targetCornerX, 0, targetCornerZ)
           ];
       } else if (Math.abs(dx) < 0.1) {
-          // Pure Z move (Vertical) -> bulge sideways symmetrically
+          // Pure Z move (Vertical) -> Trace exactly down the left and right rails of the squares
+          const railL = startPos.x - 0.5;
+          const railR = startPos.x + 0.5;
           p1 = [
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX - 1.0, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX - 1.0, 0, targetCornerZ),
-             new THREE.Vector3(snapCornerX, 0, targetCornerZ)
+             new THREE.Vector3(railL, 0, snapCornerZ),
+             new THREE.Vector3(railL, 0, targetCornerZ)
           ];
           p2 = [
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX + 1.0, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX + 1.0, 0, targetCornerZ),
-             new THREE.Vector3(snapCornerX, 0, targetCornerZ)
+             new THREE.Vector3(railR, 0, snapCornerZ),
+             new THREE.Vector3(railR, 0, targetCornerZ)
           ];
       } else {
-          // Pure X move (Horizontal) -> bulge longitudinally symmetrically
+          // Pure X move (Horizontal) -> Trace exactly along the top and bottom rails
+          const railT = startPos.z - 0.5;
+          const railB = startPos.z + 0.5;
           p1 = [
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ - 1.0),
-             new THREE.Vector3(targetCornerX, 0, snapCornerZ - 1.0),
-             new THREE.Vector3(targetCornerX, 0, targetCornerZ)
+             new THREE.Vector3(snapCornerX, 0, railT),
+             new THREE.Vector3(targetCornerX, 0, railT)
           ];
           p2 = [
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ + 1.0),
-             new THREE.Vector3(targetCornerX, 0, snapCornerZ + 1.0),
-             new THREE.Vector3(targetCornerX, 0, targetCornerZ)
+             new THREE.Vector3(snapCornerX, 0, railB),
+             new THREE.Vector3(targetCornerX, 0, railB)
           ];
       }
 
