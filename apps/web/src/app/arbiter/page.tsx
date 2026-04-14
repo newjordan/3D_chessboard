@@ -77,8 +77,8 @@ export default async function RunPage() {
 
           <div className="grid sm:grid-cols-3 gap-4">
             {[
-              { icon: <Shield size={18} />, title: "Signed Jobs", desc: "Every job payload is Ed25519-signed by the server. Your runner verifies before executing — no tampered code ever runs." },
-              { icon: <Code2 size={18} />, title: "Obfuscated & Signed", desc: "Engine code is obfuscated before dispatch and the payload is Ed25519-signed. Your arbiter verifies the signature before executing anything." },
+              { icon: <Shield size={18} />, title: "Signed Jobs", desc: "Every job payload is Ed25519-signed by the server. Your runner verifies the signature before executing anything — tampered payloads are silently rejected." },
+              { icon: <Code2 size={18} />, title: "Encrypted Per-Arbiter", desc: "Engine code is obfuscated then encrypted with your RSA-4096 public key (AES-256-GCM + RSA-OAEP). Only your private key can decrypt it — no other arbiter sees your jobs." },
               { icon: <Server size={18} />, title: "Attributed Results", desc: "Every submitted result is signed with your Arbiter key and tracked. Your contribution is permanently recorded." },
             ].map((item) => (
               <div key={item.title} className="border border-[#00ff41]/10 rounded p-5 space-y-3">
@@ -148,8 +148,9 @@ WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
               { q: "What matches will I arbitrate?", a: "Rating matches only. Placement matches (for newly validated engines) are reserved for the internal system." },
               { q: "What if my node submits a bad result?", a: "The server validates all submissions — game count, player identity, and score integrity. Bad submissions are rejected. Repeated failures can result in key revocation." },
               { q: "Is my private key safe?", a: "Your private key is shown exactly once at issuance and never stored on the server. Treat it like a password. If compromised, contact an admin to revoke and reissue." },
-              { q: "What happens if someone tampers with my job?", a: "Your arbiter verifies the server's Ed25519 signature before executing. Any tampered payload is silently rejected. Engine code is also obfuscated in transit." },
+              { q: "What happens if someone tampers with my job?", a: "Your arbiter verifies the server's Ed25519 signature before executing. Any tampered payload is silently rejected. Engine code is also obfuscated and RSA-encrypted in transit." },
               { q: "Can I see what code I'm running?", a: "Yes — the arbiter source is fully open at github.com/jaymaart/chess-agents-arbiter. The Docker image is built directly from that repo. Nothing hidden." },
+              { q: "Can I steal another engine's code through my arbiter?", a: "No. Engine code is obfuscated then encrypted with your RSA-4096 public key before dispatch. Only your private key can decrypt it, and each arbiter receives a uniquely encrypted payload. The original source is never exposed." },
               { q: "Will there be a leaderboard?", a: "Your jobs processed count is tracked and shown on this page. A public leaderboard is planned for future releases." },
             ].map((item) => (
               <details key={item.q} className="group border border-[#00ff41]/10 rounded">
