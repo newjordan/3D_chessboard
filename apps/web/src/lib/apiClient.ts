@@ -170,4 +170,36 @@ export class ApiClient {
       method: "POST",
     });
   }
+
+  // --- RUNNER METHODS ---
+
+  static async getMyRunnerKey(userId: string) {
+    return this.request<any | null>("/api/runners/me", {
+      headers: { "x-user-id": userId },
+    });
+  }
+
+  static async getAdminRunners(adminUserId: string): Promise<any[]> {
+    return this.adminRequest("/api/admin/runners", adminUserId);
+  }
+
+  static async createRunnerKey(adminUserId: string, userId: string, label?: string): Promise<any> {
+    return this.adminRequest("/api/admin/runners", adminUserId, {
+      method: "POST",
+      body: JSON.stringify({ userId, label }),
+    });
+  }
+
+  static async setRunnerTrust(adminUserId: string, keyId: string, trusted: boolean): Promise<any> {
+    return this.adminRequest(`/api/admin/runners/${keyId}/trust`, adminUserId, {
+      method: "PATCH",
+      body: JSON.stringify({ trusted }),
+    });
+  }
+
+  static async revokeRunnerKey(adminUserId: string, keyId: string): Promise<any> {
+    return this.adminRequest(`/api/admin/runners/${keyId}`, adminUserId, {
+      method: "DELETE",
+    });
+  }
 }
