@@ -7,6 +7,7 @@ import crypto from "crypto";
 import path from "path";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
+import https from "https";
 import Redis from "ioredis";
 import rateLimit from "express-rate-limit";
 import { generateKeyPair, generateRSAKeyPair, hashData, signData, verifyData, encryptForArbiter } from "./crypto";
@@ -72,7 +73,7 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
   requestHandler: new NodeHttpHandler({
-    maxSockets: 100,
+    httpsAgent: new https.Agent({ maxSockets: 100 }),
   }),
 });
 
