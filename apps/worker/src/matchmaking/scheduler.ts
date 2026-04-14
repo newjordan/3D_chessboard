@@ -1,10 +1,10 @@
 import { prisma, MatchType, MatchStatus, JobType, JobStatus, EngineStatus } from "../db";
 
 /**
- * Rematch cooldown in milliseconds (4 hours).
+ * Rematch cooldown in milliseconds (15 minutes).
  * Engines can play each other again after this period.
  */
-const REMATCH_COOLDOWN_MS = 1 * 60 * 60 * 1000;
+const REMATCH_COOLDOWN_MS = 15 * 60 * 1000;
 
 /**
  * How many matches to schedule per poll cycle to avoid flooding the queue.
