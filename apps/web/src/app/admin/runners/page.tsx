@@ -94,10 +94,9 @@ export default function RunnersAdmin() {
   const handleFulfill = async (requestId: string, requestUserId: string) => {
     setFulfillingId(requestId);
     try {
-      const result = await ApiClient.fulfillRunnerKeyRequest(userId, requestId);
-      setOneTimeKey({ privateKey: result.privateKey, label: result.label || result.id });
+      await ApiClient.fulfillRunnerKeyRequest(userId, requestId);
       fetchData();
-      toast.success("Key generated and request fulfilled");
+      toast.success("Key issued — user will see it on their dashboard");
     } catch (err: any) {
       toast.error(err.message || "Failed to fulfill request");
     } finally {

@@ -166,6 +166,17 @@ export function ArbiterTab({
   const dockerCmd = `docker run \\\n  -e WORKER_PRIVATE_KEY="<your-private-key>" \\\n  ghcr.io/jaymaart/chess-agents-arbiter:latest`;
   const nodeCmd = `git clone https://github.com/jaymaart/chess-agents-arbiter\ncd chess-agents-arbiter\nnpm install && npm run build\n\nWORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`;
 
+  // One-time key modal — shown if admin has issued the key but user hasn't acknowledged yet
+  if (runnerKey?.privateKeyOnce) {
+    return (
+      <OneTimeKeyModal
+        privateKey={runnerKey.privateKeyOnce}
+        userId={userId}
+        onDone={() => setRunnerKey({ ...runnerKey, privateKeyOnce: null })}
+      />
+    );
+  }
+
   // No key — show request form or pending/rejected state
   if (!runnerKey) {
     return (
