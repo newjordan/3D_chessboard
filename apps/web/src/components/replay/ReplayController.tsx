@@ -1,12 +1,9 @@
 "use client";
 
 import { Chess, Square } from 'chess.js';
-import { Canvas } from '@react-three/fiber';
-import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import * as THREE from 'three';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Board3D } from './Board3D';
-import { Piece3D } from './Piece3D';
+import { Board3DScene } from './Board3DScene';
+import type { Board3DHandle } from './board3d/types';
 import { Board2D } from './Board2D';
 import { 
   Play, 
@@ -41,6 +38,8 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1000);
   const [viewMode, setViewMode] = useState<'2D' | '3D'>('2D');
   const moveListRef = useRef<HTMLDivElement>(null);
+  const board3dRef = useRef<Board3DHandle>(null);
+  const prevPlyRef = useRef(0);
 
   const gamesList = useMemo(() => {
     if (!pgn) return [];
@@ -89,6 +88,31 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     setIsPlaying(false);
   }, [selectedGameIndex]);
 
+  // Sync 3D board when ply changes
+  useEffect(() => {
+    if (viewMode !== '3D' || !board3dRef.current) return;
+    const prev = prevPlyRef.current;
+    prevPlyRef.current = currentPly;
+
+    if (currentPly === prev + 1 && currentPly > 0) {
+      const move = history[currentPly - 1];
+      board3dRef.current.applyMove(move.from, move.to, !!move.captured, move.flags ?? '', move.promotion ?? undefined);
+    } else {
+      const temp = new Chess();
+      for (let i = 0; i < currentPly; i++) temp.move(history[i]);
+      board3dRef.current.resetToPosition(temp.fen());
+    }
+  }, [currentPly, viewMode, history]);
+
+  // Sync 3D board when switching to 3D view
+  useEffect(() => {
+    if (viewMode !== '3D' || !board3dRef.current) return;
+    prevPlyRef.current = currentPly;
+    const temp = new Chess();
+    for (let i = 0; i < currentPly; i++) temp.move(history[i]);
+    board3dRef.current.resetToPosition(temp.fen());
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPlaying && currentPly < history.length) {
@@ -108,26 +132,6 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     const move = history[currentPly - 1];
     return { from: move.from as string, to: move.to as string };
   }, [currentPly, history]);
-
-  const pieceComponents3D = useMemo(() => {
-    if (viewMode !== '3D') return null;
-    const pieces: React.ReactNode[] = [];
-    boardState.forEach((row, r) => {
-      row.forEach((square, c) => {
-        if (square) {
-          pieces.push(
-            <Piece3D 
-              key={`${square.type}-${square.color}-${r}-${c}`}
-              type={square.type}
-              color={square.color as 'w' | 'b'}
-              position={[c - 3.5, 0, r - 3.5]}
-            />
-          );
-        }
-      });
-    });
-    return pieces;
-  }, [boardState, viewMode]);
 
   const playerNames = useMemo(() => {
     return {
@@ -182,45 +186,11 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         <div className="flex flex-col gap-4 min-h-0">
           <div className="flex-1 min-h-0 relative bg-black border border-white/5 rounded-xl group overflow-hidden flex items-center justify-center p-4">
              {viewMode === '3D' ? (
-               <Canvas 
-                  shadows
-                  onCreated={({ gl }) => { 
-                    gl.shadowMap.enabled = true;
-                    gl.shadowMap.type = THREE.PCFShadowMap; 
-                  }}
-                  gl={{ antialias: true, alpha: false, stencil: false }}
-                >
-                  <PerspectiveCamera makeDefault position={[0, 8, 8]} fov={45} />
-                  <OrbitControls 
-                    enablePan={false}
-                    maxPolarAngle={Math.PI / 2.1} 
-                    minDistance={5}
-                    maxDistance={15}
-                  />
-                  
-                  <ambientLight intensity={1.5} />
-                  <directionalLight 
-                    position={[10, 10, 10]} 
-                    intensity={2} 
-                    castShadow 
-                    shadow-mapSize={[1024, 1024]}
-                  />
-                  <pointLight position={[-10, 5, -10]} intensity={1} color="#3b82f6" />
-                  
-                  <group position={[0, 0, 0]}>
-                     <Board3D />
-                     {pieceComponents3D}
-                     <ContactShadows 
-                       position={[0, -0.05, 0]} 
-                       opacity={0.4} 
-                       scale={12} 
-                       blur={1.5} 
-                       far={0.8} 
-                     />
-                  </group>
-
-                  <Environment preset="night" />
-                </Canvas>
+               <Board3DScene
+                 ref={board3dRef}
+                 whiteName={playerNames.white}
+                 blackName={playerNames.black}
+               />
              ) : (
                 <div className="w-full h-full max-w-[600px] aspect-square">
                   <Board2D 
