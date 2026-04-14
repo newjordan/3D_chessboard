@@ -96,6 +96,9 @@ export function createBoard(scene) {
 
   masterGroup.add(boardGroup);
 
+  // Ambient Grid Crawlers
+  const updateTracers = createAmbientGridData(boardGroup, offset);
+
   // Fake Reflection (Upside down, faded)
   const reflection = boardGroup.clone();
   reflection.scale.y = -1;
@@ -118,7 +121,7 @@ export function createBoard(scene) {
 
   scene.add(masterGroup);
   
-  return { boardGroup, squareSize, offset };
+  return { boardGroup, squareSize, offset, update: updateTracers };
 }
 
 function createCoordinates(parent, offset, boardThickness, tabDist, b2, b3) {
@@ -219,4 +222,43 @@ function addGridDecorations(parent, offset) {
   brackets.computeLineDistances(); 
   brackets.position.y = 0.02;
   parent.add(brackets);
+}
+
+function createAmbientGridData(parent, offset) {
+  const dotMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.8 });
+  const dotGeo = new THREE.PlaneGeometry(0.02, 0.02);
+  const dots = [];
+  
+  // Create tiny dotmatrix bots
+  for (let i = 0; i < 80; i++) {
+     const dot = new THREE.Mesh(dotGeo, dotMat);
+     dot.rotation.x = -Math.PI / 2;
+     
+     // Randomize their starting setup
+     const isHorizontal = Math.random() > 0.5;
+     const lineIdx = Math.floor(Math.random() * 9) - 4; // -4 to +4
+     const posOnLine = (Math.random() - 0.5) * 8; // -4 to +4
+     
+     const speed = (Math.random() * 0.4 + 0.1) * (Math.random() > 0.5 ? 1 : -1);
+     
+     dot.userData = { isHorizontal, lineIdx, posOnLine, speed };
+     parent.add(dot);
+     dots.push(dot);
+  }
+  
+  return (delta) => {
+    dots.forEach(dot => {
+       dot.userData.posOnLine += dot.userData.speed * delta;
+       if (dot.userData.posOnLine > 4) dot.userData.posOnLine = -4;
+       if (dot.userData.posOnLine < -4) dot.userData.posOnLine = 4;
+       
+       if (dot.userData.isHorizontal) {
+         dot.position.set(dot.userData.posOnLine, 0.005, dot.userData.lineIdx);
+       } else {
+         dot.position.set(dot.userData.lineIdx, 0.005, dot.userData.posOnLine);
+       }
+       // Random flickering to simulate matrix data transfer
+       dot.material.opacity = Math.random() > 0.85 ? 1 : 0.1;
+    });
+  };
 }

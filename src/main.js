@@ -3,20 +3,26 @@ import { setupScene } from './scene.js';
 import { createBoard } from './board.js';
 import { createPieces } from './pieces.js';
 import { updateTimer, addMove } from './ui.js';
+import { createAnimationsContext } from './animations.js';
 
 const appContainer = document.getElementById('app');
 
 const { scene, camera, renderer, composer, controls } = setupScene(appContainer);
-const { boardGroup, squareSize, offset } = createBoard(scene);
+const { boardGroup, squareSize, offset, update: updateBoardTracers } = createBoard(scene);
 const { piecesContainer, pieces, highlightPiece, unhighlightPiece } = await createPieces(scene, offset);
+
+const animCtx = createAnimationsContext(scene, boardGroup, piecesContainer, offset);
 
 const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
+  const delta = clock.getDelta();
   const time = clock.getElapsedTime();
 
   controls.update();
+
+  if (updateBoardTracers) updateBoardTracers(delta);
 
   // Pulse effect on highlighted pieces halo
   pieces.forEach(p => {
@@ -32,13 +38,22 @@ animate();
 
 // Simulate some game action after 2 seconds for visual testing
 setTimeout(() => {
-  addMove(3, 'Bb5', 'a6');
+  addMove(3, 'Na3', 'xa3'); // Mock move
   
-  // Highlight a piece representing a move
-  const king = pieces.find(p => p.userData.type === 'K' && p.userData.isWhite);
-  if (king) highlightPiece(king);
+  // Grab White Knight (Rank 7, File 1 OR 6, let's just find one)
+  const knight = pieces.find(p => p.userData.type === 'N' && p.userData.isWhite);
+  // Grab Black Pawn (Rank 1, File 0 or 1 or whatever)
+  const pawn = pieces.find(p => p.userData.type === 'P' && !p.userData.isWhite);
+
+  if (knight && pawn) {
+    animCtx.animateLightningStrike(knight.userData.rank, knight.userData.file, pawn.userData.rank, pawn.userData.file, () => {
+      animCtx.animateJump(knight, pawn.userData.rank, pawn.userData.file, () => {
+        animCtx.animateCapture(pawn);
+      });
+    });
+  }
   
-}, 2000);
+}, 3000);
 
 // Expose API module
 window.ChessVisualizer = {
