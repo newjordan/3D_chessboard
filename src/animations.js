@@ -231,66 +231,60 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       tl.to(piece.position, { y: -2, duration: 0.6, ease: "power3.in" }, 0.3);
       
-      // Particle Burst on Death (Sparse, varied vertical glitch needles)
-      // Dropped size by 65%, stretched Y by 20%, switched to BoxGeometry so they don't lie flat
-      const particleGeo = new THREE.BoxGeometry(0.012, 0.15, 0.012); 
-      const particles = [];
+      // Particle Burst on Death (Orthogonal grid flow / Circuit burst)
+      const particleGeo = new THREE.PlaneGeometry(0.04, 0.04); 
       const particleGroup = new THREE.Group();
-      particleGroup.position.set(px, 0, pz); // Set base at square center
+      particleGroup.position.set(px, 0.02, pz); // Set just above grid floor so they lie on it
       
-      // Reduce count massively to 8
-      for(let i=0; i<8; i++) {
-         const mat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 0 });
+      const directions = [
+         {x: 1, z: 0}, {x: -1, z: 0}, {x: 0, z: 1}, {x: 0, z: -1}
+      ];
+
+      for(let i=0; i<12; i++) {
+         const mat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 1, side: THREE.DoubleSide });
          const mesh = new THREE.Mesh(particleGeo, mat);
-         const gridX = (Math.floor(Math.random() * 7) - 3) * 0.12;
-         const gridZ = (Math.floor(Math.random() * 7) - 3) * 0.12;
-         const startY = 0.5 + Math.random() * 2.5; // Huge spawn height variance
-         
-         mesh.position.set(gridX, startY, gridZ);
-         
-         mesh.userData = { 
-             speed: 1.0 + Math.random() * 3.0,     // Wild speed variance
-             startDelay: Math.random() * 0.4,      // Staggered start timings (proxy t is 0->1)
-             flickerFreq: Math.random() * 0.1 + 0.02
-         }; 
-         
+         mesh.rotation.x = -Math.PI / 2; // Flat on the grid
          particleGroup.add(mesh);
-         particles.push(mesh);
+         
+         const dir1 = directions[Math.floor(Math.random() * directions.length)];
+         // Orthogonal turn for the second leg of the journey
+         const dir2 = (dir1.x === 0) ? 
+                [{x: 1, z: 0}, {x: -1, z: 0}][Math.floor(Math.random()*2)] : 
+                [{x: 0, z: 1}, {x: 0, z: -1}][Math.floor(Math.random()*2)];
+         
+         // First leg moves it exactly 0.5 (to the grid line boundary), or 1.5 (next grid line)
+         const dist1 = 0.5 + Math.floor(Math.random() * 2); 
+         // Second leg shoots down the intersection line
+         const dist2 = 1.0 + Math.floor(Math.random() * 3);
+
+         const pTl = gsap.timeline();
+         
+         // 1. Zoom to grid intersection
+         pTl.to(mesh.position, {
+             x: dir1.x * dist1,
+             z: dir1.z * dist1,
+             duration: dist1 * 0.15,
+             ease: "none"
+         }, Math.random() * 0.2); // Stagger start sequence
+         
+         // 2. Snap 90 degrees and race down intersecting grid line
+         pTl.to(mesh.position, {
+             x: (dir1.x * dist1) + (dir2.x * dist2),
+             z: (dir1.z * dist1) + (dir2.z * dist2),
+             duration: dist2 * 0.15,
+             ease: "none"
+         });
+         
+         // 3. Dissipate/Fade out into the grid
+         pTl.to(mat, {
+             opacity: 0,
+             duration: 0.3
+         }, "-=0.3");
       }
       boardGroup.add(particleGroup);
       
-      const pProxy = { t: 0 };
-      tl.to(pProxy, {
-         t: 1,
-         duration: 1.2, // Let the glitch breathe for a long second
-         ease: "none",
-         onUpdate: () => {
-             particles.forEach(p => {
-                // Staggered entry logic
-                if (pProxy.t < p.userData.startDelay) return;
-
-                p.position.y -= p.userData.speed * 0.02; // Vertical drop
-                
-                // Infinite Loop physics with variance reset
-                if (p.position.y < -0.5) {
-                    p.position.y = 0.5 + Math.random() * 1.5;
-                    p.userData.speed = 1.0 + Math.random() * 3.0; // Randomize drop speed again
-                }
-                
-                // Gradient transparency based on vertical height
-                const fade = Math.max(0, Math.min(1, (p.position.y + 0.2) / 0.8));
-                p.material.opacity = fade * 0.9;
-                
-                // Asynchronous Dialtone Glitch flicker
-                if (Math.random() < p.userData.flickerFreq) {
-                    p.scale.setScalar(Math.random() > 0.4 ? 1 : 0);
-                }
-             });
-         }
-      }, 0.2); // Dialtone fires up as piece drops
-      
-      // Plunge clean up
-      tl.to(particleGroup.position, { y: -1, duration: 0.2 }, 1.2); 
+      // Plunge cleanup after max timeline length
+      tl.to(particleGroup.position, { y: -1, duration: 0.2 }, "+=1.5"); 
 
       // Glitch Touch at lower Y border (wobbles the clipping plane dynamically)
       const glitchObj = { val: 0.5 };
