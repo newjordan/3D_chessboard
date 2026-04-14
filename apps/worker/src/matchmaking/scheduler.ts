@@ -10,7 +10,7 @@ const REMATCH_COOLDOWN_MS = 1 * 60 * 60 * 1000;
  * How many matches to schedule per poll cycle to avoid flooding the queue.
  * Set to 20 for Local Performance Mode (High-core CPUs like R9 7900X).
  */
-const BATCH_SIZE = 40;
+const BATCH_SIZE = 100;
 
 /**
  * Maximum Elo distance for a "competitive" match.
