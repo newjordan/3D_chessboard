@@ -67,7 +67,7 @@ export default async function ArbiterDocsPage() {
           </p>
           <div className="flex items-center gap-4 pt-2 flex-wrap">
             {session ? (
-              <Link href="/arbiter/dashboard" className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors">
+              <Link href="/dashboard?tab=arbiter" className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors">
                 My Dashboard <ChevronRight size={14} />
               </Link>
             ) : (
@@ -216,7 +216,7 @@ WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
             <>
               <p className="text-[#00ff41]/50 text-sm">View your key status, public identity, and run configuration.</p>
               <Link
-                href="/arbiter/dashboard"
+                href="/dashboard?tab=arbiter"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[#00ff41] text-black font-bold text-sm hover:bg-[#00ff41]/90 transition-colors"
               >
                 Open Arbiter Dashboard <ChevronRight size={14} />
