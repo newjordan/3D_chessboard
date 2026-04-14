@@ -1481,6 +1481,95 @@ app.post("/api/admin/jobs/:id/retry", authorizeAdmin, async (req, res) => {
   }
 });
 
+// --- RUNNER KEY MANAGEMENT ---
+
+app.post("/api/admin/runners", authorizeAdmin, async (req, res) => {
+  const { userId, label } = req.body;
+  if (!userId) return res.status(400).json({ error: "userId required" });
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const kp = generateKeyPair();
+  const runnerKey = await prisma.runnerKey.create({
+    data: {
+      userId,
+      label: label || null,
+      publicKey: kp.publicKey,
+      privateKey: kp.privateKey,
+      trusted: false,
+    },
+  });
+
+  console.log(`[Admin] Runner key created for user ${userId} (key ${runnerKey.id})`);
+
+  res.json({
+    ...runnerKey,
+    privateKeyShownOnce: true,
+  });
+});
+
+app.get("/api/admin/runners", authorizeAdmin, async (req, res) => {
+  const keys = await prisma.runnerKey.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { id: true, username: true, email: true } } },
+  });
+  const sanitized = keys.map(({ privateKey, ...rest }: any) => rest);
+  res.json(sanitized);
+});
+
+app.patch("/api/admin/runners/:id/trust", authorizeAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { trusted } = req.body;
+  if (typeof trusted !== "boolean") return res.status(400).json({ error: "trusted (boolean) required" });
+
+  const key = await prisma.runnerKey.findUnique({ where: { id } });
+  if (!key) return res.status(404).json({ error: "Runner key not found" });
+
+  const updated = await prisma.runnerKey.update({
+    where: { id },
+    data: { trusted },
+  });
+
+  console.log(`[Admin] Runner key ${id} trusted=${trusted}`);
+  res.json({ success: true, trusted: updated.trusted });
+});
+
+app.delete("/api/admin/runners/:id", authorizeAdmin, async (req, res) => {
+  const { id } = req.params;
+  const key = await prisma.runnerKey.findUnique({ where: { id } });
+  if (!key) return res.status(404).json({ error: "Runner key not found" });
+
+  await prisma.runnerKey.update({
+    where: { id },
+    data: { revokedAt: new Date() },
+  });
+
+  console.log(`[Admin] Runner key ${id} revoked`);
+  res.json({ success: true });
+});
+
+app.get("/api/runners/me", async (req, res) => {
+  const userId = req.headers["x-user-id"] as string;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const key = await prisma.runnerKey.findFirst({
+    where: { userId, revokedAt: null },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      label: true,
+      publicKey: true,
+      trusted: true,
+      jobsProcessed: true,
+      createdAt: true,
+      revokedAt: true,
+    },
+  });
+
+  res.json(key || null);
+});
+
 initServerKey().then(() => {
   app.listen(port, () => {
     console.log(`Chess Agents API running on port ${port}`);
