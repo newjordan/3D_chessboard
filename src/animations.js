@@ -322,6 +322,7 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       tl.call(() => {
          piecesContainer.remove(piece);
+         if (piece.userData.haloGroup) piecesContainer.remove(piece.userData.haloGroup);
          boardGroup.remove(border);
          boardGroup.remove(ghostRing);
          boardGroup.remove(particleGroup);
