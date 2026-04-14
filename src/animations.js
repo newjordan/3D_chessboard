@@ -214,23 +214,23 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       tl.to(piece.position, { y: -2, duration: 0.6, ease: "power3.in" }, 0.3);
       
-      // Particle Burst on Death (Matrix dialtone drop)
-      const particleGeo = new THREE.PlaneGeometry(0.05, 0.05); // small rigid squares
-      const particleMat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+      // Particle Burst on Death (Matrix dialtone drop, thinned out with gradient)
+      const particleGeo = new THREE.PlaneGeometry(0.04, 0.04); 
       const particles = [];
       const particleGroup = new THREE.Group();
       particleGroup.position.set(px, 0, pz); // Set base at square center
       
-      for(let i=0; i<40; i++) {
-         const mesh = new THREE.Mesh(particleGeo, particleMat);
-         // Align securely to an invisible 0.15 interval grid inside the square
+      // Thin it out: only 14 traces
+      for(let i=0; i<14; i++) {
+         const mat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+         const mesh = new THREE.Mesh(particleGeo, mat);
          const gridX = (Math.floor(Math.random() * 7) - 3) * 0.12;
          const gridZ = (Math.floor(Math.random() * 7) - 3) * 0.12;
-         const startY = 0.2 + Math.random() * 1.5;
+         const startY = 0.5 + Math.random() * 1.5;
          
          mesh.position.set(gridX, startY, gridZ);
          mesh.rotation.x = -Math.PI / 2; // Flat data squares parallel to board
-         mesh.userData = { speed: 3.0 + Math.random() * 4.0 }; // Extreme vertical speed
+         mesh.userData = { speed: 1.5 + Math.random() * 2.5 }; // Smooth vertical speed
          
          particleGroup.add(mesh);
          particles.push(mesh);
@@ -246,16 +246,23 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
              particles.forEach(p => {
                 p.position.y -= p.userData.speed * 0.016; // Drop rigidly straight down
                 // Loop the "raindrops" if they pass the floor
-                if (p.position.y < -0.6) {
+                if (p.position.y < -0.5) {
                     p.position.y = 1.0 + Math.random() * 0.5;
                 }
+                
+                // Gradient transparency based on vertical height
+                // Starts fading out smoothly as it reaches 0 (the board surface)
+                const fade = Math.max(0, Math.min(1, (p.position.y + 0.2) / 0.8));
+                p.material.opacity = fade * 0.8;
+                
                 // Dialtone Glitch scale flicker
-                p.scale.setScalar(Math.random() > 0.15 ? 1 : 0);
+                p.scale.setScalar(Math.random() > 0.1 ? 1 : 0);
              });
          }
       }, 0.2); // Dialtone fires up instantly as piece drops
       
-      tl.to(particleMat, { opacity: 0, duration: 0.2 }, 0.8); // Snap-fade the stream mid-flight
+      // Quickly plunge the whole group down to clean up visually when done
+      tl.to(particleGroup.position, { y: -1, duration: 0.2 }, 0.8); 
 
       // Glitch Touch at lower Y border (wobbles the clipping plane dynamically)
       const glitchObj = { val: 0.5 };

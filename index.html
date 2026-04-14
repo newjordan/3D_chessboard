@@ -12,15 +12,66 @@
   <body>
     <div id="app"></div>
     <div id="ui-layer">
-      <div id="timer-box">
-        <span id="timer">00:53</span>
+      <!-- Frame Border overlay -->
+      <div id="hud-screen-border"></div>
+
+      <!-- Header -->
+      <div id="hud-header">
+        <h1>NEURO-GRID CHESS.01</h1>
       </div>
-      <div id="move-history-box">
-        <div id="moves">
-          <!-- Moves will be populated here -->
-          <div><span class="move-num">1.</span> <span class="move-white">e4</span> <span class="move-black">e5</span></div>
-          <div><span class="move-num">2.</span> <span class="move-white">Nf3</span> <span class="move-black">Nc6</span></div>
+
+      <!-- Left Panel -->
+      <div id="hud-left-panel" class="hud-panel">
+        <div class="unit-graphic-container">
+           <!-- Placeholder static CSS graphics for the wireframes -->
+           <div class="unit-graphic placeholder-king"></div>
+           <div class="unit-graphic placeholder-pawn"></div>
         </div>
+        <div class="unit-labels">
+            <div class="unit-label">
+                <span class="title">UNIT: KING</span>
+                <span class="sub">(CORE AI)</span>
+            </div>
+            <div class="unit-label">
+                <span class="title">UNIT: PAWN</span>
+                <span class="sub">(DATA SENTRY)</span>
+            </div>
+        </div>
+        <div class="hud-status">SYSTEM: LIVE</div>
+      </div>
+
+      <!-- Right Panel -->
+      <div id="hud-right-panel" class="hud-panel">
+        <div class="side-units">
+            <div class="side-unit">
+               <div class="unit-graphic placeholder-queen"></div>
+               <span class="title">QUEEN</span><br><span class="sub">DETAILED MECH-HYBRID</span>
+            </div>
+            <div class="side-unit">
+               <div class="unit-graphic placeholder-knight"></div>
+               <span class="title">KNIGHT</span><br><span class="sub">FULL HULL-OVD MECH</span>
+            </div>
+        </div>
+        
+        <div id="move-history-box" class="hud-box">
+          <div class="box-title">MOVE HISTORY:</div>
+          <div id="moves">
+            <div><span class="move-num">1.</span> <span class="move-white">e2-e4</span> <span class="move-black">e7-e5</span></div>
+            <div><span class="move-num">2.</span> <span class="move-white">Ng1-f3</span> <span class="move-black">Nb8-c6</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div id="hud-footer">
+         <div class="footer-left">
+            <div class="footer-main">ROSE INDUSTRIES</div>
+            <div class="footer-sub">STRATEGIC SIMULATION MODULE</div>
+         </div>
+         <div class="footer-right">
+            <div class="glitch-text">STB-Net Mk 12-B882 widget ID:</div>
+            <div class="glitch-text">CO-ink data: 345 25 5485</div>
+         </div>
       </div>
     </div>
     <script type="module" src="./src/main.js"></script>
