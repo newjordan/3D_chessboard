@@ -1,12 +1,13 @@
 import AdminGuard from "@/components/admin/AdminGuard";
 import Link from "next/link";
-import { 
+import {
   LayoutDashboard,
   Users,
-  Cpu, 
+  Cpu,
   ListOrdered,
   LogOut,
-  Trophy
+  Trophy,
+  Terminal
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <SidebarItem href="/admin/engines" icon={<Cpu size={20} />} label="Engines" />
             <SidebarItem href="/admin/matches" icon={<Trophy size={20} />} label="Matches" />
             <SidebarItem href="/admin/jobs" icon={<ListOrdered size={20} />} label="Job Queue" />
+            <SidebarItem href="/admin/runners" icon={<Terminal size={20} />} label="Runners" />
           </nav>
 
           <div className="absolute bottom-8 left-0 w-full px-6">
