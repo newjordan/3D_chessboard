@@ -126,8 +126,8 @@ export async function createPieces(scene, offset) {
     // Make knight face correct direction
     if (typeName === 'knight') {
       // The original model might face Z or X. 
-      // We assume it faces +Z or +X. Let's force them to face each other.
-      group.rotation.y = isWhite ? Math.PI : 0; 
+      // User requested turning them 90 degrees clockwise to face the battle.
+      group.rotation.y = (isWhite ? Math.PI : 0) - Math.PI / 2; 
     }
 
     group.userData = { material, haloMat };
