@@ -45,8 +45,10 @@ setTimeout(() => {
 
   if (knight && pawn) {
     animCtx.animateLightningStrike(knight.userData.rank, knight.userData.file, pawn.userData.rank, pawn.userData.file, () => {
-      animCtx.animateJump(knight, pawn.userData.rank, pawn.userData.file, () => {
-        animCtx.animateCapture(pawn);
+      // 2. Erase the target piece to clear the square
+      animCtx.animateCapture(pawn, () => {
+         // 3. Jump the winning piece into the now-cleared square
+         animCtx.animateJump(knight, pawn.userData.rank, pawn.userData.file, () => {});
       });
     });
   }

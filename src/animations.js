@@ -142,27 +142,66 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
     animateCapture: (piece, onComplete) => {
       const tl = gsap.timeline({ onComplete });
       
-      // Halo violently vanishes
-      tl.to(piece.userData.haloMat, { opacity: 0, duration: 0.1 });
+      const px = piece.position.x;
+      const pz = piece.position.z;
       
-      // Propel downward
-      tl.to(piece.position, { y: -2, duration: 0.6, ease: "power2.in" }, 0);
+      // 1. Highlight the square in a green border, starting small, expanding to edge
+      const borderGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(0.9, 0.9));
+      const borderMat = new THREE.LineBasicMaterial({ color: 0x00ff77, opacity: 0, transparent: true });
+      const border = new THREE.LineSegments(borderGeo, borderMat);
+      border.rotation.x = -Math.PI / 2;
+      border.position.set(px, 0.03, pz);
+      border.scale.set(0.1, 0.1, 0.1);
+      boardGroup.add(border);
+
+      tl.to(borderMat, { opacity: 1, duration: 0.1 }, 0);
+      tl.to(border.scale, { x: 1, y: 1, z: 1, duration: 0.3, ease: "power2.out" }, 0);
+
+      // 2. Ghost circle dropping to -y
+      const ghostGeo = new THREE.EdgesGeometry(new THREE.CircleGeometry(0.4, 32));
+      const ghostMat = new THREE.LineBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 0.8 });
+      const ghostRing = new THREE.LineSegments(ghostGeo, ghostMat);
+      ghostRing.rotation.x = -Math.PI / 2;
+      ghostRing.position.set(px, 0, pz);
+      boardGroup.add(ghostRing);
       
-      // Scale down
-      tl.to(piece.scale, { x: 0, y: 0, z: 0, duration: 0.6, ease: "power2.inOut" }, 0);
+      tl.to(ghostRing.position, { y: -2, duration: 0.8, ease: "power1.in" }, 0.2);
+      tl.to(ghostRing.scale, { x: 2, y: 2, z: 2, duration: 0.8 }, 0.2);
+      tl.to(ghostMat, { opacity: 0, duration: 0.8 }, 0.2);
+
+      // 3. Piece falls down once border hits the edge
+      tl.to(piece.userData.haloMat, { opacity: 0, duration: 0.1 }, 0.3);
       
-      // Opacity fade to 0 (Wireframe)
-      const materials = [];
+      // We will clone the piece materials to apply a local clipping plane just for this dying piece!
+      const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.5); // Cuts off anything below y = -0.5
       piece.traverse(c => {
-        if (c.material && c.type === 'LineSegments') materials.push(c.material);
+         if (c.material && c.type === 'LineSegments') {
+            c.material = c.material.clone();
+            c.material.clippingPlanes = [clipPlane];
+         }
       });
+
+      tl.to(piece.position, { y: -2, duration: 0.6, ease: "power3.in" }, 0.3);
       
-      if (materials.length > 0) {
-        tl.to(materials, { opacity: 0, duration: 0.5, ease: "none" }, 0.1);
-      }
-      
+      // Glitch Touch at lower Y border (wobbles the clipping plane dynamically)
+      const glitchObj = { val: 0.5 };
+      tl.to(glitchObj, {
+         val: 0.7, 
+         duration: 0.4, 
+         onUpdate: () => {
+             // Randomly fluctuate the plane to simulate a "glitch touch" as it passes the floor
+             clipPlane.constant = glitchObj.val + (Math.random() * 0.1 - 0.05);
+         }
+      }, 0.4);
+
+      // Wait until the piece falls below the border, then shrink the square
+      tl.to(border.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 0.2, ease: "power2.in" }, 0.8);
+      tl.to(borderMat, { opacity: 0, duration: 0.2 }, 0.8);
+
       tl.call(() => {
          piecesContainer.remove(piece);
+         boardGroup.remove(border);
+         boardGroup.remove(ghostRing);
       });
     },
 

@@ -17,6 +17,7 @@ export function setupScene(container) {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setClearColor(0x000000, 0); // Transparent to show body background or starry sky
+  renderer.localClippingEnabled = true; // Enable clipping planes for piece destruction
   container.appendChild(renderer.domElement);
 
   const controls = new OrbitControls(camera, renderer.domElement);
