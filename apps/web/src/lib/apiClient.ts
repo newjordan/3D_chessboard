@@ -228,6 +228,13 @@ export class ApiClient {
     });
   }
 
+  static async setRunnerPlacements(adminUserId: string, keyId: string, canRunPlacements: boolean): Promise<any> {
+    return this.adminRequest(`/api/admin/runners/${keyId}/placements`, adminUserId, {
+      method: "PATCH",
+      body: JSON.stringify({ canRunPlacements }),
+    });
+  }
+
   static async revokeRunnerKey(adminUserId: string, keyId: string): Promise<any> {
     return this.adminRequest(`/api/admin/runners/${keyId}`, adminUserId, {
       method: "DELETE",

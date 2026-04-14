@@ -211,6 +211,13 @@ export function ArbiterTab({
             </span>
           </div>
         </div>
+        <div className="flex items-center gap-3 pt-1">
+          <span className="technical-label opacity-30">Match types:</span>
+          <span className="technical-label text-accent">Rating</span>
+          {runnerKey.canRunPlacements && (
+            <span className="technical-label text-accent">Placement</span>
+          )}
+        </div>
       </div>
 
       {/* Public Key */}

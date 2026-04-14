@@ -1,0 +1,1 @@
+ALTER TABLE "RunnerKey" ADD COLUMN "canRunPlacements" BOOLEAN NOT NULL DEFAULT false;

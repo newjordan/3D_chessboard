@@ -1016,7 +1016,10 @@ app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
   try {
     const jobs = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Find pending match_run jobs using the same logic as workers
-      const matchTypeFilter = brokerMode === "runner" ? `AND m."matchType" = 'rating'` : "";
+      const runnerKey = (req as any).runnerKey;
+      const matchTypeFilter = brokerMode === "runner" && !runnerKey?.canRunPlacements
+        ? `AND m."matchType" = 'rating'`
+        : "";
 
       const pendingJobs = (await tx.$queryRawUnsafe(`
         SELECT j.id FROM "Job" j
@@ -1688,6 +1691,23 @@ app.patch("/api/admin/runners/:id/trust", authorizeAdmin, async (req, res) => {
   res.json({ success: true, trusted: updated.trusted });
 });
 
+app.patch("/api/admin/runners/:id/placements", authorizeAdmin, async (req, res) => {
+  const id = req.params.id as string;
+  const { canRunPlacements } = req.body;
+  if (typeof canRunPlacements !== "boolean") return res.status(400).json({ error: "canRunPlacements (boolean) required" });
+
+  const key = await prisma.runnerKey.findUnique({ where: { id } });
+  if (!key) return res.status(404).json({ error: "Runner key not found" });
+
+  const updated = await prisma.runnerKey.update({
+    where: { id },
+    data: { canRunPlacements },
+  });
+
+  console.log(`[Admin] Runner key ${id} canRunPlacements=${canRunPlacements}`);
+  res.json({ success: true, canRunPlacements: updated.canRunPlacements });
+});
+
 app.delete("/api/admin/runners/:id", authorizeAdmin, async (req, res) => {
   const id = req.params.id as string;
   const key = await prisma.runnerKey.findUnique({ where: { id } });
@@ -1714,6 +1734,7 @@ app.get("/api/runners/me", async (req, res) => {
       label: true,
       publicKey: true,
       trusted: true,
+      canRunPlacements: true,
       jobsProcessed: true,
       createdAt: true,
       revokedAt: true,

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ApiClient } from "@/lib/apiClient";
 import { toast } from "sonner";
-import { Shield, ShieldOff, Trash2, Terminal, Copy, CheckCircle, XCircle, Plus, X, Check, ChevronRight } from "lucide-react";
+import { Shield, ShieldOff, Trash2, Terminal, Copy, CheckCircle, XCircle, Plus, X, Check, Swords } from "lucide-react";
 
 export default function RunnersAdmin() {
   const { data: session } = useSession();
@@ -67,6 +67,16 @@ export default function RunnersAdmin() {
       fetchData();
     } catch (err: any) {
       toast.error(err.message || "Failed to update trust");
+    }
+  };
+
+  const handleTogglePlacements = async (id: string, current: boolean) => {
+    try {
+      await ApiClient.setRunnerPlacements(userId, id, !current);
+      toast.success(!current ? "Placement matches enabled" : "Placement matches disabled");
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update");
     }
   };
 
@@ -232,6 +242,7 @@ export default function RunnersAdmin() {
               <th className="px-6 py-4 text-left">Label</th>
               <th className="px-6 py-4 text-left">Public Key</th>
               <th className="px-6 py-4 text-left">Trusted</th>
+              <th className="px-6 py-4 text-left">Placements</th>
               <th className="px-6 py-4 text-left">Jobs</th>
               <th className="px-6 py-4 text-left">Status</th>
               <th className="px-6 py-4 text-left">Actions</th>
@@ -247,6 +258,11 @@ export default function RunnersAdmin() {
                   {r.trusted
                     ? <span className="flex items-center gap-1 text-green-400 text-xs font-mono"><CheckCircle size={12} /> Trusted</span>
                     : <span className="flex items-center gap-1 text-amber-400 text-xs font-mono"><XCircle size={12} /> Pending</span>}
+                </td>
+                <td className="px-6 py-4">
+                  {r.canRunPlacements
+                    ? <span className="flex items-center gap-1 text-purple-400 text-xs font-mono"><Swords size={12} /> Yes</span>
+                    : <span className="text-white/20 text-xs font-mono">—</span>}
                 </td>
                 <td className="px-6 py-4 text-white/50 font-mono text-xs">{r.jobsProcessed}</td>
                 <td className="px-6 py-4">
@@ -264,6 +280,13 @@ export default function RunnersAdmin() {
                           title={r.trusted ? "Revoke trust" : "Grant trust"}
                         >
                           {r.trusted ? <ShieldOff size={14} /> : <Shield size={14} />}
+                        </button>
+                        <button
+                          onClick={() => handleTogglePlacements(r.id, r.canRunPlacements)}
+                          className={`p-1.5 rounded-lg hover:bg-white/5 transition-colors ${r.canRunPlacements ? "text-purple-400" : "text-white/40 hover:text-purple-400"}`}
+                          title={r.canRunPlacements ? "Disable placement matches" : "Enable placement matches"}
+                        >
+                          <Swords size={14} />
                         </button>
                         <button
                           onClick={() => handleRevoke(r.id)}

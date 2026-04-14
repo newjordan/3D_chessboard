@@ -279,14 +279,15 @@ model RunnerKeyRequest {
 }
 
 model RunnerKey {
-  id            String    @id @default(uuid())
-  userId        String
-  label         String?
-  publicKey     String    @db.Text
-  trusted       Boolean   @default(false)
-  jobsProcessed Int       @default(0)
-  createdAt     DateTime  @default(now())
-  revokedAt     DateTime?
+  id                String    @id @default(uuid())
+  userId            String
+  label             String?
+  publicKey         String    @db.Text
+  trusted           Boolean   @default(false)
+  canRunPlacements  Boolean   @default(false)
+  jobsProcessed     Int       @default(0)
+  createdAt         DateTime  @default(now())
+  revokedAt         DateTime?
 
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
