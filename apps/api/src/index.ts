@@ -600,6 +600,7 @@ app.get("/api/matches", async (req, res) => {
       include: {
         challengerEngine: { include: { owner: { select: { username: true, image: true } } } },
         defenderEngine: { include: { owner: { select: { username: true, image: true } } } },
+        ratings: { select: { engineId: true, delta: true } },
       }
     });
     res.json(matches);

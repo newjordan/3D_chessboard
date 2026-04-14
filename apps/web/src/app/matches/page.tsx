@@ -45,19 +45,32 @@ export default async function MatchesPage({
       </div>
 
       <div className="flex flex-col border-t border-border-custom">
-        {matches.map((match: any) => (
-          <Link 
+        {matches.map((match: any) => {
+          // When filtered by engine, find the delta for that specific engine
+          const filteredEngineId = engine
+            ? (match.challengerEngine.slug === engine ? match.challengerEngine.id : match.defenderEngine.id)
+            : null;
+          const filteredDelta = filteredEngineId
+            ? (match.ratings?.find((r: any) => r.engineId === filteredEngineId)?.delta ?? null)
+            : null;
+          const challengerDelta = match.ratings?.find((r: any) => r.engineId === match.challengerEngine.id)?.delta ?? null;
+          const defenderDelta = match.ratings?.find((r: any) => r.engineId === match.defenderEngine.id)?.delta ?? null;
+
+          return (
+          <Link
             key={match.id}
             href={`/matches/${match.id}`}
-            className="grid grid-cols-[100px_1fr_120px_40px] items-center py-8 border-b border-border-custom hover:bg-white/[0.01] transition-all group px-4 -mx-4"
+            className="grid grid-cols-[100px_1fr_80px_120px_40px] items-center py-8 border-b border-border-custom hover:bg-white/[0.01] transition-all group px-4 -mx-4"
           >
             <span className="font-mono text-[10px] opacity-30">
               {new Date(match.completedAt || match.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
-            
+
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <span className="font-bold">{match.challengerEngine.name}</span>
+                <span className={`font-bold ${engine && match.challengerEngine.slug === engine ? '' : 'opacity-60'}`}>
+                  {match.challengerEngine.name}
+                </span>
                 {match.status === 'running' && (
                   <span className="px-1 py-0.5 rounded-full bg-accent/10 border border-accent/20 animate-pulse text-[7px] font-bold text-accent">LIVE</span>
                 )}
@@ -66,7 +79,38 @@ export default async function MatchesPage({
                 )}
               </div>
               <span className="opacity-20 italic font-mono text-[10px]">VS</span>
-              <span className="font-bold">{match.defenderEngine.name}</span>
+              <span className={`font-bold ${engine && match.defenderEngine.slug === engine ? '' : 'opacity-60'}`}>
+                {match.defenderEngine.name}
+              </span>
+            </div>
+
+            {/* Elo delta column */}
+            <div className="text-right hidden sm:block">
+              {match.status === 'completed' && (
+                engine ? (
+                  filteredDelta != null && (
+                    <span className={`font-mono text-[11px] font-bold ${
+                      filteredDelta > 0 ? 'text-accent' : filteredDelta < 0 ? 'text-red-400' : 'opacity-30'
+                    }`}>
+                      {filteredDelta > 0 ? '+' : ''}{filteredDelta}
+                    </span>
+                  )
+                ) : (
+                  <div className="flex items-center justify-end gap-1 font-mono text-[10px]">
+                    {challengerDelta != null && (
+                      <span className={challengerDelta > 0 ? 'text-accent' : challengerDelta < 0 ? 'text-red-400' : 'opacity-30'}>
+                        {challengerDelta > 0 ? '+' : ''}{challengerDelta}
+                      </span>
+                    )}
+                    {challengerDelta != null && defenderDelta != null && <span className="opacity-20">/</span>}
+                    {defenderDelta != null && (
+                      <span className={defenderDelta > 0 ? 'text-accent' : defenderDelta < 0 ? 'text-red-400' : 'opacity-30'}>
+                        {defenderDelta > 0 ? '+' : ''}{defenderDelta}
+                      </span>
+                    )}
+                  </div>
+                )
+              )}
             </div>
 
             <div className="flex items-center justify-center gap-4 font-mono text-sm">
@@ -89,7 +133,8 @@ export default async function MatchesPage({
               <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted" />
             </div>
           </Link>
-        ))}
+          );
+        })}
 
         {matches.length === 0 && (
           <div className="py-24 text-center border-b border-border-custom flex flex-col gap-4 items-center">
