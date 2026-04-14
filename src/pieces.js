@@ -36,11 +36,11 @@ export async function createPieces(scene, offset) {
           
           // Dynamically stand the piece upright based on its longest dimension
           if (xLen > yLen && xLen > zLen) {
-             // Laying along X axis
-             geometry.rotateZ(-Math.PI / 2);
+             // Laying along X axis: was upside down, so spin opposite direction
+             geometry.rotateZ(Math.PI / 2);
           } else if (zLen > yLen && zLen > xLen) {
-             // Laying along Z axis
-             geometry.rotateX(-Math.PI / 2);
+             // Laying along Z axis: was upside down, so spin opposite direction
+             geometry.rotateX(Math.PI / 2);
           }
           // Now compute the bounds again after rotation
           geometry.computeBoundingBox();
