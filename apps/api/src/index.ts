@@ -6,6 +6,7 @@ import multer from "multer";
 import crypto from "crypto";
 import path from "path";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import rateLimit from "express-rate-limit";
 import { generateKeyPair, generateRSAKeyPair, hashData, signData, verifyData, encryptForArbiter } from "./crypto";
 import JavaScriptObfuscator from "javascript-obfuscator";
@@ -69,6 +70,9 @@ const s3Client = new S3Client({
     accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
+  requestHandler: new NodeHttpHandler({
+    maxSockets: 200,
+  }),
 });
 
 const BUCKET_NAME = process.env.R2_BUCKET || "chess-agents";
