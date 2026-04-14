@@ -231,23 +231,28 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       tl.to(piece.position, { y: -2, duration: 0.6, ease: "power3.in" }, 0.3);
       
-      // Particle Burst on Death (Matrix dialtone drop, thinned out with gradient)
-      const particleGeo = new THREE.PlaneGeometry(0.04, 0.04); 
+      // Particle Burst on Death (Sparse, varied vertical glitch needles)
+      // Dropped size by 65%, stretched Y by 20%, switched to BoxGeometry so they don't lie flat
+      const particleGeo = new THREE.BoxGeometry(0.012, 0.15, 0.012); 
       const particles = [];
       const particleGroup = new THREE.Group();
       particleGroup.position.set(px, 0, pz); // Set base at square center
       
-      // Thin it out: only 14 traces
-      for(let i=0; i<14; i++) {
-         const mat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+      // Reduce count massively to 8
+      for(let i=0; i<8; i++) {
+         const mat = new THREE.MeshBasicMaterial({ color: 0x00ff77, transparent: true, opacity: 0 });
          const mesh = new THREE.Mesh(particleGeo, mat);
          const gridX = (Math.floor(Math.random() * 7) - 3) * 0.12;
          const gridZ = (Math.floor(Math.random() * 7) - 3) * 0.12;
-         const startY = 0.5 + Math.random() * 1.5;
+         const startY = 0.5 + Math.random() * 2.5; // Huge spawn height variance
          
          mesh.position.set(gridX, startY, gridZ);
-         mesh.rotation.x = -Math.PI / 2; // Flat data squares parallel to board
-         mesh.userData = { speed: 1.5 + Math.random() * 2.5 }; // Smooth vertical speed
+         
+         mesh.userData = { 
+             speed: 1.0 + Math.random() * 3.0,     // Wild speed variance
+             startDelay: Math.random() * 0.4,      // Staggered start timings (proxy t is 0->1)
+             flickerFreq: Math.random() * 0.1 + 0.02
+         }; 
          
          particleGroup.add(mesh);
          particles.push(mesh);
@@ -257,29 +262,35 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       const pProxy = { t: 0 };
       tl.to(pProxy, {
          t: 1,
-         duration: 0.8,
+         duration: 1.2, // Let the glitch breathe for a long second
          ease: "none",
          onUpdate: () => {
              particles.forEach(p => {
-                p.position.y -= p.userData.speed * 0.016; // Drop rigidly straight down
-                // Loop the "raindrops" if they pass the floor
+                // Staggered entry logic
+                if (pProxy.t < p.userData.startDelay) return;
+
+                p.position.y -= p.userData.speed * 0.02; // Vertical drop
+                
+                // Infinite Loop physics with variance reset
                 if (p.position.y < -0.5) {
-                    p.position.y = 1.0 + Math.random() * 0.5;
+                    p.position.y = 0.5 + Math.random() * 1.5;
+                    p.userData.speed = 1.0 + Math.random() * 3.0; // Randomize drop speed again
                 }
                 
                 // Gradient transparency based on vertical height
-                // Starts fading out smoothly as it reaches 0 (the board surface)
                 const fade = Math.max(0, Math.min(1, (p.position.y + 0.2) / 0.8));
-                p.material.opacity = fade * 0.8;
+                p.material.opacity = fade * 0.9;
                 
-                // Dialtone Glitch scale flicker
-                p.scale.setScalar(Math.random() > 0.1 ? 1 : 0);
+                // Asynchronous Dialtone Glitch flicker
+                if (Math.random() < p.userData.flickerFreq) {
+                    p.scale.setScalar(Math.random() > 0.4 ? 1 : 0);
+                }
              });
          }
-      }, 0.2); // Dialtone fires up instantly as piece drops
+      }, 0.2); // Dialtone fires up as piece drops
       
-      // Quickly plunge the whole group down to clean up visually when done
-      tl.to(particleGroup.position, { y: -1, duration: 0.2 }, 0.8); 
+      // Plunge clean up
+      tl.to(particleGroup.position, { y: -1, duration: 0.2 }, 1.2); 
 
       // Glitch Touch at lower Y border (wobbles the clipping plane dynamically)
       const glitchObj = { val: 0.5 };
