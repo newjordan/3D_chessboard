@@ -7,7 +7,7 @@ import crypto from "crypto";
 import path from "path";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import rateLimit from "express-rate-limit";
-import { generateKeyPair, hashData, signData, verifyData } from "./crypto";
+import { generateKeyPair, generateRSAKeyPair, hashData, signData, verifyData, encryptForArbiter } from "./crypto";
 import JavaScriptObfuscator from "javascript-obfuscator";
 
 dotenv.config();
@@ -1082,23 +1082,44 @@ app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
       const challengerObfuscated = obfuscateCode(challengerCode, match.challengerVersion.language);
       const defenderObfuscated = obfuscateCode(defenderCode, match.defenderVersion.language);
 
+      // Per-arbiter RSA encryption: if the runner has an RSA key, encrypt obfuscated code
+      // so only their private key can decrypt it. Falls back to obfuscation-only for Ed25519 runners.
+      const runnerKey = (req as any).runnerKey;
+      let finalChallengerCode = challengerObfuscated;
+      let finalDefenderCode = defenderObfuscated;
+      let encrypted = false;
+
+      if (brokerMode === "runner" && runnerKey) {
+        try {
+          const keyType = require("crypto").createPublicKey(runnerKey.publicKey).asymmetricKeyType;
+          if (keyType === "rsa") {
+            finalChallengerCode = encryptForArbiter(challengerObfuscated, runnerKey.publicKey);
+            finalDefenderCode = encryptForArbiter(defenderObfuscated, runnerKey.publicKey);
+            encrypted = true;
+          }
+        } catch {
+          // If key parsing fails, fall back to obfuscation-only
+        }
+      }
+
       return {
         jobId: job.id,
         matchId: match.id,
         matchType: match.matchType,
         timeControl: match.timeControl,
         gamesPlanned: match.gamesPlanned,
+        encrypted,
         challenger: {
           id: match.challengerEngineId,
           name: match.challengerEngine.name,
           language: match.challengerVersion.language,
-          code: challengerObfuscated
+          code: finalChallengerCode
         },
         defender: {
           id: match.defenderEngineId,
           name: match.defenderEngine.name,
           language: match.defenderVersion.language,
-          code: defenderObfuscated
+          code: finalDefenderCode
         },
         challengerHash,
         defenderHash,
@@ -1622,7 +1643,7 @@ app.post("/api/admin/runners", authorizeAdmin, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return res.status(404).json({ error: "User not found" });
 
-  const kp = generateKeyPair();
+  const kp = generateRSAKeyPair();
   const runnerKey = await prisma.runnerKey.create({
     data: {
       userId,
@@ -1632,7 +1653,7 @@ app.post("/api/admin/runners", authorizeAdmin, async (req, res) => {
     },
   });
 
-  console.log(`[Admin] Runner key created for user ${userId} (key ${runnerKey.id})`);
+  console.log(`[Admin] RSA-4096 runner key created for user ${userId} (key ${runnerKey.id})`);
 
   // Private key returned once and never stored — client must save it
   res.json({
