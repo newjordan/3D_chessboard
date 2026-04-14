@@ -303,7 +303,7 @@ export default function RunnersAdmin() {
             ))}
             {runners.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-white/20 font-mono text-xs">No runner keys yet</td>
+                <td colSpan={8} className="px-6 py-12 text-center text-white/20 font-mono text-xs">No runner keys yet</td>
               </tr>
             )}
           </tbody>
