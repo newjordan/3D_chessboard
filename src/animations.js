@@ -108,47 +108,43 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       let p1 = [], p2 = [];
       if (Math.abs(dx) > 0.1 && Math.abs(dz) > 0.1) {
-          // Diagonal/Knight: Overshoot the bounding box slightly, then converge
-          const oX = Math.sign(dx) * 1.0; 
-          const oZ = Math.sign(dz) * 1.0;
+          // Diagonal/Knight: Trace exact rectangular perimeter. No overshooting.
           p1 = [
              new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX, 0, targetCornerZ + oZ),
-             new THREE.Vector3(targetCornerX, 0, targetCornerZ + oZ),
+             new THREE.Vector3(snapCornerX, 0, targetCornerZ),
              new THREE.Vector3(targetCornerX, 0, targetCornerZ)
           ];
           p2 = [
              new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(targetCornerX + oX, 0, snapCornerZ),
-             new THREE.Vector3(targetCornerX + oX, 0, targetCornerZ),
+             new THREE.Vector3(targetCornerX, 0, snapCornerZ),
              new THREE.Vector3(targetCornerX, 0, targetCornerZ)
           ];
       } else if (Math.abs(dx) < 0.1) {
-          // Pure Z move (Vertical) -> bulge widely horizontally
+          // Pure Z move (Vertical) -> bulge sideways symmetrically
           p1 = [
              new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX - 1.5, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX - 1.5, 0, targetCornerZ),
-             new THREE.Vector3(targetCornerX, 0, targetCornerZ)
+             new THREE.Vector3(snapCornerX - 1.0, 0, snapCornerZ),
+             new THREE.Vector3(snapCornerX - 1.0, 0, targetCornerZ),
+             new THREE.Vector3(snapCornerX, 0, targetCornerZ)
           ];
           p2 = [
              new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX + 1.5, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX + 1.5, 0, targetCornerZ),
-             new THREE.Vector3(targetCornerX, 0, targetCornerZ)
+             new THREE.Vector3(snapCornerX + 1.0, 0, snapCornerZ),
+             new THREE.Vector3(snapCornerX + 1.0, 0, targetCornerZ),
+             new THREE.Vector3(snapCornerX, 0, targetCornerZ)
           ];
       } else {
-          // Pure X move (Horizontal) -> bulge widely vertically
+          // Pure X move (Horizontal) -> bulge longitudinally symmetrically
           p1 = [
              new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ - 1.5),
-             new THREE.Vector3(targetCornerX, 0, snapCornerZ - 1.5),
+             new THREE.Vector3(snapCornerX, 0, snapCornerZ - 1.0),
+             new THREE.Vector3(targetCornerX, 0, snapCornerZ - 1.0),
              new THREE.Vector3(targetCornerX, 0, targetCornerZ)
           ];
           p2 = [
              new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ + 1.5),
-             new THREE.Vector3(targetCornerX, 0, snapCornerZ + 1.5),
+             new THREE.Vector3(snapCornerX, 0, snapCornerZ + 1.0),
+             new THREE.Vector3(targetCornerX, 0, snapCornerZ + 1.0),
              new THREE.Vector3(targetCornerX, 0, targetCornerZ)
           ];
       }
@@ -276,6 +272,7 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       piece.traverse(c => {
          if (c.material && c.type === 'LineSegments') {
             c.material = c.material.clone();
+            c.material.color.setHex(0xff0022); // Deep glowing red
             c.material.clippingPlanes = [clipPlane];
          }
       });

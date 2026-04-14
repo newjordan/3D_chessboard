@@ -22,10 +22,14 @@ function animate() {
 
   controls.update();
 
-  // Pulse effect on highlighted pieces halo
+  // Decaying timestamp pulse effect on moved pieces
   pieces.forEach(p => {
-    if (p.userData.haloMat && p.userData.haloMat.opacity > 0) {
-      p.userData.haloMat.opacity = 0.5 + 0.5 * Math.sin(time * 6);
+    if (p.userData.moveAge !== undefined && p.userData.moveAge <= 3) {
+      const baseOpacities = [1.0, 0.6, 0.3, 0.1]; // Decay over 3 turns
+      const base = baseOpacities[p.userData.moveAge];
+      p.userData.haloMat.opacity = (base * 0.6) + (base * 0.4) * Math.sin(time * 6);
+    } else {
+      if (p.userData.haloMat) p.userData.haloMat.opacity = 0;
     }
   });
 
@@ -83,6 +87,10 @@ function nextMove() {
            
            // 3. Jump to location
            animCtx.animateJump(actor, m.tR, m.tF, () => {
+              // Increment global history decay
+              pieces.forEach(p => { if (p.userData.moveAge !== undefined) p.userData.moveAge++; });
+              actor.userData.moveAge = 0; // Stamp piece as most recently moved
+              
               step++;
               setTimeout(nextMove, 800); // Wait 0.8s before next sequence
            });
@@ -90,6 +98,10 @@ function nextMove() {
      } else {
         // 2. Just jump to location
         animCtx.animateJump(actor, m.tR, m.tF, () => {
+           // Increment global history decay
+           pieces.forEach(p => { if (p.userData.moveAge !== undefined) p.userData.moveAge++; });
+           actor.userData.moveAge = 0;
+           
            step++;
            setTimeout(nextMove, 800); 
         });
