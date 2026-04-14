@@ -32,11 +32,24 @@ export function MatchRow({ match, engineName }: MatchRowProps) {
     >
       <div className="flex items-center gap-3 sm:gap-6 min-w-0 flex-1">
         <span className="technical-label opacity-30 text-[10px] w-10 sm:w-12 shrink-0 hidden sm:block">
-          {new Date(match.completedAt || 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {new Date(match.completedAt || match.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </span>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm font-medium min-w-0">
-          <span className={`truncate ${match.role === 'challenger' ? 'font-bold' : ''}`}>{engineName}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <span className={`truncate ${match.role === 'challenger' ? 'font-bold' : ''}`}>{engineName}</span>
+            {match.status === 'running' && (
+              <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-accent/10 border border-accent/20 animate-pulse">
+                <span className="w-1 h-1 rounded-full bg-accent" />
+                <span className="text-[8px] font-bold text-accent uppercase tracking-tighter">Live</span>
+              </span>
+            )}
+            {match.status === 'queued' && (
+              <span className="px-1.5 py-0.5 border border-border-custom bg-white/[0.02] text-[8px] font-bold opacity-40 uppercase tracking-tighter">
+                Queued
+              </span>
+            )}
+          </div>
           <span className="hidden sm:inline opacity-20 italic shrink-0">vs</span>
           <div className="flex items-center gap-2 min-w-0">
             <Link 
@@ -64,13 +77,19 @@ export function MatchRow({ match, engineName }: MatchRowProps) {
 
       <div className="flex items-center gap-3 sm:gap-6 shrink-0">
         <div className="font-mono text-sm font-bold flex gap-1">
-          <span className={myScore > theirScore ? 'text-accent' : (myScore < theirScore ? 'text-red-800' : 'opacity-40')}>
-            {myScore}
-          </span>
-          <span className="opacity-20">-</span>
-          <span className={theirScore > myScore ? 'text-accent' : (theirScore < myScore ? 'text-red-800' : 'opacity-40')}>
-            {theirScore}
-          </span>
+          {match.status === 'completed' ? (
+            <>
+              <span className={myScore > theirScore ? 'text-accent' : (myScore < theirScore ? 'text-red-800' : 'opacity-40')}>
+                {myScore}
+              </span>
+              <span className="opacity-20">-</span>
+              <span className={theirScore > myScore ? 'text-accent' : (theirScore < myScore ? 'text-red-800' : 'opacity-40')}>
+                {theirScore}
+              </span>
+            </>
+          ) : (
+            <span className="text-[10px] technical-label opacity-20 uppercase tracking-widest italic">In Progress</span>
+          )}
         </div>
         <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted hidden sm:block" />
       </div>

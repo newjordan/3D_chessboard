@@ -881,7 +881,7 @@ app.delete("/api/engines/:id", async (req, res) => {
 
 // 1. Fetch Next Jobs (Batch)
 app.post("/api/broker/next-jobs", authorizeBroker, async (req, res) => {
-  const count = Math.min(10, Math.max(1, req.body.count || 1));
+  const count = Math.min(100, Math.max(1, req.body.count || 1));
   const brokerId = `broker-${req.body.brokerId || 'external'}`;
   
   console.log(`[Broker] ${brokerId} requesting ${count} jobs`);

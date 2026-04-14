@@ -52,8 +52,13 @@ export default async function EngineDetailPage({ params }: { params: Promise<{ s
   const allMatches = [
     ...(engine?.matchesChallenged || []).map((m: any) => ({ ...m, role: 'challenger' })),
     ...(engine?.matchesDefended || []).map((m: any) => ({ ...m, role: 'defender' }))
-  ].sort((a, b) => (new Date(b.completedAt || 0).getTime()) - (new Date(a.completedAt || 0).getTime()))
-   .slice(0, 5);
+  ].sort((a, b) => {
+    const aActive = a.status === 'queued' || a.status === 'running';
+    const bActive = b.status === 'queued' || b.status === 'running';
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    return new Date(b.completedAt || b.createdAt).getTime() - new Date(a.completedAt || a.createdAt).getTime();
+  }).slice(0, 5);
 
 
 

@@ -52,23 +52,37 @@ export default async function MatchesPage({
             className="grid grid-cols-[100px_1fr_120px_40px] items-center py-8 border-b border-border-custom hover:bg-white/[0.01] transition-all group px-4 -mx-4"
           >
             <span className="font-mono text-[10px] opacity-30">
-              {new Date(match.completedAt || 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {new Date(match.completedAt || match.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
             
             <div className="flex items-center gap-4 text-sm">
-              <span className="font-bold">{match.challengerEngine.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold">{match.challengerEngine.name}</span>
+                {match.status === 'running' && (
+                  <span className="px-1 py-0.5 rounded-full bg-accent/10 border border-accent/20 animate-pulse text-[7px] font-bold text-accent">LIVE</span>
+                )}
+                {match.status === 'queued' && (
+                  <span className="px-1 py-0.5 border border-border-custom bg-white/[0.02] text-[7px] font-bold opacity-30 uppercase">Queued</span>
+                )}
+              </div>
               <span className="opacity-20 italic font-mono text-[10px]">VS</span>
               <span className="font-bold">{match.defenderEngine.name}</span>
             </div>
 
             <div className="flex items-center justify-center gap-4 font-mono text-sm">
-              <span className={Number(match.challengerScore) > Number(match.defenderScore) ? 'text-accent font-bold' : 'opacity-40'}>
-                {match.challengerScore?.toString()}
-              </span>
-              <span className="opacity-10">-</span>
-              <span className={Number(match.defenderScore) > Number(match.challengerScore) ? 'text-accent font-bold' : 'opacity-40'}>
-                {match.defenderScore?.toString()}
-              </span>
+              {match.status === 'completed' ? (
+                <>
+                  <span className={Number(match.challengerScore) > Number(match.defenderScore) ? 'text-accent font-bold' : 'opacity-40'}>
+                    {match.challengerScore?.toString()}
+                  </span>
+                  <span className="opacity-10">-</span>
+                  <span className={Number(match.defenderScore) > Number(match.challengerScore) ? 'text-accent font-bold' : 'opacity-40'}>
+                    {match.defenderScore?.toString()}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[9px] technical-label opacity-20 italic">Ongoing</span>
+              )}
             </div>
 
             <div className="flex justify-end">
