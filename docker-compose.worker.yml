@@ -1,11 +1,7 @@
 version: '3.8'
 
 services:
-  worker:
-    # Option A: Pull from Docker Hub (Recommended for remote servers)
-    # image: jaymaart/chess-worker:latest
-    
-    # Option B: Build locally (Recommended for development)
+  scheduler:
     build:
       context: .
       dockerfile: ./apps/worker/Dockerfile
@@ -14,18 +10,32 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - WORKER_ID=local-worker
-      - ENABLE_MATCH_RUN=true
-    # Optional: If you ever want to use your 5070 for GPU engines:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+      - WORKER_ROLE=scheduler,reaper
+      - WORKER_ID=local-scheduler
     volumes:
       - ./apps/worker/tmp:/app/apps/worker/tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10mb"
+        max-file: "3"
+
+  worker:
+    build:
+      context: .
+      dockerfile: ./apps/worker/Dockerfile
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - WORKER_ROLE=runner
+      - WORKER_ID=local-runner
+      - ENABLE_MATCH_RUN=true
+    volumes:
+      - ./apps/worker/tmp:/app/apps/worker/tmp
+    deploy:
+      replicas: 6
     logging:
       driver: "json-file"
       options:

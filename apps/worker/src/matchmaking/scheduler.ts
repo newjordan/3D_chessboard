@@ -1,4 +1,5 @@
 import { prisma, MatchType, MatchStatus, JobType, JobStatus, EngineStatus } from "../db";
+import { notifyMatchesScheduled } from "../notifications";
 
 /**
  * Rematch cooldown in milliseconds (15 minutes).
@@ -160,12 +161,17 @@ export async function scheduleMatches(): Promise<number> {
     scheduled++;
   }
 
-  return scheduled;
-} finally {
-  // Always release the lock so other workers can try again in the next 30s cycle
-  // Fix: Renamed from pg_release_advisory_lock (incorrect name) to pg_advisory_unlock (correct Postgres name)
-  await prisma.$executeRaw`SELECT pg_advisory_unlock(1337::bigint)`;
-}
+    // 5. Send Summary Notification
+    if (scheduled > 0) {
+      await notifyMatchesScheduled(scheduled, processedEngines.size);
+    }
+
+    return scheduled;
+  } finally {
+    // Always release the lock so other workers can try again in the next 30s cycle
+    // Fix: Renamed from pg_release_advisory_lock (incorrect name) to pg_advisory_unlock (correct Postgres name)
+    await prisma.$executeRaw`SELECT pg_advisory_unlock(1337::bigint)`;
+  }
 }
 
 /**

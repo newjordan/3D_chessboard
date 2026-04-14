@@ -1,56 +1,7 @@
 const BASE_URL = process.env.NEXTAUTH_URL || "https://chessagents.ai";
 
 export async function notifyMatchStarted(match: any) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  try {
-    console.log(`[Notification] Sending Match Started for ${match.id}...`);
-    const embed = {
-      title: "⚔️ Match Started",
-      description: `**${match.challengerEngine?.name || "Unknown"}** vs **${match.defenderEngine?.name || "Unknown"}**`,
-      color: 0x3498db, // Blue
-      fields: [
-        {
-          name: "Challenger",
-          value: `${match.challengerEngine?.name || "N/A"} (${match.challengerEngine?.currentRating || 1200} Elo)`,
-          inline: true
-        },
-        {
-          name: "Defender",
-          value: `${match.defenderEngine?.name || "N/A"} (${match.defenderEngine?.currentRating || 1200} Elo)`,
-          inline: true
-        },
-        {
-          name: "Format",
-          value: `${match.gamesPlanned || 0} Games`,
-          inline: false
-        }
-      ],
-      timestamp: new Date().toISOString(),
-      footer: {
-        text: `Match ID: ${String(match.id).substring(0, 8)}`
-      }
-    };
-
-    if (!webhookUrl) {
-      console.warn("DEBUG: No DISCORD_WEBHOOK_URL found in environment.");
-      return;
-    }
-
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ embeds: [embed] }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Discord API Error (started): ${response.status} ${response.statusText} - ${errorText}`);
-    } else {
-      console.log(`[Notification] Match Started sent successfully.`);
-    }
-  } catch (error) {
-    console.error("Failed to send Discord notification (started):", error);
-  }
+  // Silenced to prevent webhook spam on large batches.
 }
 
 export async function notifyMatchResult(match: any, deltaA: number, deltaB: number, challengerWins: number, defenderWins: number, draws: number) {
@@ -110,66 +61,50 @@ export async function notifyMatchResult(match: any, deltaA: number, deltaB: numb
   }
 }
 
-export async function notifyGameResult(match: any, round: number, result: string, termination: string) {
+export async function notifyMatchesScheduled(matchCount: number, engineCount: number) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  try {
-    console.log(`[Notification] Sending Game Result for round ${round}...`);
-    
-    // Logic: Odd rounds = Challenger is White, Even rounds = Defender is White
-    const isChallengerWhite = round % 2 !== 0;
-    const whiteName = isChallengerWhite ? match.challengerEngine?.name : match.defenderEngine?.name;
-    const blackName = isChallengerWhite ? match.defenderEngine?.name : match.challengerEngine?.name;
-    
-    let winnerText = "🤝 The game ended in a draw.";
-    let resultEmoji = "🤝";
-    
-    if (result === "1-0") {
-      winnerText = `🏆 **${whiteName}** (White) won!`;
-      resultEmoji = "⚪";
-    } else if (result === "0-1") {
-      winnerText = `🏆 **${blackName}** (Black) won!`;
-      resultEmoji = "⚫";
-    }
+  if (!webhookUrl || matchCount === 0) return;
 
+  try {
     const embed = {
-      title: `🎮 Game ${round} Finished`,
-      description: `${resultEmoji} ${winnerText}\n**Result**: ${result} (${termination})`,
-      color: 0xf1c40f, // Yellow/Gold
+      title: "🔄 Matches Scheduled",
+      description: `The scheduler has successfully queued a new batch of matches.`,
+      color: 0x9b59b6, // Purple
       fields: [
         {
-          name: "Challenger",
-          value: match.challengerEngine?.name || "Agent A",
+          name: "Matches Queued",
+          value: `**${matchCount}**`,
           inline: true
         },
         {
-          name: "Defender",
-          value: match.defenderEngine?.name || "Agent B",
+          name: "Engines Involved",
+          value: `**${engineCount}**`,
           inline: true
+        },
+        {
+          name: "Mode",
+          value: "Competitive Rating",
+          inline: false
         }
       ],
       timestamp: new Date().toISOString(),
       footer: {
-        text: `Match ID: ${String(match.id).substring(0, 8)}`
+        text: "Chess Arena Scheduler"
       }
     };
 
-    if (!webhookUrl) return;
-
-    const response = await fetch(webhookUrl, {
+    await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ embeds: [embed] }),
     });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Discord API Error (game): ${response.status} ${response.statusText} - ${errorText}`);
-    } else {
-      console.log(`[Notification] Game Result sent successfully.`);
-    }
   } catch (error) {
-    console.error("Failed to send Discord notification (game):", error);
+    console.error("Failed to send Batch Schedule notification:", error);
   }
+}
+
+export async function notifyGameResult(match: any, round: number, result: string, termination: string) {
+  // Silenced to prevent webhook spam (2 results per match).
 }
 
 export async function notifyEngineValidated(engine: any, owner: any) {

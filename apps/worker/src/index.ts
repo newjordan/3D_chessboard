@@ -557,8 +557,20 @@ if (isPublicMode) {
     });
   });
 } else {
-  console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
+  const ROLES = (process.env.WORKER_ROLE || "all").toLowerCase().split(",");
+
+console.log(`Chess Agents Worker started with ID: ${WORKER_ID}`);
+console.log(`Assigned Roles: ${ROLES.join(", ")}`);
+
+if (ROLES.includes("all") || ROLES.includes("runner")) {
   pollJobs();
+}
+
+if (ROLES.includes("all") || ROLES.includes("scheduler")) {
   pollScheduler();
+}
+
+if (ROLES.includes("all") || ROLES.includes("reaper")) {
   pollReaper();
+}
 }
