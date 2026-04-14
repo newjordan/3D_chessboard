@@ -27,6 +27,7 @@ model User {
   engines       Engine[]
   submissions   Submission[]
   runnerKeys    RunnerKey[]
+  runnerKeyRequests RunnerKeyRequest[]
 
   // NextAuth
   accounts      Account[]
@@ -258,6 +259,23 @@ model Job {
   updatedAt   DateTime  @updatedAt
 
   @@index([status, runAt])
+}
+
+enum RunnerKeyRequestStatus {
+  pending
+  fulfilled
+  rejected
+}
+
+model RunnerKeyRequest {
+  id        String                 @id @default(uuid())
+  userId    String
+  note      String?                @db.Text
+  status    RunnerKeyRequestStatus @default(pending)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RunnerKey {
