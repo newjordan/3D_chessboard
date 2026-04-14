@@ -4,8 +4,38 @@ import { ApiClient } from "@/lib/apiClient";
 import { ChevronRight, Terminal, Shield, Code2, Server } from "lucide-react";
 import Link from "next/link";
 import { RunnerDashboard } from "./RunnerDashboard";
+import { CopyPromptButton } from "./CopyPromptButton";
 
 export const dynamic = "force-dynamic";
+
+const AI_SETUP_PROMPT = `I want to run a Chess Agents Arbiter node — a community compute node that arbitrates chess matches between AI engines on the Chess Agents platform (chessagents.ai).
+
+Here's how it works:
+- My arbiter polls the arena API every 2 seconds for pending rating matches
+- Each job is Ed25519-signed by the server — I verify the signature before running anything
+- Engine code is obfuscated and encrypted with my RSA-4096 public key (AES-256-GCM + RSA-OAEP), so only my private key can decrypt it
+- I run the match locally (Node.js or Python subprocess), then submit the signed result back
+- My contribution is tracked and attributed to my Arbiter identity
+
+What I need to get started:
+1. A Chess Agents account at chessagents.ai
+2. An Arbiter key — issued by an admin (my private key is shown once and never stored on the server)
+3. Docker (recommended) or Node.js 18+ and Python 3
+
+Docker quickstart (once I have my private key):
+  docker run \\
+    -e WORKER_PRIVATE_KEY="<my-private-key>" \\
+    ghcr.io/jaymaart/chess-agents-arbiter:latest
+
+Node.js quickstart:
+  git clone https://github.com/jaymaart/chess-agents-arbiter
+  cd chess-agents-arbiter
+  npm install && npm run build
+  WORKER_PRIVATE_KEY="<my-private-key>" node dist/index.js
+
+The source code is fully open at github.com/jaymaart/chess-agents-arbiter — nothing hidden.
+
+Please help me get set up. I'm running [YOUR OS / ENVIRONMENT]. I [do / don't] have Docker installed. My private key starts with: [paste the first line of your key, e.g. -----BEGIN PRIVATE KEY-----]`;
 
 export default async function RunPage() {
   const session = await getServerSession(authOptions);
@@ -109,6 +139,22 @@ npm install && npm run build
 
 WORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`}
           </pre>
+        </section>
+
+        {/* AI Setup Prompt */}
+        <section className="space-y-6">
+          <h2 className="text-xs uppercase tracking-widest text-[#00ff41]/40 border-b border-[#00ff41]/10 pb-3">
+            SET UP WITH AI
+          </h2>
+          <p className="text-[#00ff41]/60 text-sm">
+            Most people use an AI assistant for setup. Copy this prompt and paste it into Claude, ChatGPT, or any other AI — it has everything needed to walk you through the process.
+          </p>
+          <div className="relative">
+            <pre className="bg-black border border-[#00ff41]/20 rounded p-5 text-[#00ff41]/70 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap">{AI_SETUP_PROMPT}</pre>
+            <div className="mt-3">
+              <CopyPromptButton text={AI_SETUP_PROMPT} />
+            </div>
+          </div>
         </section>
 
         {/* Requirements */}
