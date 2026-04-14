@@ -46,7 +46,15 @@
       "Bash(docker compose:*)",
       "WebFetch(domain:github.com)",
       "Bash(python3 -c ':*)",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(railway --version)",
+      "Bash(railway status:*)",
+      "Bash(railway service:*)",
+      "Bash(railway logs:*)",
+      "Bash(railway list:*)",
+      "Bash(cat .railway)",
+      "Bash(cat railway.json)",
+      "Bash(ls .railway*)"
     ]
   }
 }

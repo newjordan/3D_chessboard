@@ -404,6 +404,49 @@ async function fetchEngineSource(key: string): Promise<string> {
   }
 }
 
+const OBFUSCATED_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 1 week — engine code rarely changes
+
+async function fetchOrCreateObfuscated(storageKey: string, language: string | null): Promise<string> {
+  const cacheKey = `obfuscated:${storageKey}`;
+
+  // 1. Redis cache hit
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) return cached;
+  } catch {
+    // Redis unavailable — continue
+  }
+
+  // 2. S3 cache hit
+  const s3Key = `obfuscated/${storageKey}`;
+  try {
+    const response = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key })) as any;
+    const cached = await response.Body.transformToString();
+    if (cached) {
+      try { await redis.setex(cacheKey, OBFUSCATED_CACHE_TTL_SECONDS, cached); } catch {}
+      return cached;
+    }
+  } catch {
+    // Not cached in S3 yet — generate it
+  }
+
+  // 3. Generate, then cache in both Redis and S3
+  const source = await fetchEngineSource(storageKey);
+  const obfuscated = obfuscateCode(source, language);
+
+  try { await redis.setex(cacheKey, OBFUSCATED_CACHE_TTL_SECONDS, obfuscated); } catch {}
+  try {
+    await s3Client.send(new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: s3Key,
+      Body: obfuscated,
+      ContentType: "text/plain",
+    }));
+  } catch {}
+
+  return obfuscated;
+}
+
 // --- SOCIAL & SHOWCASE ENDPOINTS (High Priority) ---
 
 // Get a Random Recent Match (for Showcase)
@@ -1141,7 +1184,7 @@ app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async 
 
       if (!match) return null;
 
-      // Extract raw code for the broker
+      // Fetch raw source for hashing (integrity), then get cached obfuscated versions
       const [challengerCode, defenderCode] = await Promise.all([
         fetchEngineSource(match.challengerVersion.storageKey),
         fetchEngineSource(match.defenderVersion.storageKey)
@@ -1153,9 +1196,11 @@ app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async 
       const signingString = match.id + challengerHash + defenderHash;
       const serverSignature = signData(signingString, serverPrivateKey);
 
-      // Obfuscate after hashing so the transmitted code is not readable as plaintext
-      const challengerObfuscated = obfuscateCode(challengerCode, match.challengerVersion.language);
-      const defenderObfuscated = obfuscateCode(defenderCode, match.defenderVersion.language);
+      // Use cached obfuscated code — generated once per engine version, not per dispatch
+      const [challengerObfuscated, defenderObfuscated] = await Promise.all([
+        fetchOrCreateObfuscated(match.challengerVersion.storageKey, match.challengerVersion.language),
+        fetchOrCreateObfuscated(match.defenderVersion.storageKey, match.defenderVersion.language),
+      ]);
 
       // Per-arbiter RSA encryption: if the runner has an RSA key, encrypt obfuscated code
       // so only their private key can decrypt it. Falls back to obfuscation-only for Ed25519 runners.

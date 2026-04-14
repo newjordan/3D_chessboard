@@ -1,8 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { ReplayController } from '@/components/replay/ReplayController';
+import dynamic from 'next/dynamic';
 import { getMatchPgnAction } from '../actions';
+
+const ReplayController = dynamic(
+  () => import('@/components/replay/ReplayController').then(m => ({ default: m.ReplayController })),
+  { ssr: false, loading: () => (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="technical-label opacity-20 animate-pulse">Loading 3D Engine...</div>
+    </div>
+  )},
+);
 import { ApiClient } from '@/lib/apiClient';
 import { Metadata } from 'next';
 

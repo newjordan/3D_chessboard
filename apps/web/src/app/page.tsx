@@ -6,7 +6,10 @@ import { Countdown } from "@/components/Countdown";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const leaderboardData = await ApiClient.getLeaderboard(1, 5).catch(() => ({ engines: [], total: 0, page: 1, limit: 5 }));
+  const leaderboardData = await Promise.race([
+    ApiClient.getLeaderboard(1, 5),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
+  ]).catch(() => ({ engines: [], total: 0, page: 1, limit: 5 }));
   const topEngines = leaderboardData.engines || [];
 
   return (
