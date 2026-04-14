@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Copy, Check, CheckCircle, XCircle, Clock,
-  Zap, AlertTriangle, ExternalLink, Send,
+  Zap, AlertTriangle, ExternalLink, Send, Terminal, X,
 } from "lucide-react";
 import { ApiClient } from "@/lib/apiClient";
 
@@ -79,8 +79,80 @@ function RequestForm({ userId, onSubmitted }: { userId: string; onSubmitted: (re
   );
 }
 
+function OneTimeKeyModal({ privateKey, userId, onDone }: { privateKey: string; userId: string; onDone: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(privateKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDone = async () => {
+    setClearing(true);
+    try {
+      await ApiClient.acknowledgeRunnerKey(userId);
+    } finally {
+      onDone();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-background border border-border-custom max-w-xl w-full flex flex-col gap-6 p-8">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <Terminal size={18} className="text-accent" />
+            <div>
+              <h3 className="text-foreground font-bold text-base">Your Arbiter Private Key</h3>
+              <p className="text-xs text-muted mt-0.5">Issued by an admin — shown once only</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="border border-red-500/20 bg-red-500/5 p-4">
+          <p className="text-red-400 text-sm font-semibold">This is the only time your private key will be shown.</p>
+          <p className="text-red-300/60 text-xs mt-1">Copy it now and store it securely. It cannot be recovered.</p>
+        </div>
+
+        <div className="relative">
+          <pre className="bg-black border border-border-custom p-4 text-accent text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+            {privateKey}
+          </pre>
+          <button
+            onClick={handleCopy}
+            className="absolute top-3 right-3 p-1.5 bg-white/5 hover:bg-white/10 border border-border-custom text-muted hover:text-foreground transition-colors"
+          >
+            {copied ? <Check size={13} className="text-accent" /> : <Copy size={13} />}
+          </button>
+        </div>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            className="w-4 h-4 accent-current"
+          />
+          <span className="text-muted text-sm">I have copied and securely stored my private key</span>
+        </label>
+
+        <button
+          onClick={handleDone}
+          disabled={!confirmed || clearing}
+          className="w-full py-3 bg-foreground text-background font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          Done — Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ArbiterTab({
-  runnerKey,
+  runnerKey: initialRunnerKey,
   runnerKeyRequest: initialRequest,
   userId,
 }: {
@@ -89,6 +161,7 @@ export function ArbiterTab({
   userId: string;
 }) {
   const [request, setRequest] = useState(initialRequest);
+  const [runnerKey, setRunnerKey] = useState(initialRunnerKey);
 
   const dockerCmd = `docker run \\\n  -e WORKER_PRIVATE_KEY="<your-private-key>" \\\n  ghcr.io/jaymaart/chess-agents-arbiter:latest`;
   const nodeCmd = `git clone https://github.com/jaymaart/chess-agents-arbiter\ncd chess-agents-arbiter\nnpm install && npm run build\n\nWORKER_PRIVATE_KEY="<your-private-key>" node dist/index.js`;
