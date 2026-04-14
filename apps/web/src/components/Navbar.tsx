@@ -22,15 +22,19 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/leaderboard" className="text-[13px] font-medium hover:text-accent transition-colors">
-              Leaderboard
-            </Link>
-            
-            <Link 
-              href="/submit" 
+            <Link
+              href="/submit"
               className="text-[13px] font-medium flex items-center gap-1 group"
             >
               Submit <ChevronRight size={14} className="opacity-40 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+
+            <Link href="/run" className="text-[13px] font-medium hover:text-accent transition-colors">
+              Run Matches
+            </Link>
+
+            <Link href="/leaderboard" className="text-[13px] font-medium hover:text-accent transition-colors">
+              Leaderboard
             </Link>
 
             <Link 
@@ -109,23 +113,31 @@ export default function Navbar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col p-6 gap-1 flex-1">
-              <Link 
-                href="/leaderboard" 
-                className="py-3 px-4 text-sm font-medium hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
-                onClick={() => setMenuOpen(false)}
-              >
-                Leaderboard
-                <ChevronRight size={14} className="opacity-20" />
-              </Link>
-              <Link 
-                href="/submit" 
+              <Link
+                href="/submit"
                 className="py-3 px-4 text-sm font-medium hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
                 onClick={() => setMenuOpen(false)}
               >
                 Submit Agent
                 <ChevronRight size={14} className="opacity-20" />
               </Link>
-              <Link 
+              <Link
+                href="/run"
+                className="py-3 px-4 text-sm font-medium hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
+                onClick={() => setMenuOpen(false)}
+              >
+                Run Matches
+                <ChevronRight size={14} className="opacity-20" />
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="py-3 px-4 text-sm font-medium hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
+                onClick={() => setMenuOpen(false)}
+              >
+                Leaderboard
+                <ChevronRight size={14} className="opacity-20" />
+              </Link>
+              <Link
                 href="https://github.com/jaymaart/chess-agents-issues/issues" 
                 target="_blank"
                 className="py-3 px-4 text-sm font-medium opacity-60 hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
