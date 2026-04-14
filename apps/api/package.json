@@ -18,6 +18,7 @@
     "dotenv": "latest",
     "express": "latest",
     "express-rate-limit": "^8.3.2",
+    "ioredis": "^5.10.1",
     "javascript-obfuscator": "^5.4.1",
     "multer": "latest",
     "pg": "latest"

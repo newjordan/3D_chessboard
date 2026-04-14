@@ -7,6 +7,7 @@ import crypto from "crypto";
 import path from "path";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
+import Redis from "ioredis";
 import rateLimit from "express-rate-limit";
 import { generateKeyPair, generateRSAKeyPair, hashData, signData, verifyData, encryptForArbiter } from "./crypto";
 import JavaScriptObfuscator from "javascript-obfuscator";
@@ -71,11 +72,20 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
   requestHandler: new NodeHttpHandler({
-    maxSockets: 200,
+    maxSockets: 100,
   }),
 });
 
 const BUCKET_NAME = process.env.R2_BUCKET || "chess-agents";
+
+// Redis — engine source cache
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  lazyConnect: true,
+  enableOfflineQueue: false, // Don't queue commands if Redis is down — fall through to R2
+});
+redis.on("error", (err) => console.warn("[Redis] Connection error:", err.message));
+
+const ENGINE_CACHE_TTL_SECONDS = 10 * 60; // 10 minutes
 
 // Server keypair — loaded/generated at startup
 let serverPublicKey = "";
@@ -111,6 +121,13 @@ const MAX_ENGINE_NAME_LENGTH = 32;
 const MAX_ACTIVE_ENGINES_PER_USER = 5;
 
 // Limiters
+const brokerLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60, // 1 request/sec average — well above the 2s poll interval
+  keyGenerator: (req) => (req.headers["x-worker-public-key"] as string) || req.ip || "unknown",
+  message: { error: "Too many broker requests — slow down" },
+});
+
 const submitLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -355,15 +372,31 @@ const authorizeBrokerOrRunner = async (
 
 // Helper: Fetch engine source from R2
 async function fetchEngineSource(key: string): Promise<string> {
+  const cacheKey = `engine:${key}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) return cached;
+  } catch {
+    // Redis unavailable — fall through to R2
+  }
+
   try {
     const response = await s3Client.send(new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
     })) as any;
-    
+
     const body = response.Body;
     if (!body) return "";
-    return await body.transformToString();
+    const code = await body.transformToString();
+
+    try {
+      await redis.setex(cacheKey, ENGINE_CACHE_TTL_SECONDS, code);
+    } catch {
+      // Redis write failed — not fatal
+    }
+
+    return code;
   } catch (err) {
     console.error(`Failed to fetch source for ${key}:`, err);
     return "";
@@ -1042,7 +1075,7 @@ app.delete("/api/engines/:id", async (req, res) => {
 // --- MATCH BROKER API ---
 
 // 1. Fetch Next Jobs (Batch)
-app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
+app.post("/api/broker/next-jobs", brokerLimiter, authorizeBrokerOrRunner, async (req, res) => {
   const brokerMode = (req as any).brokerMode;
   const count = brokerMode === "runner"
     ? Math.min(100, Math.max(1, req.body.count || 1))
@@ -1226,7 +1259,7 @@ app.patch("/api/engines/:id/status", async (req, res) => {
 });
 
 // 13. Submit Worker Result
-app.post("/api/broker/submit", authorizeBrokerOrRunner, async (req, res) => {
+app.post("/api/broker/submit", brokerLimiter, authorizeBrokerOrRunner, async (req, res) => {
   const { jobId, matchId, pgn, result, challengerScore, defenderScore } = req.body;
   console.log(`[Broker] Submission received for match ${matchId} (Job: ${jobId})`);
 
