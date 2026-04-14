@@ -8,7 +8,7 @@ import { createAnimationsContext } from './animations.js';
 const appContainer = document.getElementById('app');
 
 const { scene, camera, renderer, composer, controls } = setupScene(appContainer);
-const { boardGroup, squareSize, offset, update: updateBoardTracers } = createBoard(scene);
+const { boardGroup, squareSize, offset } = createBoard(scene);
 const { piecesContainer, pieces, highlightPiece, unhighlightPiece } = await createPieces(scene, offset);
 
 const animCtx = createAnimationsContext(scene, boardGroup, piecesContainer, offset);
@@ -21,8 +21,6 @@ function animate() {
   const time = clock.getElapsedTime();
 
   controls.update();
-
-  if (updateBoardTracers) updateBoardTracers(delta);
 
   // Pulse effect on highlighted pieces halo
   pieces.forEach(p => {
