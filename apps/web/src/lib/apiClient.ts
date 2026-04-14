@@ -11,11 +11,16 @@ export class ApiClient {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     const url = `${API_BASE_URL}${normalizedPath}`;
 
+    // On the server (server actions, server components), inject the internal secret directly.
+    // In the browser, the Next.js middleware handles this for proxied requests.
+    const serverSecret = isServer ? process.env.INTERNAL_API_SECRET : undefined;
+
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         ...options.headers,
+        ...(serverSecret ? { "x-internal-secret": serverSecret } : {}),
       },
       next: { revalidate: 0 } // No cache for MVP consistency
     });
@@ -70,9 +75,11 @@ export class ApiClient {
   }
 
   static async submitEngine(form: FormData) {
+    const serverSecret = isServer ? process.env.INTERNAL_API_SECRET : undefined;
     const res = await fetch(`${API_BASE_URL}/api/engines/submit`, {
       method: "POST",
       body: form, // Fetch handles FormData content type
+      headers: serverSecret ? { "x-internal-secret": serverSecret } : undefined,
     });
 
     if (!res.ok) {
@@ -92,10 +99,11 @@ export class ApiClient {
   static async uploadEngineAssets(engineId: string, userId: string, formData: FormData) {
     // Append userId to formData
     formData.append("userId", userId);
-    
+    const serverSecret = isServer ? process.env.INTERNAL_API_SECRET : undefined;
     const res = await fetch(`${API_BASE_URL}/api/engines/${engineId}/assets`, {
       method: "POST",
       body: formData,
+      headers: serverSecret ? { "x-internal-secret": serverSecret } : undefined,
     });
 
     if (!res.ok) {
