@@ -217,6 +217,56 @@ const authorizeBroker = (req: express.Request, res: express.Response, next: expr
   }
   next();
 };
+const authorizeBrokerOrRunner = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  const secret = req.headers["x-broker-secret"];
+  const publicKey = req.headers["x-worker-public-key"] as string;
+
+  if (secret) {
+    // Path A: existing broker secret
+    if (secret !== process.env.BROKER_SECRET) {
+      console.warn(`[Broker] Unauthorized secret from ${req.ip}`);
+      return res.status(401).json({ error: "Unauthorized broker access" });
+    }
+    (req as any).brokerMode = "secret";
+    return next();
+  }
+
+  if (publicKey) {
+    // Path B: trusted runner
+    const signature = req.headers["x-worker-signature"] as string;
+    if (!signature) return res.status(401).json({ error: "Missing x-worker-signature" });
+
+    const runnerKey = await prisma.runnerKey.findFirst({
+      where: { publicKey, revokedAt: null },
+    });
+    if (!runnerKey) return res.status(401).json({ error: "Unknown runner key" });
+    if (!runnerKey.trusted) return res.status(403).json({ error: "Runner key not yet trusted" });
+
+    const count = req.body.count ?? 1;
+    const jobId = req.body.jobId ?? "";
+    const matchId = req.body.matchId ?? "";
+    const reqPath = req.path;
+
+    let signingString = "";
+    if (reqPath.endsWith("next-jobs")) signingString = `next-jobs:${count}`;
+    else if (reqPath.endsWith("submit")) signingString = `submit:${jobId}:${matchId}`;
+
+    if (!verifyData(signingString, signature, publicKey)) {
+      return res.status(401).json({ error: "Invalid runner signature" });
+    }
+
+    (req as any).brokerMode = "runner";
+    (req as any).runnerKey = runnerKey;
+    return next();
+  }
+
+  return res.status(401).json({ error: "No broker credentials provided" });
+};
+
 // Helper: Fetch engine source from R2
 async function fetchEngineSource(key: string): Promise<string> {
   try {
@@ -906,19 +956,26 @@ app.delete("/api/engines/:id", async (req, res) => {
 // --- MATCH BROKER API ---
 
 // 1. Fetch Next Jobs (Batch)
-app.post("/api/broker/next-jobs", authorizeBroker, async (req, res) => {
-  const count = Math.min(100, Math.max(1, req.body.count || 1));
+app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
+  const brokerMode = (req as any).brokerMode;
+  const count = brokerMode === "runner"
+    ? Math.min(100, Math.max(1, req.body.count || 1))
+    : Math.min(10, Math.max(1, req.body.count || 1));
   const brokerId = `broker-${req.body.brokerId || 'external'}`;
-  
+
   console.log(`[Broker] ${brokerId} requesting ${count} jobs`);
 
   try {
     const jobs = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Find pending match_run jobs using the same logic as workers
+      const matchTypeFilter = brokerMode === "runner" ? `AND m."matchType" = 'rating'` : "";
+
       const pendingJobs = (await tx.$queryRawUnsafe(`
-        SELECT id FROM "Job"
-        WHERE status = 'pending' AND "runAt" <= NOW() AND "jobType" = 'match_run'
-        ORDER BY "runAt" ASC
+        SELECT j.id FROM "Job" j
+        JOIN "Match" m ON (j."payloadJson"->>'matchId') = m.id::text
+        WHERE j.status = 'pending' AND j."runAt" <= NOW() AND j."jobType" = 'match_run'
+        ${matchTypeFilter}
+        ORDER BY j."runAt" ASC
         LIMIT ${count}
         FOR UPDATE SKIP LOCKED
       `)) as any[];
@@ -1046,7 +1103,7 @@ app.patch("/api/engines/:id/status", async (req, res) => {
 });
 
 // 13. Submit Worker Result
-app.post("/api/broker/submit", authorizeBroker, async (req, res) => {
+app.post("/api/broker/submit", authorizeBrokerOrRunner, async (req, res) => {
   const { jobId, matchId, pgn, result, challengerScore, defenderScore } = req.body;
   console.log(`[Broker] Submission received for match ${matchId} (Job: ${jobId})`);
 
