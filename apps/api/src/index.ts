@@ -1024,6 +1024,11 @@ app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
         fetchEngineSource(match.defenderVersion.storageKey)
       ]);
 
+      const challengerHash = hashData(challengerCode);
+      const defenderHash = hashData(defenderCode);
+      const signingString = match.id + challengerHash + defenderHash;
+      const serverSignature = signData(signingString, serverPrivateKey);
+
       return {
         jobId: job.id,
         matchId: match.id,
@@ -1041,7 +1046,10 @@ app.post("/api/broker/next-jobs", authorizeBrokerOrRunner, async (req, res) => {
           name: match.defenderEngine.name,
           language: match.defenderVersion.language,
           code: defenderCode
-        }
+        },
+        challengerHash,
+        defenderHash,
+        serverSignature,
       };
     }));
 
