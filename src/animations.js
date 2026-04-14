@@ -107,107 +107,65 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       const targetCornerX = endPos.x + (dx > 0 ? -0.5 : 0.5);
       const targetCornerZ = endPos.z + (dz > 0 ? -0.5 : 0.5);
 
-      let p1 = [], p2 = [];
-      if (Math.abs(dx) > 0.1 && Math.abs(dz) > 0.1) {
-          // Diagonal/Knight: Trace exact rectangular perimeter using the near/inside rails!
-          p1 = [
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(snapCornerX, 0, targetCornerZ),
-             new THREE.Vector3(targetCornerX, 0, targetCornerZ)
-          ];
-          p2 = [
-             new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-             new THREE.Vector3(targetCornerX, 0, snapCornerZ),
-             new THREE.Vector3(targetCornerX, 0, targetCornerZ)
-          ];
-      } else if (Math.abs(dx) < 0.1) {
-          // Pure Z move (Vertical) -> Trace exactly down the left and right rails of the squares
-          const railL = startPos.x - 0.5;
-          const railR = startPos.x + 0.5;
-          p1 = [
-             new THREE.Vector3(railL, 0, snapCornerZ),
-             new THREE.Vector3(railL, 0, targetCornerZ)
-          ];
-          p2 = [
-             new THREE.Vector3(railR, 0, snapCornerZ),
-             new THREE.Vector3(railR, 0, targetCornerZ)
-          ];
-      } else {
-          // Pure X move (Horizontal) -> Trace exactly along the top and bottom rails
-          const railT = startPos.z - 0.5;
-          const railB = startPos.z + 0.5;
-          p1 = [
-             new THREE.Vector3(snapCornerX, 0, railT),
-             new THREE.Vector3(targetCornerX, 0, railT)
-          ];
-          p2 = [
-             new THREE.Vector3(snapCornerX, 0, railB),
-             new THREE.Vector3(targetCornerX, 0, railB)
-          ];
-      }
+      const dist1 = Math.abs(snapCornerZ - targetCornerZ);
+      const dist2 = Math.abs(snapCornerX - targetCornerX);
+      const totalDist = dist1 + dist2;
 
-      const createTrace = (points) => {
-         let tDist = 0;
-         const dists = [0];
-         for(let i=1; i<points.length; i++) {
-             tDist += points[i].distanceTo(points[i-1]);
-             dists.push(tDist);
-         }
-         const uvs = new Float32Array(points.length * 2);
-         for(let i=0; i<points.length; i++) {
-             uvs[i*2] = dists[i] / tDist;
-             uvs[i*2+1] = 0;
-         }
-         
-         const geo = new THREE.BufferGeometry().setFromPoints(points);
-         geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-         
-         const mat = new THREE.ShaderMaterial({
-            uniforms: {
-               uProgress: { value: 0.0 },
-               uLength: { value: 0.95 }, // Super long tails for the wide traces
-               color: { value: new THREE.Color(0x00ffff) }
-            },
-            vertexShader: `
-               varying float vUv;
-               void main() {
-                 vUv = uv.x;
-                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-               }
-            `,
-            fragmentShader: `
-               uniform float uProgress;
-               uniform float uLength;
-               uniform vec3 color;
-               varying float vUv;
-               void main() {
-                 float dist = uProgress - vUv;
-                 if (dist >= 0.0 && dist <= uLength) {
-                    float alpha = pow(1.0 - (dist / uLength), 1.2);
-                    // Extremely bright high-voltage bloom multiplier
-                    gl_FragColor = vec4(color * 4.0, alpha);
-                 } else {
-                    gl_FragColor = vec4(0.0);
-                 }
-               }
-            `,
-            transparent: true,
-            depthTest: false
-         });
-         const line = new THREE.Line(geo, mat);
-         line.position.y = 0.03;
-         return { line, mat, tDist };
-      };
+      const tracePoints = [
+        new THREE.Vector3(snapCornerX, 0, snapCornerZ),
+        new THREE.Vector3(snapCornerX, 0, targetCornerZ),
+        new THREE.Vector3(targetCornerX, 0, targetCornerZ)
+      ];
 
-      const trace1 = createTrace(p1);
-      const trace2 = createTrace(p2);
-      
-      boardGroup.add(trace1.line);
-      boardGroup.add(trace2.line);
+      const traceGeo = new THREE.BufferGeometry().setFromPoints(tracePoints);
+      const uvs = new Float32Array([
+        0, 0,
+        (totalDist === 0) ? 0 : (dist1/totalDist), 0,
+        1, 0
+      ]);
+      traceGeo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
+      const traceMat = new THREE.ShaderMaterial({
+        uniforms: {
+           uProgress: { value: 0.0 },
+           uLength: { value: 0.85 }, // 85% trailing length for massive electricity drag
+           color: { value: new THREE.Color(0x00ffff) }
+        },
+        vertexShader: `
+           varying float vUv;
+           void main() {
+             vUv = uv.x;
+             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+           }
+        `,
+        fragmentShader: `
+           uniform float uProgress;
+           uniform float uLength;
+           uniform vec3 color;
+           varying float vUv;
+           void main() {
+             float dist = uProgress - vUv;
+             if (dist >= 0.0 && dist <= uLength) {
+                // Non-linear fade so the head is extremely bright and the tail lingers
+                float alpha = pow(1.0 - (dist / uLength), 1.5);
+                // Multiplying color by 3.0 to severely trigger the UnrealBloomPass
+                gl_FragColor = vec4(color * 3.0, alpha);
+             } else {
+                gl_FragColor = vec4(0.0);
+             }
+           }
+        `,
+        transparent: true,
+        depthTest: false
+      });
+
+      const traceLine = new THREE.Line(traceGeo, traceMat);
+      traceLine.position.y = 0.05;
+      boardGroup.add(traceLine);
 
       // Crawl slowly along the path
-      tl.to([trace1.mat.uniforms.uProgress, trace2.mat.uniforms.uProgress], {
-        value: 1.0 + Math.max(trace1.mat.uniforms.uLength.value, trace2.mat.uniforms.uLength.value), 
+      tl.to(traceMat.uniforms.uProgress, {
+        value: 1.0 + 0.85, // 1.0 + length
         duration: 1.2,
         ease: "power1.inOut"
       });
@@ -222,12 +180,11 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
 
       // Cleanup Flash
       tl.to([bracket.children[0].material, bracket.children[1].material], { opacity: 0, duration: 0.2 }, "+=0.2");
-      tl.to([trace1.mat, trace2.mat], { opacity: 0, transparent: true, duration: 0.2 }, "<");
+      tl.to(traceMat, { opacity: 0, transparent: true, duration: 0.2 }, "<");
       
       tl.call(() => {
         boardGroup.remove(bracket);
-        boardGroup.remove(trace1.line);
-        boardGroup.remove(trace2.line);
+        boardGroup.remove(traceLine);
       });
     },
 
