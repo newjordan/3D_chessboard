@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 
 export async function createPieces(scene, offset) {
   const piecesContainer = new THREE.Group();
@@ -11,7 +11,7 @@ export async function createPieces(scene, offset) {
   const blackMaterial = new THREE.LineBasicMaterial({ color: 0x22aaff, transparent: true, opacity: 0.7 });
   const activeMaterial = new THREE.LineBasicMaterial({ color: 0x00ffaa, transparent: true, opacity: 1.0 });
 
-  const loader = new GLTFLoader();
+  const loader = new FBXLoader();
   const loadedGeometries = {};
   
   const modelsToLoad = ['pawn', 'rook', 'knight', 'bishop', 'queen', 'king'];
@@ -20,9 +20,9 @@ export async function createPieces(scene, offset) {
   await Promise.all(modelsToLoad.map(type => {
     return new Promise((resolve, reject) => {
       // URL references the local Vite public mappings
-      loader.load(`/models/styles/classic-lowpoly/models/white/${type}.glb`, (gltf) => {
+      loader.load(`/pieces_fbx/${type}.fbx`, (object) => {
         let geometry = null;
-        gltf.scene.traverse((child) => {
+        object.traverse((child) => {
           if (child.isMesh && !geometry) {
              geometry = child.geometry.clone();
           }
