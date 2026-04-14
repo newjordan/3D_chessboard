@@ -892,53 +892,90 @@ app.post("/api/engines/submit", submitLimiter, upload.single("file"), async (req
       });
     }
 
-    // 4. Create new Version
-    const version = await prisma.engineVersion.create({
-      data: {
-        engineId: engine.id,
-        storageKey: `engines/${engine.id}/${sha256}${ext}`,
-        sha256,
-        fileSizeBytes: buffer.length,
-        language: ext.slice(1),
-        generationModel: generationModel || null,
-        validationStatus: "pending",
-      },
-    });
+    const storageKey = `engines/${engine.id}/${sha256}${ext}`;
 
-    // 5. Create Submission
-    const submission = await prisma.submission.create({
-      data: {
-        engineVersionId: version.id,
-        submittedByUserId: ownerUserId,
-        status: "uploaded",
-      },
-    });
+    // 4. Upload to Storage first — if this fails we haven't touched the DB yet
+    try {
+      await s3Client.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: storageKey,
+        Body: buffer,
+        ContentType: ext === ".js" ? "application/javascript" : "text/x-python",
+      }));
+    } catch (s3Error: any) {
+      console.error(`[Submit] S3 upload failed for engine ${engine.id}:`, s3Error);
+      return res.status(500).json({ error: "Failed to upload engine file. Please try again." });
+    }
 
-    // 6. Upload to Storage
-    await s3Client.send(new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: version.storageKey,
-      Body: buffer,
-      ContentType: ext === ".js" ? "application/javascript" : "text/x-python",
-    }));
+    // Invalidate any cached obfuscated version for this storage key so the new code is used
+    try { await redis.del(`obfuscated:${storageKey}`); } catch {}
 
-    // 7. Create Validation Job
-    await prisma.job.create({
-      data: {
-        jobType: "submission_validate",
-        payloadJson: {
-          submissionId: submission.id,
-          versionId: version.id,
-          storageKey: version.storageKey,
+    // 5. Upsert EngineVersion — handles re-submission of same code (resets validation for retry)
+    let version;
+    try {
+      version = await prisma.engineVersion.upsert({
+        where: { engineId_sha256: { engineId: engine.id, sha256 } },
+        create: {
+          engineId: engine.id,
+          storageKey,
+          sha256,
+          fileSizeBytes: buffer.length,
+          language: ext.slice(1),
+          generationModel: generationModel || null,
+          validationStatus: "pending",
         },
-        status: "pending",
-      },
-    });
+        update: {
+          // Existing version with same code — reset so it can be re-validated
+          validationStatus: "pending",
+          validationNotes: null,
+          validatedAt: null,
+          submittedAt: new Date(),
+          generationModel: generationModel || null,
+        },
+      });
+    } catch (dbError: any) {
+      console.error(`[Submit] EngineVersion upsert failed for engine ${engine.id}:`, dbError);
+      return res.status(500).json({ error: "Failed to register engine version. Please try again." });
+    }
 
+    // 6. Create Submission record
+    let submission;
+    try {
+      submission = await prisma.submission.create({
+        data: {
+          engineVersionId: version.id,
+          submittedByUserId: ownerUserId,
+          status: "uploaded",
+        },
+      });
+    } catch (dbError: any) {
+      console.error(`[Submit] Submission create failed for version ${version.id}:`, dbError);
+      return res.status(500).json({ error: "Failed to record submission. Please try again." });
+    }
+
+    // 7. Queue Validation Job
+    try {
+      await prisma.job.create({
+        data: {
+          jobType: "submission_validate",
+          payloadJson: {
+            submissionId: submission.id,
+            versionId: version.id,
+            storageKey: version.storageKey,
+          },
+          status: "pending",
+        },
+      });
+    } catch (dbError: any) {
+      console.error(`[Submit] Validation job create failed for submission ${submission.id}:`, dbError);
+      return res.status(500).json({ error: "Failed to queue validation. Please try again." });
+    }
+
+    console.log(`[Submit] ${engineId ? "Updated" : "Created"} engine ${engine.slug} — submission ${submission.id}, version ${version.id}`);
     res.json({ success: true, submissionId: submission.id, engineSlug: engine.slug, versionId: version.id });
   } catch (error: any) {
-    console.error("Submission error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("[Submit] Unexpected error in submission pipeline:", error);
+    res.status(500).json({ error: "An unexpected error occurred. Please try again." });
   }
 });
 
