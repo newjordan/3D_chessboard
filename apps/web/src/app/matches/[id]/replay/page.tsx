@@ -1,17 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { ReplayControllerClient } from '@/components/replay/ReplayControllerClient';
 import { getMatchPgnAction } from '../actions';
-
-const ReplayController = dynamic(
-  () => import('@/components/replay/ReplayController').then(m => ({ default: m.ReplayController })),
-  { ssr: false, loading: () => (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="technical-label opacity-20 animate-pulse">Loading 3D Engine...</div>
-    </div>
-  )},
-);
 import { ApiClient } from '@/lib/apiClient';
 import { Metadata } from 'next';
 
@@ -78,8 +69,8 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
 
       {/* Main Container - Fills remaining height, no overflow */}
       <main className="flex-1 min-h-0 container mx-auto p-4 lg:p-6 overflow-hidden flex flex-col">
-        <ReplayController 
-          pgn={pgnResult.pgn} 
+        <ReplayControllerClient
+          pgn={pgnResult.pgn}
           whiteName={match.challengerEngine.name}
           blackName={match.defenderEngine.name}
           whitePieceUrl={match.challengerEngine.pieceUrl}
