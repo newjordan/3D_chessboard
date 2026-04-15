@@ -6,13 +6,101 @@ const B1 = OFFSET + 0.08;
 const B2 = OFFSET + 0.3;
 const B3 = B2 + 0.6;
 
+function createCellDepthStack(): THREE.Group {
+  const group = new THREE.Group();
+  const squareGeo = new THREE.PlaneGeometry(0.9, 0.9);
+  const layers = [
+    { y: -0.018, opacity: 0.09, scale: 1.0 },
+    { y: -0.068, opacity: 0.055, scale: 0.96 },
+    { y: -0.122, opacity: 0.03, scale: 0.92 },
+  ] as const;
+  const mats = layers.map((layer) =>
+    new THREE.MeshBasicMaterial({
+      color: 0x4aaeff,
+      transparent: true,
+      opacity: layer.opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+
+  for (let rank = 0; rank < 8; rank++) {
+    for (let file = 0; file < 8; file++) {
+      const isLightSquare = (file + rank) % 2 === 0;
+      if (!isLightSquare) continue;
+
+      const x = file - (OFFSET - 0.5);
+      const z = rank - (OFFSET - 0.5);
+
+      layers.forEach((layer, idx) => {
+        const cell = new THREE.Mesh(squareGeo, mats[idx]);
+        cell.rotation.x = -Math.PI / 2;
+        cell.position.set(x, layer.y, z);
+        cell.scale.setScalar(layer.scale);
+        group.add(cell);
+      });
+    }
+  }
+
+  return group;
+}
+
+function createLightSquareDotOverlay(): THREE.Group {
+  const group = new THREE.Group();
+  const squareGeo = new THREE.PlaneGeometry(0.9, 0.9);
+  const patternCanvas = document.createElement('canvas');
+  patternCanvas.width = 64;
+  patternCanvas.height = 64;
+  const ctx = patternCanvas.getContext('2d');
+  if (!ctx) return group;
+
+  ctx.clearRect(0, 0, 64, 64);
+  ctx.fillStyle = 'rgba(160, 228, 255, 0.92)';
+  for (let y = 4; y < 64; y += 8) {
+    for (let x = 4; x < 64; x += 8) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(patternCanvas);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+
+  const dotMat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    opacity: 0.33,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  for (let rank = 0; rank < 8; rank++) {
+    for (let file = 0; file < 8; file++) {
+      const isLightSquare = (file + rank) % 2 === 0;
+      if (!isLightSquare) continue;
+
+      const x = file - (OFFSET - 0.5);
+      const z = rank - (OFFSET - 0.5);
+      const overlay = new THREE.Mesh(squareGeo, dotMat);
+      overlay.rotation.x = -Math.PI / 2;
+      overlay.position.set(x, -0.0065, z);
+      group.add(overlay);
+    }
+  }
+
+  return group;
+}
+
 function createBoardSurface(): THREE.Mesh {
   const material = new THREE.ShaderMaterial({
     uniforms: {
       darkColor: { value: new THREE.Color(0x020914) },
-      lightColor: { value: new THREE.Color(0x061223) },
+      lightColor: { value: new THREE.Color(0x0b2a45) },
       accentColor: { value: new THREE.Color(0x49b7ff) },
-      dotDensity: { value: 34.0 }, // per square, tuned for a fine micro-matrix
+      dotDensity: { value: 18.0 }, // per square, tuned for clear micro-dot readability at game camera distance
     },
     vertexShader: `
       varying vec2 vUv;
@@ -37,13 +125,16 @@ function createBoardSurface(): THREE.Mesh {
         vec2 square = floor(board);
         vec2 squareUv = fract(board);
         float parity = mod(square.x + square.y, 2.0);
+        float lightMask = parity;
+        float darkMask = 1.0 - parity;
 
         vec3 base = mix(darkColor, lightColor, parity);
 
         vec2 cell = fract(board * dotDensity);
         float dist = length(cell - 0.5);
         float aa = fwidth(dist);
-        float microDot = 1.0 - smoothstep(0.16 - aa, 0.33 + aa, dist);
+        float microDot = 1.0 - smoothstep(0.20 - aa, 0.42 + aa, dist);
+        float lightMicroDot = microDot * lightMask;
 
         float gx = min(squareUv.x, 1.0 - squareUv.x);
         float gy = min(squareUv.y, 1.0 - squareUv.y);
@@ -53,8 +144,12 @@ function createBoardSurface(): THREE.Mesh {
         float centerFalloff = 1.0 - clamp(dot(centerUv, centerUv) * 0.22, 0.0, 0.24);
 
         vec3 color = base;
-        color *= 0.90 + microDot * 0.16;
-        color += accentColor * (microDot * 0.11 + majorGrid * 0.22) * centerFalloff;
+        // Keep dark squares clean while pushing matrix texture/grid emphasis onto light squares.
+        color *= 0.93 + darkMask * 0.02 + lightMicroDot * 0.08;
+        color += vec3(0.03, 0.06, 0.1) * lightMask;
+        color += vec3(0.11, 0.19, 0.28) * lightMicroDot;
+        color -= vec3(0.03, 0.05, 0.08) * lightMask * (1.0 - microDot);
+        color += accentColor * ((lightMask * 0.12) + lightMicroDot * 0.34 + (majorGrid * lightMask) * 0.2) * centerFalloff;
 
         gl_FragColor = vec4(color, 1.0);
       }
@@ -180,6 +275,10 @@ export function createBoard(scene: THREE.Scene, whiteName: string, blackName: st
 
   // Shader-first board substrate with fine dot-matrix detail.
   boardGroup.add(createBoardSurface());
+  // Dedicated light-square micro-dot overlay for visible retro matrix texture.
+  boardGroup.add(createLightSquareDotOverlay());
+  // Soft transparent cell stack for subtle volumetric depth.
+  boardGroup.add(createCellDepthStack());
 
   // Grid lines
   const gridPts: THREE.Vector3[] = [];
@@ -229,13 +328,17 @@ export function createBoard(scene: THREE.Scene, whiteName: string, blackName: st
   reflection.scale.y = -1;
   reflection.position.y = -BOARD_THICKNESS - 0.01;
   reflection.traverse((child) => {
-    const c = child as any;
-    if (c.material) {
-      c.material = c.material.clone();
-      c.material.opacity = c.isMesh ? 0.05 : c.material.opacity * 0.15;
-      c.material.transparent = true;
-      c.material.blending = THREE.AdditiveBlending;
-    }
+    if (!(child instanceof THREE.Mesh || child instanceof THREE.Line || child instanceof THREE.Points)) return;
+    const originalMaterial = child.material;
+    const materialList = Array.isArray(originalMaterial) ? originalMaterial : [originalMaterial];
+    const clonedMaterials = materialList.map((material) => {
+      const clone = material.clone();
+      clone.opacity = child instanceof THREE.Mesh ? 0.05 : clone.opacity * 0.15;
+      clone.transparent = true;
+      clone.blending = THREE.AdditiveBlending;
+      return clone;
+    });
+    child.material = Array.isArray(originalMaterial) ? clonedMaterials : clonedMaterials[0];
   });
 
   masterGroup.add(boardGroup, reflection);
