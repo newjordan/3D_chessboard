@@ -24,6 +24,7 @@ interface ReplayControllerProps {
   blackName?: string;
   whitePieceUrl?: string;
   blackPieceUrl?: string;
+  initialViewMode?: '2D' | '3D';
 }
 
 export const ReplayController: React.FC<ReplayControllerProps> = ({ 
@@ -31,13 +32,15 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   whiteName, 
   blackName,
   whitePieceUrl,
-  blackPieceUrl
+  blackPieceUrl,
+  initialViewMode = '2D',
 }) => {
   const [selectedGameIndex, setSelectedGameIndex] = useState(0);
   const [currentPly, setCurrentPly] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [viewMode, setViewMode] = useState<'2D' | '3D'>('2D');
+  const [viewMode, setViewMode] = useState<'2D' | '3D'>(initialViewMode);
+  const [flashTargetSquare, setFlashTargetSquare] = useState('e5');
   const moveListRef = useRef<HTMLDivElement>(null);
   const board3dRef = useRef<Board3DHandle>(null);
   const prevPlyRef = useRef(0);
@@ -158,6 +161,43 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     };
   }, [whiteName, blackName]);
 
+  const nextToPlay = useMemo(() => {
+    if (currentPly >= history.length) return null;
+    return currentPly % 2 === 0 ? 'white' : 'black';
+  }, [currentPly, history.length]);
+
+  const nextTetromino = useMemo(() => {
+    if (nextToPlay === 'white') {
+      return [
+        [0, 1, 0, 0],
+        [1, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+      ];
+    }
+    if (nextToPlay === 'black') {
+      return [
+        [1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+      ];
+    }
+    return [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+  }, [nextToPlay]);
+
+  const triggerSquareFlash = () => {
+    if (viewMode !== '3D' || !board3dRef.current) return;
+    const normalized = flashTargetSquare.trim().toLowerCase();
+    if (!/^[a-h][1-8]$/.test(normalized)) return;
+    board3dRef.current.flashSquare(normalized);
+  };
+
   return (
     <div className="flex flex-col gap-4 w-full h-full max-w-[1400px] mx-auto overflow-hidden">
       {/* Game Selector Tabs - Compact */}
@@ -256,6 +296,25 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
+               {viewMode === '3D' && (
+                 <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 rounded-md p-1">
+                   <input
+                     value={flashTargetSquare}
+                     onChange={(e) => setFlashTargetSquare(e.target.value)}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter') triggerSquareFlash();
+                     }}
+                     placeholder="e5"
+                     className="w-10 bg-transparent text-[10px] technical-label uppercase text-white/80 px-1.5 py-1 outline-none border border-white/10 rounded"
+                   />
+                   <button
+                     onClick={triggerSquareFlash}
+                     className="px-2 py-1 text-[9px] technical-label rounded bg-[#8bddff]/15 text-[#c9f5ff] hover:bg-[#8bddff]/25 transition-colors"
+                   >
+                     Flash
+                   </button>
+                 </div>
+               )}
                <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 rounded-md p-1">
                  {speedOptions.map((speed) => (
                    <button
@@ -304,6 +363,36 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
 
           {/* Sidebar Footer - Static */}
           <div className="flex-none p-4 bg-white/[0.01] border-t border-white/5">
+                <div className="pb-3 mb-3 border-b border-white/5">
+                   <div className="flex justify-between items-center text-[9px] technical-label opacity-50">
+                     <span>Next To Play</span>
+                     <span className="font-bold uppercase tracking-widest">{nextToPlay ?? 'Done'}</span>
+                   </div>
+                   <div className="mt-2 inline-grid grid-cols-4 gap-[2px] p-1 rounded-sm border border-white/10 bg-black/25">
+                     {nextTetromino.flatMap((row, rowIdx) =>
+                       row.map((cell, colIdx) => {
+                         const active = cell === 1;
+                         const fill = nextToPlay === 'white'
+                           ? 'rgba(126, 225, 255, 0.48)'
+                           : 'rgba(125, 255, 0, 0.42)';
+                         const glow = nextToPlay === 'white'
+                           ? '0 0 6px rgba(126, 225, 255, 0.22)'
+                           : '0 0 6px rgba(125, 255, 0, 0.2)';
+
+                         return (
+                           <span
+                             key={`${rowIdx}-${colIdx}`}
+                             className="w-2.5 h-2.5 border border-white/10 rounded-[1px]"
+                             style={{
+                               backgroundColor: active ? fill : 'rgba(255,255,255,0.02)',
+                               boxShadow: active ? glow : 'none',
+                             }}
+                           />
+                         );
+                       })
+                     )}
+                   </div>
+                </div>
                 <div className="flex justify-between items-center text-[9px] technical-label opacity-40">
                    <span>Isolation Level</span>
                    <span className="font-bold uppercase tracking-widest text-accent/60">High Performance</span>

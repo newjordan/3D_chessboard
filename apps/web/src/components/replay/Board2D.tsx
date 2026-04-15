@@ -10,87 +10,105 @@ interface Board2DProps {
   blackPieceUrl?: string;
 }
 
-// Minimalist, high-contrast SVG piece set
+const FILE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+const RANK_LABELS = ['8', '7', '6', '5', '4', '3', '2', '1'];
+
+const pieceNameMap: Record<string, string> = {
+  p: 'pawn',
+  r: 'rook',
+  n: 'knight',
+  b: 'bishop',
+  q: 'queen',
+  k: 'king',
+};
+
 const PieceImage = ({ color, type, customUrl }: { color: string; type: string; customUrl?: string }) => {
-  if (customUrl) {
-    return (
-      <img 
-        src={customUrl} 
-        alt={`${color} ${type}`}
-        className="w-[80%] h-[80%] drop-shadow-md select-none pointer-events-none object-contain"
-      />
-    );
-  }
-  const pieceNameMap: Record<string, string> = {
-    'p': 'pawn',
-    'r': 'rook',
-    'n': 'knight',
-    'b': 'bishop',
-    'q': 'queen',
-    'k': 'king'
-  };
-  
   const name = pieceNameMap[type.toLowerCase()];
-  const src = `/${name}-${color}.svg`;
+  const defaultSrc = `/replay/neuro-grid/pieces/${name}-${color === 'w' ? 'w' : 'b'}.png`;
+  const src = customUrl || defaultSrc;
 
   return (
-    <img 
-      src={src} 
+    <img
+      src={src}
       alt={`${color} ${name}`}
-      className="w-[85%] h-[85%] drop-shadow-md select-none pointer-events-none"
+      className="w-[84%] h-[84%] object-contain select-none pointer-events-none"
     />
   );
 };
 
 export const Board2D: React.FC<Board2DProps> = ({ board, lastMove, whitePieceUrl, blackPieceUrl }) => {
-  const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  
   return (
-    <div className="w-full aspect-square bg-[#0a0a0a] border border-white/5 rounded-lg overflow-hidden relative group">
-      {/* Gloss overlay Effect */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/[0.04] to-transparent z-20" />
-      <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
-        {board.map((row, r) => 
-          row.map((square, c) => {
-            const isBlack = (r + c) % 2 === 1;
-            const squareId = `${letters[c]}${8-r}`;
-            const isHighlighted = lastMove && (lastMove.from === squareId || lastMove.to === squareId);
-            
-            return (
-              <div 
-                key={`${r}-${c}`}
-                className={`relative flex items-center justify-center ${isBlack ? 'bg-[#1a1a1a]' : 'bg-[#2a2a2a]'} ${isHighlighted ? 'after:absolute after:inset-0 after:bg-accent/10 transition-colors' : ''}`}
-              >
-                {/* Coordinates */}
-                {c === 0 && (
-                  <span className={`absolute top-0.5 left-0.5 text-[7px] font-mono select-none ${isBlack ? 'text-white/10' : 'text-black/20'}`}>{8-r}</span>
-                )}
-                {r === 7 && (
-                  <span className={`absolute bottom-0.5 right-0.5 text-[7px] font-mono select-none ${isBlack ? 'text-white/10' : 'text-black/20'}`}>{letters[c]}</span>
-                )}
+    <div className="relative w-full aspect-square rounded-xl overflow-hidden border border-white/10 bg-[#0a0d12]">
+      <div className="absolute left-[8%] right-[8%] top-[8%] bottom-[8%]">
+        <div className="absolute -top-5 inset-x-0 grid grid-cols-8 text-[11px] font-mono tracking-[0.2em] text-white/55">
+          {FILE_LABELS.map((file) => (
+            <span key={`top-${file}`} className="text-center">{file}</span>
+          ))}
+        </div>
 
-                <AnimatePresence mode="popLayout">
-                  {square && (
-                    <motion.div
-                      key={`${square.type}-${square.color}-${squareId}`}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      className="w-full h-full flex items-center justify-center z-10"
-                    >
-                      <PieceImage 
-                        color={square.color} 
-                        type={square.type} 
-                        customUrl={square.color === 'w' ? whitePieceUrl : blackPieceUrl} 
-                      />
-                    </motion.div>
+        <div className="absolute -bottom-5 inset-x-0 grid grid-cols-8 text-[11px] font-mono tracking-[0.2em] text-white/55">
+          {FILE_LABELS.map((file) => (
+            <span key={`bottom-${file}`} className="text-center">{file}</span>
+          ))}
+        </div>
+
+        <div className="absolute -left-6 inset-y-0 grid grid-rows-8 text-[11px] font-mono text-white/55">
+          {RANK_LABELS.map((rank) => (
+            <span key={`left-${rank}`} className="self-center">{rank}</span>
+          ))}
+        </div>
+
+        <div className="absolute -right-6 inset-y-0 grid grid-rows-8 text-[11px] font-mono text-white/35">
+          {RANK_LABELS.map((rank) => (
+            <span key={`right-${rank}`} className="self-center text-right">{rank}</span>
+          ))}
+        </div>
+
+        <div className="relative grid grid-cols-8 grid-rows-8 w-full h-full rounded-md overflow-hidden border border-white/20">
+          {board.map((row, r) =>
+            row.map((square, c) => {
+              const isDark = (r + c) % 2 === 1;
+              const squareId = `${'abcdefgh'[c]}${8 - r}`;
+              const isHighlighted = lastMove && (lastMove.from === squareId || lastMove.to === squareId);
+
+              return (
+                <div
+                  key={`${r}-${c}`}
+                  className={[
+                    'relative flex items-center justify-center border border-white/10',
+                    isDark ? 'bg-[#1a1f29]' : 'bg-[#232a36]',
+                  ].join(' ')}
+                >
+                  {isHighlighted && (
+                    <>
+                      <div className="absolute inset-[10%] border border-white/60" />
+                      <div className="absolute inset-0 bg-white/10" />
+                    </>
                   )}
-                </AnimatePresence>
-              </div>
-            );
-          })
-        )}
+
+                  <AnimatePresence mode="popLayout">
+                    {square && (
+                      <motion.div
+                        key={`${square.type}-${square.color}-${squareId}`}
+                        initial={{ scale: 0.78, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.78, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                        className="w-full h-full flex items-center justify-center z-10"
+                      >
+                        <PieceImage
+                          color={square.color}
+                          type={square.type}
+                          customUrl={square.color === 'w' ? whitePieceUrl : blackPieceUrl}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
