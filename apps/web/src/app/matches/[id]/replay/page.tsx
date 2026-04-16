@@ -34,7 +34,7 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
         <div className="max-w-md w-full text-center space-y-6">
           <h1 className="text-2xl font-bold">Replay Unavailable</h1>
-          <Link href={`/matches/${id}`} className="px-6 py-3 bg-foreground text-background font-bold rounded-lg">
+          <Link href={`/matches/${id}`} className="px-6 py-3 bg-foreground text-background font-bold">
             Back to Match
           </Link>
         </div>
@@ -47,7 +47,7 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
       {/* Immersive Header - Fixed Height */}
       <header className="flex-none h-16 px-8 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md z-50">
         <div className="flex items-center gap-8">
-          <Link href={`/matches/${id}`} className="p-2 hover:bg-white/5 transition-colors rounded-lg group">
+          <Link href={`/matches/${id}`} className="p-2 hover:bg-white/5 transition-colors group">
             <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
           </Link>
           <div className="flex flex-col">
@@ -55,7 +55,7 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
               {match.challengerEngine.name} vs {match.defenderEngine.name}
             </h1>
             <div className="flex items-center gap-2">
-               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+               <span className="w-1.5 h-1.5 bg-accent animate-pulse" />
                <span className="technical-label text-[9px] opacity-40 uppercase tracking-widest">Live Arena Theater</span>
             </div>
           </div>
@@ -80,8 +80,8 @@ export default async function ReplayPage({ params }: ReplayPageProps) {
       
       {/* Background blobs */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden opacity-50">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 blur-[120px] rounded-full" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 blur-[120px]" />
       </div>
     </div>
   );

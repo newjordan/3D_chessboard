@@ -9,6 +9,8 @@
     "dev": "npm run dev --workspaces --if-present",
     "build": "npm run generate && npm run build --workspaces --if-present",
     "generate": "prisma generate --schema ./prisma/schema.prisma",
+    "dotmax:pieces": "bash ./scripts/generate_dotmax_pieces.sh",
+    "dotmax:tune": "bash ./scripts/dotmax_live_tuner.sh",
     "start": "npm run start --workspaces --if-present",
     "postinstall": "npm run generate"
   },

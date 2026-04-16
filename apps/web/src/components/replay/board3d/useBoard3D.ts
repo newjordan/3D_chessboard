@@ -7,7 +7,7 @@ import type { Board3DHandle, PieceInstance } from './types';
 import { setupScene } from './scene';
 import { createBoard } from './board';
 import { loadPieceGeometries, initPiecesFromFen, clearPieces, type Geometries } from './pieces';
-import { animateLightningStrike, animateCapture, animateJump, setReplayAnimationSpeed } from './animations';
+import { animateTurnDestinationPing, animateLightningStrike, animateCapture, animateJump, setReplayAnimationSpeed } from './animations';
 import { squareToXZ } from './squareUtils';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -18,6 +18,7 @@ export function useBoard3D(whiteName: string, blackName: string) {
     applyMove: () => {},
     resetToPosition: () => {},
     highlightSquare: () => {},
+    flashSquare: () => {},
   });
 
   useEffect(() => {
@@ -160,49 +161,57 @@ export function useBoard3D(whiteName: string, blackName: string) {
         }
 
         setReplayAnimationSpeed(speedMultiplier);
-        animateLightningStrike(from, to, effectsGroup, () => {
+        animateTurnDestinationPing(to, effectsGroup, () => {
           if (!isCurrentVersion(version)) {
             restoreActorHighlight();
             resolve();
             return;
           }
 
-          const finishActorMove = () => {
+          animateLightningStrike(from, to, effectsGroup, () => {
             if (!isCurrentVersion(version)) {
               restoreActorHighlight();
               resolve();
               return;
             }
-            pieceMap.delete(from);
-            actor.square = to;
-            pieceMap.set(to, actor);
-            if (shouldResyncAfterMove) {
-              syncBoardToFen(targetFen);
-            }
-            restoreActorHighlight();
-            resolve();
-          };
 
-          if (isCapture) {
-            // For en passant, the captured pawn is on the same file as `to` but same rank as `from`
-            const capturedSquare = flags.includes('e') ? to[0] + from[1] : to;
-            const victim = pieceMap.get(capturedSquare);
-            if (victim && capturedSquare !== to) pieceMap.delete(capturedSquare);
-            if (victim) {
-              pieceMap.delete(to);
-              animateCapture(victim, effectsGroup, piecesContainer, () => {
-                if (!isCurrentVersion(version)) {
-                  resolve();
-                  return;
-                }
-                animateJump(actor, to, finishActorMove);
-              });
+            const finishActorMove = () => {
+              if (!isCurrentVersion(version)) {
+                restoreActorHighlight();
+                resolve();
+                return;
+              }
+              pieceMap.delete(from);
+              actor.square = to;
+              pieceMap.set(to, actor);
+              if (shouldResyncAfterMove) {
+                syncBoardToFen(targetFen);
+              }
+              restoreActorHighlight();
+              resolve();
+            };
+
+            if (isCapture) {
+              // For en passant, the captured pawn is on the same file as `to` but same rank as `from`
+              const capturedSquare = flags.includes('e') ? to[0] + from[1] : to;
+              const victim = pieceMap.get(capturedSquare);
+              if (victim && capturedSquare !== to) pieceMap.delete(capturedSquare);
+              if (victim) {
+                pieceMap.delete(to);
+                animateCapture(victim, effectsGroup, piecesContainer, () => {
+                  if (!isCurrentVersion(version)) {
+                    resolve();
+                    return;
+                  }
+                  animateJump(actor, to, effectsGroup, finishActorMove);
+                });
+              } else {
+                animateJump(actor, to, effectsGroup, finishActorMove);
+              }
             } else {
-              animateJump(actor, to, finishActorMove);
+              animateJump(actor, to, effectsGroup, finishActorMove);
             }
-          } else {
-            animateJump(actor, to, finishActorMove);
-          }
+          });
         });
       });
 
@@ -277,6 +286,14 @@ export function useBoard3D(whiteName: string, blackName: string) {
             inst.haloGroup.visible = true;
           }
         }
+      },
+
+      flashSquare(square) {
+        if (!ready || disposed) return;
+        const normalized = square.trim().toLowerCase();
+        if (!/^[a-h][1-8]$/.test(normalized)) return;
+        setReplayAnimationSpeed(1);
+        animateTurnDestinationPing(normalized, effectsGroup, () => {});
       },
     };
 

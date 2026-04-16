@@ -154,6 +154,17 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     return { from: move.from as string, to: move.to as string };
   }, [currentPly, history]);
 
+  const fxMove = useMemo(() => {
+    if (currentPly === 0) return null;
+    const move = history[currentPly - 1];
+    return {
+      from: move.from as string,
+      to: move.to as string,
+      flags: move.flags as string | undefined,
+      captured: move.captured as string | undefined,
+    };
+  }, [currentPly, history]);
+
   const playerNames = useMemo(() => {
     return {
       white: whiteName || 'White AI',
@@ -202,12 +213,12 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     <div className="flex flex-col gap-4 w-full h-full max-w-[1400px] mx-auto overflow-hidden">
       {/* Game Selector Tabs - Compact */}
       <div className="flex-none flex items-center justify-between">
-        <div className="flex gap-1 bg-white/[0.02] p-1 border border-white/5 rounded-lg">
+        <div className="flex gap-1 bg-white/[0.02] p-1 border border-white/5">
           {gamesList.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setSelectedGameIndex(idx)}
-              className={`px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest transition-all rounded-md ${
+              className={`px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest transition-all ${
                 selectedGameIndex === idx ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
               }`}
             >
@@ -217,10 +228,10 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         </div>
 
         {/* View Switcher */}
-        <div className="flex gap-1 bg-white/[0.02] p-1 border border-white/5 rounded-lg">
+        <div className="flex gap-1 bg-white/[0.02] p-1 border border-white/5">
           <button
             onClick={() => setViewMode('2D')}
-            className={`flex items-center gap-2 px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest transition-all rounded-md ${
+            className={`flex items-center gap-2 px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest transition-all ${
               viewMode === '2D' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
             }`}
           >
@@ -228,7 +239,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
           </button>
           <button
             onClick={() => setViewMode('3D')}
-            className={`flex items-center gap-2 px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest transition-all rounded-md ${
+            className={`flex items-center gap-2 px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest transition-all ${
               viewMode === '3D' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
             }`}
           >
@@ -242,7 +253,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         
         {/* Left Pane: Board & Primary Controls */}
         <div className="flex flex-col gap-4 min-h-0">
-          <div className="flex-1 min-h-0 relative bg-black border border-white/5 rounded-xl group overflow-hidden flex items-center justify-center p-4">
+          <div className="flex-1 min-h-0 relative bg-black border border-white/5 group overflow-hidden flex items-center justify-center p-4">
              {viewMode === '3D' ? (
                <Board3DScene
                  ref={board3dRef}
@@ -256,6 +267,9 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                     lastMove={lastMove} 
                     whitePieceUrl={whitePieceUrl}
                     blackPieceUrl={blackPieceUrl}
+                    fxMove={fxMove}
+                    fxKey={currentPly}
+                    fxSpeed={playbackRate}
                   />
                 </div>
              )}
@@ -263,41 +277,41 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
               {/* Player Labels */}
               <div className="absolute top-6 left-6 flex flex-col gap-1 items-start">
                 <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Opponent</span>
-                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md rounded-md flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-sm border border-white/20 bg-[#999999] ${currentPly % 2 === 1 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
+                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md flex items-center gap-2">
+                  <span className={`w-2 h-2 border border-white/20 bg-[#999999] ${currentPly % 2 === 1 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
                   <span className="font-bold text-xs">{playerNames.black}</span>
                   <span className="text-[9px] opacity-40 lowercase">Black</span>
                 </div>
               </div>
 
               <div className="absolute bottom-6 right-6 flex flex-col gap-1 items-end">
-                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md rounded-md flex items-center gap-2">
+                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md flex items-center gap-2">
                   <span className="text-[9px] opacity-40 lowercase">White</span>
                   <span className="font-bold text-xs">{playerNames.white}</span>
-                  <span className={`w-2 h-2 rounded-sm border border-white/20 bg-white ${currentPly % 2 === 0 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
+                  <span className={`w-2 h-2 border border-white/20 bg-white ${currentPly % 2 === 0 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
                 </div>
                 <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Current Player</span>
               </div>
           </div>
 
           {/* Console Controls Bar - Fixed and Compact */}
-          <div className="flex-none flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-xl">
+          <div className="flex-none flex items-center justify-between p-3 bg-white/[0.03] border border-white/5">
             <div className="flex items-center gap-1">
-              <button onClick={() => { setCurrentPly(0); setIsPlaying(false); }} title="Reset" className="p-2 hover:bg-white/5 rounded transition-colors text-white/40"><RotateCcw size={16} /></button>
-              <button onClick={() => setCurrentPly(Math.max(0, currentPly - 1))} title="Prev" className="p-2 hover:bg-white/5 rounded transition-colors text-white/60"><ChevronLeft size={20} /></button>
+              <button onClick={() => { setCurrentPly(0); setIsPlaying(false); }} title="Reset" className="p-2 hover:bg-white/5 transition-colors text-white/40"><RotateCcw size={16} /></button>
+              <button onClick={() => setCurrentPly(Math.max(0, currentPly - 1))} title="Prev" className="p-2 hover:bg-white/5 transition-colors text-white/60"><ChevronLeft size={20} /></button>
               <button 
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="w-10 h-10 flex items-center justify-center bg-white text-black rounded-full hover:scale-105 transition-all shadow-xl active:scale-95 mx-1"
+                className="w-10 h-10 flex items-center justify-center bg-white text-black hover:scale-105 transition-all shadow-xl active:scale-95 mx-1"
               >
                 {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} className="ml-0.5" fill="currentColor" />}
               </button>
-              <button onClick={() => setCurrentPly(Math.min(history.length, currentPly + 1))} title="Next" className="p-2 hover:bg-white/5 rounded transition-colors text-white/60"><ChevronRight size={20} /></button>
-              <button onClick={() => { setCurrentPly(history.length); setIsPlaying(false); }} title="End" className="p-2 hover:bg-white/5 rounded transition-colors text-white/40"><FastForward size={16} /></button>
+              <button onClick={() => setCurrentPly(Math.min(history.length, currentPly + 1))} title="Next" className="p-2 hover:bg-white/5 transition-colors text-white/60"><ChevronRight size={20} /></button>
+              <button onClick={() => { setCurrentPly(history.length); setIsPlaying(false); }} title="End" className="p-2 hover:bg-white/5 transition-colors text-white/40"><FastForward size={16} /></button>
             </div>
 
             <div className="flex items-center gap-4">
                {viewMode === '3D' && (
-                 <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 rounded-md p-1">
+                 <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 p-1">
                    <input
                      value={flashTargetSquare}
                      onChange={(e) => setFlashTargetSquare(e.target.value)}
@@ -305,22 +319,22 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                        if (e.key === 'Enter') triggerSquareFlash();
                      }}
                      placeholder="e5"
-                     className="w-10 bg-transparent text-[10px] technical-label uppercase text-white/80 px-1.5 py-1 outline-none border border-white/10 rounded"
+                     className="w-10 bg-transparent text-[10px] technical-label uppercase text-white/80 px-1.5 py-1 outline-none border border-white/10"
                    />
                    <button
                      onClick={triggerSquareFlash}
-                     className="px-2 py-1 text-[9px] technical-label rounded bg-[#8bddff]/15 text-[#c9f5ff] hover:bg-[#8bddff]/25 transition-colors"
+                     className="px-2 py-1 text-[9px] technical-label bg-[#8bddff]/15 text-[#c9f5ff] hover:bg-[#8bddff]/25 transition-colors"
                    >
                      Flash
                    </button>
                  </div>
                )}
-               <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 rounded-md p-1">
+               <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 p-1">
                  {speedOptions.map((speed) => (
                    <button
                      key={speed}
                      onClick={() => setPlaybackRate(speed)}
-                     className={`px-2 py-1 text-[9px] technical-label rounded transition-colors ${
+                     className={`px-2 py-1 text-[9px] technical-label transition-colors ${
                        playbackRate === speed ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
                      }`}
                    >
@@ -336,7 +350,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         </div>
 
         {/* Right Pane: Pro Sidebar (Move List) - Scrollable with locked height */}
-        <div className="flex-none flex flex-col bg-[#0d0d0d] border border-white/5 rounded-xl overflow-hidden min-h-0 h-full">
+        <div className="flex-none flex flex-col bg-[#0d0d0d] border border-white/5 overflow-hidden min-h-0 h-full">
           <div className="flex-none p-4 border-b border-white/5">
             <h3 className="technical-label flex items-center gap-2 text-[10px]">
               <HistoryIcon size={12} className="text-white/40" /> Move Notation
@@ -349,11 +363,11 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                 <div key={pair.index} className="grid grid-cols-[35px_1fr_1fr] items-center text-[10px] technical-label">
                   <div className="py-1.5 text-center opacity-20 font-mono text-[8px]">{pair.index}.</div>
                   <button onClick={() => { setCurrentPly(pair.white.ply); setIsPlaying(false); }} data-active={currentPly === pair.white.ply}
-                    className={`py-1.5 px-3 text-left transition-all rounded ${currentPly === pair.white.ply ? 'bg-white/10 text-white font-bold' : 'opacity-40 hover:opacity-100 hover:bg-white/[0.02]'}`}
+                    className={`py-1.5 px-3 text-left transition-all ${currentPly === pair.white.ply ? 'bg-white/10 text-white font-bold' : 'opacity-40 hover:opacity-100 hover:bg-white/[0.02]'}`}
                   > {pair.white.san} </button>
                   {pair.black && (
                     <button onClick={() => { setCurrentPly(pair.black!.ply); setIsPlaying(false); }} data-active={currentPly === pair.black.ply}
-                      className={`py-1.5 px-3 text-left transition-all rounded ${currentPly === pair.black.ply ? 'bg-white/10 text-white font-bold' : 'opacity-40 hover:opacity-100 hover:bg-white/[0.02]'}`}
+                      className={`py-1.5 px-3 text-left transition-all ${currentPly === pair.black.ply ? 'bg-white/10 text-white font-bold' : 'opacity-40 hover:opacity-100 hover:bg-white/[0.02]'}`}
                     > {pair.black.san} </button>
                   )}
                 </div>
@@ -368,7 +382,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                      <span>Next To Play</span>
                      <span className="font-bold uppercase tracking-widest">{nextToPlay ?? 'Done'}</span>
                    </div>
-                   <div className="mt-2 inline-grid grid-cols-4 gap-[2px] p-1 rounded-sm border border-white/10 bg-black/25">
+                   <div className="mt-2 inline-grid grid-cols-4 gap-[2px] p-1 border border-white/10 bg-black/25">
                      {nextTetromino.flatMap((row, rowIdx) =>
                        row.map((cell, colIdx) => {
                          const active = cell === 1;
@@ -382,7 +396,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                          return (
                            <span
                              key={`${rowIdx}-${colIdx}`}
-                             className="w-2.5 h-2.5 border border-white/10 rounded-[1px]"
+                             className="w-2.5 h-2.5 border border-white/10"
                              style={{
                                backgroundColor: active ? fill : 'rgba(255,255,255,0.02)',
                                boxShadow: active ? glow : 'none',

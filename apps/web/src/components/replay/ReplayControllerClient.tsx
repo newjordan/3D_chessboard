@@ -20,6 +20,7 @@ interface ReplayControllerClientProps {
   blackName?: string;
   whitePieceUrl?: string;
   blackPieceUrl?: string;
+  initialViewMode?: '2D' | '3D';
 }
 
 export function ReplayControllerClient(props: ReplayControllerClientProps) {

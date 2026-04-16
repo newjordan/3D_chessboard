@@ -30,6 +30,7 @@ export default function Board3DVisualLabPage() {
           pgn={SAMPLE_PGN}
           whiteName="CORE_AI"
           blackName="DATA_SENTRY"
+          initialViewMode="3D"
         />
       </main>
     </div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createDotVfxRuntime, type DotVfxRuntime } from './dotVfx';
 
 interface Board2DMoveFx {
   from: string;
@@ -19,37 +20,6 @@ interface Board2DProps {
   fxKey?: number;
   fxSpeed?: number;
 }
-
-type Vec2 = { x: number; y: number };
-
-type PolylineMetrics = {
-  points: Vec2[];
-  cumulative: number[];
-  total: number;
-};
-
-type CaptureParticle = {
-  dir1: Vec2;
-  dir2: Vec2;
-  dist1: number;
-  dist2: number;
-  size: number;
-  delay: number;
-};
-
-type ActiveMoveFx = {
-  startedAt: number;
-  pingEnd: number;
-  lightningStart: number;
-  lightningEnd: number;
-  captureStart: number;
-  captureEnd: number;
-  isCapture: boolean;
-  toSquare: string;
-  captureSquare: string;
-  lightningPath: PolylineMetrics;
-  particles: CaptureParticle[];
-};
 
 const FILE_IDS = 'abcdefgh';
 
@@ -71,7 +41,7 @@ const layeredPieceIndexMap: Record<string, number> = {
   knight: 5,
 };
 
-const whiteCleanPieceMap: Record<string, string> = {
+const dotmaxPieceMap: Record<string, string> = {
   king: '01_king.png',
   queen: '02_queen.png',
   rook: '03_rook.png',
@@ -81,391 +51,119 @@ const whiteCleanPieceMap: Record<string, string> = {
 };
 
 const pieceScaleMap: Record<string, number> = {
-  king: 1.0,
-  queen: 0.97,
-  rook: 0.9,
-  bishop: 0.88,
-  knight: 0.9,
-  pawn: 0.7,
+  king: 1.08,
+  queen: 1.02,
+  rook: 0.94,
+  bishop: 0.98,
+  knight: 1.0,
+  pawn: 0.84,
 };
 
-const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-const easeOut = (t: number) => 1 - Math.pow(1 - clamp(t), 3);
-const easeIn = (t: number) => Math.pow(clamp(t), 3);
-const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const DOTMAX_ASSET_VERSION = '4';
+const DOTMAX_DITHER_MODES = {
+  outlineA: 'bayer',
+  outlineB: 'atkinson',
+  interiorA: 'floyd',
+  interiorB: 'none',
+} as const;
 
-function makeSeeded(seed: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
+function hashSeed(input: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-
-  return () => {
-    h += 0x6d2b79f5;
-    let t = h;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  return h >>> 0;
 }
 
-function squareToCenter(square: string, cell: number): Vec2 {
-  const file = square.charCodeAt(0) - 97;
-  const rank = Number(square[1]);
-  const row = 8 - rank;
-  return {
-    x: (file + 0.5) * cell,
-    y: (row + 0.5) * cell,
-  };
-}
 
-function buildPolyline(points: Vec2[]): PolylineMetrics {
-  const cumulative: number[] = [0];
-  for (let i = 1; i < points.length; i++) {
-    const dx = points[i].x - points[i - 1].x;
-    const dy = points[i].y - points[i - 1].y;
-    cumulative.push(cumulative[i - 1] + Math.hypot(dx, dy));
-  }
-
-  return {
-    points,
-    cumulative,
-    total: cumulative[cumulative.length - 1] ?? 0,
-  };
-}
-
-function pointAtPolylineDistance(polyline: PolylineMetrics, distance: number): Vec2 {
-  const d = clamp(distance, 0, polyline.total);
-  for (let i = 1; i < polyline.cumulative.length; i++) {
-    const start = polyline.cumulative[i - 1];
-    const end = polyline.cumulative[i];
-    if (d <= end) {
-      const segmentT = end === start ? 0 : (d - start) / (end - start);
-      return {
-        x: polyline.points[i - 1].x + (polyline.points[i].x - polyline.points[i - 1].x) * segmentT,
-        y: polyline.points[i - 1].y + (polyline.points[i].y - polyline.points[i - 1].y) * segmentT,
-      };
-    }
-  }
-
-  return polyline.points[polyline.points.length - 1] ?? { x: 0, y: 0 };
-}
-
-function drawPolylineSegment(
-  ctx: CanvasRenderingContext2D,
-  polyline: PolylineMetrics,
-  fromDistance: number,
-  toDistance: number
-): void {
-  const start = clamp(Math.min(fromDistance, toDistance), 0, polyline.total);
-  const end = clamp(Math.max(fromDistance, toDistance), 0, polyline.total);
-  if (end <= start) return;
-
-  const steps = Math.max(8, Math.floor((end - start) / 6));
-  ctx.beginPath();
-  for (let i = 0; i <= steps; i++) {
-    const t = start + (end - start) * (i / steps);
-    const p = pointAtPolylineDistance(polyline, t);
-    if (i === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  }
-}
-
-function drawBracket(
-  ctx: CanvasRenderingContext2D,
-  center: Vec2,
-  size: number,
-  alpha: number,
-  color = 'rgba(0,255,204,1)'
-): void {
-  const s = size;
-  const l = size * 0.35;
-  ctx.strokeStyle = color;
-  ctx.globalAlpha = alpha;
-  ctx.lineWidth = 1.5;
-
-  ctx.beginPath();
-  ctx.moveTo(center.x - s, center.y - s + l);
-  ctx.lineTo(center.x - s, center.y - s);
-  ctx.lineTo(center.x - s + l, center.y - s);
-
-  ctx.moveTo(center.x + s - l, center.y - s);
-  ctx.lineTo(center.x + s, center.y - s);
-  ctx.lineTo(center.x + s, center.y - s + l);
-
-  ctx.moveTo(center.x - s, center.y + s - l);
-  ctx.lineTo(center.x - s, center.y + s);
-  ctx.lineTo(center.x - s + l, center.y + s);
-
-  ctx.moveTo(center.x + s - l, center.y + s);
-  ctx.lineTo(center.x + s, center.y + s);
-  ctx.lineTo(center.x + s, center.y + s - l);
-  ctx.stroke();
-}
-
-function buildLightningPath(from: string, to: string, cell: number): PolylineMetrics {
-  const start = squareToCenter(from, cell);
-  const end = squareToCenter(to, cell);
-
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-
-  const snapX = dx !== 0 ? start.x + (dx > 0 ? cell * 0.5 : -cell * 0.5) : start.x;
-  const snapY = dy !== 0 ? start.y + (dy > 0 ? cell * 0.5 : -cell * 0.5) : start.y;
-
-  const targetX = dx !== 0 ? end.x + (dx > 0 ? -cell * 0.5 : cell * 0.5) : end.x;
-  const targetY = dy !== 0 ? end.y + (dy > 0 ? -cell * 0.5 : cell * 0.5) : end.y;
-
-  return buildPolyline([
-    { x: snapX, y: snapY },
-    { x: snapX, y: targetY },
-    { x: targetX, y: targetY },
-    { x: end.x, y: end.y },
-  ]);
-}
-
-function createMoveFx(move: Board2DMoveFx, cell: number, speed: number): ActiveMoveFx {
-  const now = performance.now();
-  const scale = 1 / Math.max(speed, 0.25);
-
-  const pingDuration = 430 * scale;
-  const lightningDuration = 1150 * scale;
-  const captureDuration = 820 * scale;
-
-  const lightningStart = now + pingDuration;
-  const lightningEnd = lightningStart + lightningDuration;
-
-  const flags = move.flags ?? '';
-  const isCapture = Boolean(move.captured || flags.includes('e'));
-  const captureSquare = flags.includes('e') ? `${move.to[0]}${move.from[1]}` : move.to;
-
-  const rng = makeSeeded(`${move.from}-${move.to}-${flags}`);
-  const orthogonal = [
-    { x: 1, y: 0 },
-    { x: -1, y: 0 },
-    { x: 0, y: 1 },
-    { x: 0, y: -1 },
-  ];
-
-  const particles: CaptureParticle[] = Array.from({ length: 12 }, () => {
-    const dir1 = orthogonal[Math.floor(rng() * orthogonal.length)];
-    const dir2Options = dir1.x === 0 ? [{ x: 1, y: 0 }, { x: -1, y: 0 }] : [{ x: 0, y: 1 }, { x: 0, y: -1 }];
-    const dir2 = dir2Options[Math.floor(rng() * 2)];
-
-    return {
-      dir1,
-      dir2,
-      dist1: 0.5 + Math.floor(rng() * 2),
-      dist2: 1 + Math.floor(rng() * 3),
-      size: 1.8 + rng() * 2.2,
-      delay: rng() * 0.2,
-    };
-  });
-
-  return {
-    startedAt: now,
-    pingEnd: now + pingDuration,
-    lightningStart,
-    lightningEnd,
-    captureStart: lightningEnd,
-    captureEnd: lightningEnd + (isCapture ? captureDuration : 0),
-    isCapture,
-    toSquare: move.to,
-    captureSquare,
-    lightningPath: buildLightningPath(move.from, move.to, cell),
-    particles,
-  };
-}
-
-function renderMoveFx(ctx: CanvasRenderingContext2D, fx: ActiveMoveFx, now: number, cell: number): boolean {
-  let active = false;
-
-  const toCenter = squareToCenter(fx.toSquare, cell);
-  const toTopLeft = { x: toCenter.x - cell * 0.5, y: toCenter.y - cell * 0.5 };
-
-  if (now <= fx.pingEnd) {
-    active = true;
-    const pingProgress = clamp((now - fx.startedAt) / (fx.pingEnd - fx.startedAt));
-
-    let flashAlpha = 0;
-    if (pingProgress < 0.22) flashAlpha = easeOut(pingProgress / 0.22) * 0.9;
-    else if (pingProgress < 0.42) flashAlpha = (1 - easeIn((pingProgress - 0.22) / 0.2)) * 0.9;
-    else if (pingProgress < 0.62) flashAlpha = easeOut((pingProgress - 0.42) / 0.2) * 0.65;
-    else flashAlpha = (1 - easeIn((pingProgress - 0.62) / 0.38)) * 0.65;
-
-    const ringRadius = cell * (0.22 + pingProgress * 0.8);
-
-    ctx.save();
-    ctx.globalAlpha = flashAlpha * 0.3;
-    ctx.fillStyle = '#8bddff';
-    ctx.fillRect(toTopLeft.x + cell * 0.03, toTopLeft.y + cell * 0.03, cell * 0.94, cell * 0.94);
-
-    ctx.globalAlpha = flashAlpha * 0.8;
-    ctx.strokeStyle = '#d8f7ff';
-    ctx.lineWidth = 1.4;
-    ctx.strokeRect(toTopLeft.x + cell * 0.08, toTopLeft.y + cell * 0.08, cell * 0.84, cell * 0.84);
-
-    ctx.globalAlpha = flashAlpha * 0.7;
-    ctx.strokeStyle = '#a7ecff';
-    ctx.lineWidth = 1.3;
-    ctx.beginPath();
-    ctx.arc(toCenter.x, toCenter.y, ringRadius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  if (now >= fx.lightningStart && now <= fx.lightningEnd) {
-    active = true;
-    const lp = clamp((now - fx.lightningStart) / (fx.lightningEnd - fx.lightningStart));
-    const headDistance = fx.lightningPath.total * (lp * 1.05);
-    const tailDistance = Math.max(0, headDistance - fx.lightningPath.total * 0.42);
-    const head = pointAtPolylineDistance(fx.lightningPath, headDistance);
-
-    ctx.save();
-    drawPolylineSegment(ctx, fx.lightningPath, tailDistance, headDistance);
-    ctx.lineCap = 'round';
-
-    ctx.strokeStyle = 'rgba(0,255,255,0.16)';
-    ctx.lineWidth = 8;
-    ctx.stroke();
-
-    drawPolylineSegment(ctx, fx.lightningPath, tailDistance, headDistance);
-    ctx.strokeStyle = 'rgba(0,255,255,0.85)';
-    ctx.lineWidth = 2.2;
-    ctx.stroke();
-
-    const bracketScale = 0.68 + easeOut(lp) * 0.36;
-    const bracketAlpha = lp < 0.1 ? lp / 0.1 : 1 - clamp((lp - 0.85) / 0.15);
-    drawBracket(ctx, head, cell * 0.24 * bracketScale, bracketAlpha);
-
-    ctx.globalAlpha = bracketAlpha;
-    ctx.fillStyle = 'rgba(0,255,204,1)';
-    ctx.beginPath();
-    ctx.arc(head.x, head.y, cell * 0.035, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  if (fx.isCapture && now >= fx.captureStart && now <= fx.captureEnd) {
-    active = true;
-    const cp = clamp((now - fx.captureStart) / (fx.captureEnd - fx.captureStart));
-    const captureCenter = squareToCenter(fx.captureSquare, cell);
-    const tl = { x: captureCenter.x - cell * 0.5, y: captureCenter.y - cell * 0.5 };
-
-    ctx.save();
-
-    const borderProgress = easeOut(clamp(cp / 0.34));
-    ctx.globalAlpha = (1 - clamp((cp - 0.48) / 0.52)) * 0.9;
-    ctx.strokeStyle = '#00ff77';
-    ctx.lineWidth = 1.6;
-    const borderInset = cell * (0.45 - borderProgress * 0.4);
-    ctx.strokeRect(
-      tl.x + borderInset,
-      tl.y + borderInset,
-      cell - borderInset * 2,
-      cell - borderInset * 2
-    );
-
-    const ghostProgress = clamp((cp - 0.2) / 0.8);
-    const ghostRadius = cell * (0.24 + ghostProgress * 0.85);
-    ctx.globalAlpha = (1 - ghostProgress) * 0.7;
-    ctx.strokeStyle = '#00ff77';
-    ctx.lineWidth = 1.3;
-    ctx.beginPath();
-    ctx.arc(captureCenter.x, captureCenter.y, ghostRadius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    fx.particles.forEach((particle) => {
-      const particleProgress = clamp((cp - particle.delay) / (1 - particle.delay));
-      if (particleProgress <= 0) return;
-
-      let x = captureCenter.x;
-      let y = captureCenter.y;
-      if (particleProgress < 0.45) {
-        const t = particleProgress / 0.45;
-        x += particle.dir1.x * particle.dist1 * cell * 0.5 * easeInOut(t);
-        y += particle.dir1.y * particle.dist1 * cell * 0.5 * easeInOut(t);
-      } else {
-        const t = (particleProgress - 0.45) / 0.55;
-        x += particle.dir1.x * particle.dist1 * cell * 0.5;
-        y += particle.dir1.y * particle.dist1 * cell * 0.5;
-        x += particle.dir2.x * particle.dist2 * cell * 0.34 * easeOut(t);
-        y += particle.dir2.y * particle.dist2 * cell * 0.34 * easeOut(t);
-      }
-
-      ctx.globalAlpha = (1 - particleProgress) * 0.95;
-      ctx.fillStyle = '#00ff99';
-      ctx.fillRect(x - particle.size * 0.5, y - particle.size * 0.5, particle.size, particle.size);
-    });
-
-    ctx.restore();
-  }
-
-  return active;
-}
-
-const PieceImage = ({ color, type, customUrl }: { color: string; type: string; customUrl?: string }) => {
+const PieceImage = ({ color, type, squareId }: { color: string; type: string; squareId: string }) => {
   const name = pieceNameMap[type.toLowerCase()];
   const index = layeredPieceIndexMap[name];
-  const whiteCleanFile = whiteCleanPieceMap[name];
+  const isWhite = color === 'w';
+  const dotmaxFile = dotmaxPieceMap[name];
 
-  if (customUrl) {
-    return (
-      <img
-        src={customUrl}
-        alt={`${color} ${name}`}
-        className="w-[84%] h-[84%] object-contain select-none pointer-events-none drop-shadow-[0_0_10px_rgba(125,210,255,0.2)]"
-      />
-    );
-  }
+  if (dotmaxFile) {
+    const variantDir = isWhite ? 'white' : 'black';
+    const modeSrc = (mode: string) =>
+      `/replay/dotmax-piece-set/modes/${mode}/${variantDir}/${dotmaxFile}?v=${DOTMAX_ASSET_VERSION}`;
+    const legacySrc = `/replay/dotmax-piece-set/${variantDir}/${dotmaxFile}?v=${DOTMAX_ASSET_VERSION}`;
+    const outlineA = modeSrc(DOTMAX_DITHER_MODES.outlineA);
+    const outlineB = modeSrc(DOTMAX_DITHER_MODES.outlineB);
+    const interiorA = modeSrc(DOTMAX_DITHER_MODES.interiorA);
+    const interiorB = modeSrc(DOTMAX_DITHER_MODES.interiorB);
 
-  if (whiteCleanFile) {
-    const pieceSrc = `/replay/openai-piece-set/white/${whiteCleanFile}?v=3`;
-    const maskStyle: React.CSSProperties = {
-      WebkitMaskImage: `url(${pieceSrc})`,
-      maskImage: `url(${pieceSrc})`,
-      WebkitMaskRepeat: 'no-repeat',
-      maskRepeat: 'no-repeat',
-      WebkitMaskSize: 'contain',
-      maskSize: 'contain',
-      WebkitMaskPosition: 'center',
-      maskPosition: 'center',
-    };
-    const isWhite = color === 'w';
     const pieceScale = pieceScaleMap[name] ?? 1;
+    const seed = hashSeed(`${squareId}-${name}-${color}`);
+    const cycle = 3.6 + ((seed % 400) / 400) * 2.4;
+    const phase = -(((seed >>> 8) % 1000) / 1000) * cycle;
+    const outlineCycle = cycle * 1.27;
+    const outlinePhase = phase * 0.63;
 
     return (
       <div
-        className="relative w-[106%] h-[106%] select-none pointer-events-none"
+        className="relative w-full h-full select-none pointer-events-none"
         style={{ transform: `scale(${pieceScale})`, transformOrigin: '50% 100%' }}
         aria-label={`${color} ${name}`}
         role="img"
       >
+        <div className="absolute inset-0 [transform:scale(1.05)]">
+          <img
+            src={outlineA}
+            alt=""
+            aria-hidden="true"
+            className={`absolute inset-0 w-full h-full object-contain mix-blend-screen ${
+              isWhite
+                ? 'opacity-[0.44] [filter:brightness(1.08)_saturate(0.74)_contrast(1.04)]'
+                : 'opacity-[0.3] [filter:brightness(1.02)_saturate(0.62)_contrast(1.03)]'
+            }`}
+            style={{ animation: `dotmaxDitherPulseA ${outlineCycle}s ease-in-out ${outlinePhase}s infinite` }}
+          />
+          <img
+            src={outlineB}
+            alt=""
+            aria-hidden="true"
+            className={`absolute inset-0 w-full h-full object-contain mix-blend-screen ${
+              isWhite
+                ? 'opacity-[0.22] [filter:brightness(1.02)_saturate(0.7)_contrast(1.02)]'
+                : 'opacity-[0.2] [filter:brightness(0.99)_saturate(0.55)_contrast(1.02)]'
+            }`}
+            style={{ animation: `dotmaxDitherPulseB ${outlineCycle}s ease-in-out ${outlinePhase}s infinite` }}
+          />
+        </div>
         <img
-          src={pieceSrc}
+          src={interiorA}
           alt={`${color} ${name}`}
-          className={`absolute inset-0 w-full h-full object-contain [image-rendering:pixelated] ${
+          className={`absolute inset-0 w-full h-full object-contain [image-rendering:auto] ${
             isWhite
-              ? 'opacity-100 [filter:brightness(1.42)_saturate(1.0)_contrast(1.28)] drop-shadow-[0_0_1px_rgba(225,243,255,0.92)] drop-shadow-[0_0_10px_rgba(116,194,243,0.58)]'
-              : 'opacity-[0.9] [filter:brightness(0.74)_saturate(0.36)_contrast(1.2)] drop-shadow-[0_0_1px_rgba(88,145,188,0.62)] drop-shadow-[0_0_7px_rgba(58,106,148,0.42)]'
+              ? 'opacity-[0.96] [filter:brightness(1.16)_saturate(0.8)_contrast(1.05)] drop-shadow-[0_0_8px_rgba(126,188,232,0.34)]'
+              : 'opacity-[0.9] [filter:brightness(1.03)_saturate(0.64)_contrast(1.04)] drop-shadow-[0_0_7px_rgba(74,128,170,0.3)]'
           }`}
+          style={{ animation: `dotmaxDitherPulseA ${cycle}s ease-in-out ${phase}s infinite` }}
         />
         <img
-          src={pieceSrc}
+          src={interiorB}
           alt=""
           aria-hidden="true"
-          className={`absolute inset-0 w-full h-full object-contain [image-rendering:pixelated] mix-blend-screen ${
+          className={`absolute inset-0 w-full h-full object-contain mix-blend-screen ${
             isWhite
-              ? 'opacity-[0.4] [filter:brightness(1.16)_saturate(0.88)_contrast(1.05)] drop-shadow-[0_0_12px_rgba(95,174,221,0.52)]'
-              : 'opacity-[0.22] [filter:brightness(0.98)_saturate(0.46)_contrast(1.04)] drop-shadow-[0_0_10px_rgba(64,128,178,0.42)]'
+              ? 'opacity-[0.2] [filter:brightness(1.14)_saturate(0.68)_contrast(1.02)]'
+              : 'opacity-[0.16] [filter:brightness(1.05)_saturate(0.5)_contrast(1.01)]'
           }`}
+          style={{ animation: `dotmaxDitherPulseB ${cycle}s ease-in-out ${phase}s infinite` }}
+        />
+        <img
+          src={legacySrc}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-contain opacity-0 pointer-events-none"
         />
         <div
-          className={`absolute inset-0 bg-[repeating-linear-gradient(180deg,rgba(205,225,248,0.76)_0px,rgba(205,225,248,0.76)_1px,transparent_1px,transparent_3px)] ${
-            isWhite ? 'opacity-[0.11]' : 'opacity-[0.07]'
+          className={`absolute inset-0 ${
+            isWhite
+              ? 'bg-[radial-gradient(circle_at_50%_14%,rgba(208,230,252,0.13),transparent_58%)]'
+              : 'bg-[radial-gradient(circle_at_50%_16%,rgba(90,132,176,0.1),transparent_58%)]'
           }`}
-          style={maskStyle}
         />
       </div>
     );
@@ -486,7 +184,6 @@ const PieceImage = ({ color, type, customUrl }: { color: string; type: string; c
   const halftoneSrc = `/replay/layered-piece-set/piece_${index}_halftone.svg`;
   const glowSrc = `/replay/layered-piece-set/piece_${index}_glow.svg`;
 
-  const isWhite = color === 'w';
   const bodyColor = isWhite ? '#dceeff' : '#0b141d';
   const halftoneColor = isWhite ? '#ffffff' : '#2f4358';
   const glowColor = isWhite ? '#7fd7ff' : '#3b89be';
@@ -519,74 +216,52 @@ const PieceImage = ({ color, type, customUrl }: { color: string; type: string; c
   );
 };
 
-export const Board2D: React.FC<Board2DProps> = ({
-  board,
-  lastMove,
-  whitePieceUrl,
-  blackPieceUrl,
-  fxMove,
-  fxKey,
-  fxSpeed = 1,
-}) => {
+export const Board2D: React.FC<Board2DProps> = (props) => {
+  const { board, lastMove, fxMove, fxKey, fxSpeed = 1 } = props;
   const boardCanvasWrapRef = useRef<HTMLDivElement>(null);
   const fxCanvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
-  const activeFxRef = useRef<ActiveMoveFx | null>(null);
+  const vfxRuntimeRef = useRef<DotVfxRuntime | null>(null);
+
+  const ensureVfxRuntime = (): DotVfxRuntime | null => {
+    if (vfxRuntimeRef.current) return vfxRuntimeRef.current;
+    const canvas = fxCanvasRef.current;
+    if (!canvas) return null;
+    vfxRuntimeRef.current = createDotVfxRuntime({ canvas, maxEffects: 96 });
+    return vfxRuntimeRef.current;
+  };
 
   const syncCanvasResolution = () => {
     const wrap = boardCanvasWrapRef.current;
-    const canvas = fxCanvasRef.current;
-    if (!wrap || !canvas) return;
+    if (!wrap) return;
 
     const rect = wrap.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
+    const runtime = ensureVfxRuntime();
+    if (!runtime) return;
+    runtime.resize(rect.width, rect.height, window.devicePixelRatio || 1);
   };
 
   const drawFrame = (now: number) => {
-    const canvas = fxCanvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    if (!width || !height) return;
-
-    ctx.clearRect(0, 0, width, height);
-
-    const fx = activeFxRef.current;
-    if (!fx) {
+    const runtime = vfxRuntimeRef.current;
+    if (!runtime) {
       rafRef.current = null;
       return;
     }
-
-    const alive = renderMoveFx(ctx, fx, now, width / 8);
+    const alive = runtime.render(now);
     if (!alive) {
-      activeFxRef.current = null;
       rafRef.current = null;
       return;
     }
-
     rafRef.current = requestAnimationFrame(drawFrame);
   };
 
   useEffect(() => {
-    syncCanvasResolution();
-
     const wrap = boardCanvasWrapRef.current;
     if (!wrap) return;
+    ensureVfxRuntime();
+    syncCanvasResolution();
 
     const ro = new ResizeObserver(() => {
       syncCanvasResolution();
@@ -597,27 +272,29 @@ export const Board2D: React.FC<Board2DProps> = ({
       ro.disconnect();
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
+      vfxRuntimeRef.current?.destroy();
+      vfxRuntimeRef.current = null;
     };
   }, []);
 
   useEffect(() => {
     if (!fxMove || !fxMove.from || !fxMove.to) return;
-
-    const canvas = fxCanvasRef.current;
-    if (!canvas) return;
-
+    const runtime = ensureVfxRuntime();
+    if (!runtime) return;
     syncCanvasResolution();
-    const cell = canvas.clientWidth / 8;
-    if (!cell) return;
+    runtime.trigger({
+      type: 'move',
+      key: `${fxKey ?? 0}-${fxMove.from}-${fxMove.to}-${fxMove.flags ?? ''}-${fxMove.captured ?? ''}`,
+      from: fxMove.from,
+      to: fxMove.to,
+      flags: fxMove.flags,
+      captured: fxMove.captured,
+      speed: fxSpeed,
+    });
 
-    activeFxRef.current = createMoveFx(fxMove, cell, fxSpeed);
-
-    if (rafRef.current != null) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+    if (rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(drawFrame);
     }
-
-    rafRef.current = requestAnimationFrame(drawFrame);
   }, [fxKey, fxMove, fxSpeed]);
 
   return (
@@ -662,7 +339,7 @@ export const Board2D: React.FC<Board2DProps> = ({
                       <PieceImage
                         color={square.color}
                         type={square.type}
-                        customUrl={square.color === 'w' ? whitePieceUrl : blackPieceUrl}
+                        squareId={squareId}
                       />
                     </motion.div>
                   )}
@@ -678,6 +355,19 @@ export const Board2D: React.FC<Board2DProps> = ({
           aria-hidden="true"
         />
       </div>
+      <style jsx global>{`
+        @keyframes dotmaxDitherPulseA {
+          0% { opacity: 0.92; }
+          50% { opacity: 0.24; }
+          100% { opacity: 0.92; }
+        }
+
+        @keyframes dotmaxDitherPulseB {
+          0% { opacity: 0.14; }
+          50% { opacity: 0.82; }
+          100% { opacity: 0.14; }
+        }
+      `}</style>
     </div>
   );
 };

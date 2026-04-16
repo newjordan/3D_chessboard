@@ -6,6 +6,7 @@ export interface Board3DHandle {
   applyMove(from: string, to: string, isCapture: boolean, flags: string, promotion?: string, speedMultiplier?: number): void;
   resetToPosition(fen: string): void;
   highlightSquare(square: string | null): void;
+  flashSquare(square: string): void;
 }
 
 export interface SceneContext {

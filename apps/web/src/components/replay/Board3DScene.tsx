@@ -17,6 +17,7 @@ export const Board3DScene = forwardRef<Board3DHandle, Board3DSceneProps>(
       applyMove: (...args) => handleRef.current.applyMove(...args),
       resetToPosition: (fen) => handleRef.current.resetToPosition(fen),
       highlightSquare: (sq) => handleRef.current.highlightSquare(sq),
+      flashSquare: (sq) => handleRef.current.flashSquare(sq),
     }));
 
     return (

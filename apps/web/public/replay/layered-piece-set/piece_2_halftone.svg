@@ -1,0 +1,14 @@
+
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 1024">
+      <defs>
+        <pattern id="dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
+          <circle cx="3" cy="3" r="2" fill="white"/>
+        </pattern>
+        <mask id="mask">
+          <rect width="100%" height="100%" fill="black"/>
+          <path d="M 77,0 L 74,137 L 130,224 L 83,718 L 0,858 L 0,975 L 56,960 L 68,998 L 0,1001 L 0,1021 L 509,1018 L 509,894 L 401,705 L 360,221 L 410,135 L 410,2 L 321,0 L 324,53 L 288,58 L 288,0 L 193,0 L 178,56 L 154,0 Z" fill="white"/>
+        </mask>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#dots)" mask="url(#mask)"/>
+    </svg>
+    

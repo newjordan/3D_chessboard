@@ -9,6 +9,166 @@ export function setReplayAnimationSpeed(speedMultiplier: number): void {
   replayAnimationSpeed = Math.max(speedMultiplier, 0.25);
 }
 
+type LandingPulse = {
+  group: THREE.Group;
+  dotMesh: THREE.Mesh;
+  dotMat: THREE.MeshBasicMaterial;
+  ring: THREE.LineLoop;
+  ringMat: THREE.LineBasicMaterial;
+};
+
+function createDotMatrixLandingPulse(color = 0x7dff00): LandingPulse {
+  const group = new THREE.Group();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const rgb = new THREE.Color(color);
+    const r = Math.round(rgb.r * 255);
+    const g = Math.round(rgb.g * 255);
+    const b = Math.round(rgb.b * 255);
+    ctx.clearRect(0, 0, 64, 64);
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.9)`;
+    for (let y = 4; y < 64; y += 8) {
+      for (let x = 4; x < 64; x += 8) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1.15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  const dotTex = new THREE.CanvasTexture(canvas);
+  dotTex.minFilter = THREE.LinearFilter;
+  dotTex.magFilter = THREE.LinearFilter;
+
+  const dotMat = new THREE.MeshBasicMaterial({
+    map: dotTex,
+    color,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    depthTest: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+  const dotMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.92), dotMat);
+  dotMesh.rotation.x = -Math.PI / 2;
+  dotMesh.position.y = 0.03;
+  dotMesh.renderOrder = 20;
+  dotMesh.scale.setScalar(0.3);
+  group.add(dotMesh);
+
+  const ringMat = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const ring = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(
+      Array.from({ length: 40 }, (_, i) => {
+        const a = (i / 40) * Math.PI * 2;
+        return new THREE.Vector3(Math.cos(a) * 0.18, 0.04, Math.sin(a) * 0.18);
+      })
+    ),
+    ringMat
+  );
+  ring.renderOrder = 21;
+  group.add(ring);
+
+  return { group, dotMesh, dotMat, ring, ringMat };
+}
+
+export function animateTurnDestinationPing(
+  toSquare: string,
+  effectsGroup: THREE.Group,
+  onComplete: () => void
+): void {
+  const { x, z } = squareToXZ(toSquare);
+  const ping = createDotMatrixLandingPulse(0xc9f5ff);
+  ping.group.position.set(x, 0, z);
+  ping.dotMesh.position.y = 0.036;
+  ping.dotMesh.scale.setScalar(0.98);
+  ping.ring.scale.set(1.0, 1, 1.0);
+
+  const flashPlateMat = new THREE.MeshBasicMaterial({
+    color: 0x8bddff,
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.NormalBlending,
+  });
+  const flashPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.94), flashPlateMat);
+  flashPlate.rotation.x = -Math.PI / 2;
+  flashPlate.position.y = 0.033;
+  flashPlate.renderOrder = 19;
+  ping.group.add(flashPlate);
+
+  const frameMat = new THREE.LineBasicMaterial({
+    color: 0xb7efff,
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const frame = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-0.46, 0.038, -0.46),
+      new THREE.Vector3(0.46, 0.038, -0.46),
+      new THREE.Vector3(0.46, 0.038, 0.46),
+      new THREE.Vector3(-0.46, 0.038, 0.46),
+    ]),
+    frameMat
+  );
+  frame.renderOrder = 22;
+  ping.group.add(frame);
+  effectsGroup.add(ping.group);
+
+  const tl = gsap.timeline({ onComplete });
+  tl.timeScale(Math.min(replayAnimationSpeed, 1.0));
+
+  let disposed = false;
+  const disposePing = () => {
+    if (disposed) return;
+    disposed = true;
+    effectsGroup.remove(ping.group);
+    ping.dotMesh.geometry.dispose();
+    ping.dotMat.map?.dispose();
+    ping.dotMat.dispose();
+    ping.ring.geometry.dispose();
+    ping.ringMat.dispose();
+    flashPlate.geometry.dispose();
+    flashPlateMat.dispose();
+    frame.geometry.dispose();
+    frameMat.dispose();
+  };
+
+  // Fast double flash: quick attention cue before the main move effects begin.
+  tl.to(ping.dotMat, { opacity: 0.9, duration: 0.045, ease: 'power1.out' }, 0);
+  tl.to(flashPlateMat, { opacity: 0.28, duration: 0.045, ease: 'power1.out' }, 0);
+  tl.to(frameMat, { opacity: 0.82, duration: 0.045, ease: 'power1.out' }, 0);
+  tl.to(ping.ringMat, { opacity: 0.55, duration: 0.045, ease: 'power1.out' }, 0);
+  tl.to(ping.dotMesh.scale, { x: 1.08, y: 1.08, z: 1.08, duration: 0.12, ease: 'power1.out' }, 0);
+  tl.to([ping.dotMat, flashPlateMat, frameMat, ping.ringMat], { opacity: 0, duration: 0.075, ease: 'power1.in' }, 0.09);
+
+  tl.to(ping.dotMat, { opacity: 0.68, duration: 0.04, ease: 'power1.out' }, 0.19);
+  tl.to(flashPlateMat, { opacity: 0.18, duration: 0.04, ease: 'power1.out' }, 0.19);
+  tl.to(frameMat, { opacity: 0.58, duration: 0.04, ease: 'power1.out' }, 0.19);
+  tl.to(ping.ringMat, { opacity: 0.34, duration: 0.04, ease: 'power1.out' }, 0.19);
+  tl.to(ping.dotMesh.scale, { x: 1.18, y: 1.18, z: 1.18, duration: 0.14, ease: 'power1.out' }, 0.19);
+  tl.to(ping.ring.scale, { x: 1.72, y: 1, z: 1.72, duration: 0.16, ease: 'power2.out' }, 0.19);
+  tl.to([ping.dotMat, flashPlateMat, frameMat, ping.ringMat], { opacity: 0, duration: 0.12, ease: 'power1.in' }, 0.26);
+
+  tl.call(disposePing, [], 0.44);
+  tl.eventCallback('onInterrupt', disposePing);
+}
+
 function createBracket(): THREE.Group {
   const group = new THREE.Group();
   const mat = new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 1, depthTest: false });
@@ -65,6 +225,7 @@ export function animateLightningStrike(
 
   const dx = end.x - start.x;
   const dz = end.z - start.z;
+  const isDiagonalMove = dx !== 0 && dz !== 0 && Math.abs(dx) === Math.abs(dz);
   const snapX = dx !== 0 ? start.x + (dx > 0 ? 0.5 : -0.5) : start.x;
   const snapZ = dz !== 0 ? start.z + (dz > 0 ? 0.5 : -0.5) : start.z;
 
@@ -76,15 +237,24 @@ export function animateLightningStrike(
   const targetZ = dz !== 0 ? end.z + (dz > 0 ? -0.5 : 0.5) : end.z;
   const dist1 = Math.abs(snapZ - targetZ);
   const dist2 = Math.abs(snapX - targetX);
-  const totalDist = dist1 + dist2;
+  const totalDist = isDiagonalMove
+    ? Math.hypot(targetX - snapX, targetZ - snapZ)
+    : dist1 + dist2;
 
-  const tracePoints = [
-    new THREE.Vector3(snapX, 0, snapZ),
-    new THREE.Vector3(snapX, 0, targetZ),
-    new THREE.Vector3(targetX, 0, targetZ),
-  ];
+  const tracePoints = isDiagonalMove
+    ? [
+        new THREE.Vector3(snapX, 0, snapZ),
+        new THREE.Vector3(targetX, 0, targetZ),
+      ]
+    : [
+        new THREE.Vector3(snapX, 0, snapZ),
+        new THREE.Vector3(snapX, 0, targetZ),
+        new THREE.Vector3(targetX, 0, targetZ),
+      ];
   const traceGeo = new THREE.BufferGeometry().setFromPoints(tracePoints);
-  const uvArr = new Float32Array([0, 0, totalDist > 0 ? dist1 / totalDist : 0, 0, 1, 0]);
+  const uvArr = isDiagonalMove
+    ? new Float32Array([0, 0, 1, 0])
+    : new Float32Array([0, 0, totalDist > 0 ? dist1 / totalDist : 0, 0, 1, 0]);
   traceGeo.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2));
 
   const traceMat = new THREE.ShaderMaterial({
@@ -114,13 +284,18 @@ export function animateLightningStrike(
       traceMat.uniforms.uProgress.value = proxy.p;
       const head = Math.min(proxy.p, 1.0);
       if (totalDist > 0) {
-        const split = dist1 / totalDist;
-        if (head <= split) {
-          bracket.position.x = snapX;
-          bracket.position.z = THREE.MathUtils.lerp(snapZ, targetZ, split === 0 ? 1 : head / split);
+        if (isDiagonalMove) {
+          bracket.position.x = THREE.MathUtils.lerp(snapX, targetX, head);
+          bracket.position.z = THREE.MathUtils.lerp(snapZ, targetZ, head);
         } else {
-          bracket.position.x = THREE.MathUtils.lerp(snapX, targetX, (head - split) / (1 - split));
-          bracket.position.z = targetZ;
+          const split = dist1 / totalDist;
+          if (head <= split) {
+            bracket.position.x = snapX;
+            bracket.position.z = THREE.MathUtils.lerp(snapZ, targetZ, split === 0 ? 1 : head / split);
+          } else {
+            bracket.position.x = THREE.MathUtils.lerp(snapX, targetX, (head - split) / (1 - split));
+            bracket.position.z = targetZ;
+          }
         }
       }
     },
@@ -169,12 +344,16 @@ export function animateCapture(
   tl.to(instance.haloMat, { opacity: 0, duration: 0.1 }, 0.3);
   const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.5);
   instance.group.traverse(child => {
-    const c = child as any;
-    if (c.material && c.type === 'LineSegments') {
-      c.material = c.material.clone();
-      c.material.color.setHex(0xff0022);
-      c.material.clippingPlanes = [clipPlane];
-    }
+    if (!(child instanceof THREE.LineSegments)) return;
+    const originalMaterial = child.material;
+    const materialList = Array.isArray(originalMaterial) ? originalMaterial : [originalMaterial];
+    const clonedMaterials = materialList.map((material) => {
+      const clone = material.clone() as THREE.Material & { color?: THREE.Color };
+      clone.color?.setHex(0xff0022);
+      clone.clippingPlanes = [clipPlane];
+      return clone;
+    });
+    child.material = Array.isArray(originalMaterial) ? clonedMaterials : clonedMaterials[0];
   });
   tl.to(instance.group.position, { y: -2, duration: 0.6, ease: 'power3.in' }, 0.3);
 
@@ -216,6 +395,7 @@ export function animateCapture(
 export function animateJump(
   instance: PieceInstance,
   toSquare: string,
+  effectsGroup: THREE.Group,
   onComplete: () => void
 ): void {
   const { x, z } = squareToXZ(toSquare);
@@ -282,6 +462,33 @@ export function animateJump(
 
   tl.to(instance.group.position, { x, z, duration: 0.5, ease: 'power1.inOut' }, 0);
   tl.to(instance.group.position, { y: 1.5, duration: 0.25, ease: 'power1.out', yoyo: true, repeat: 1 }, 0);
+
+  const landingPulse = createDotMatrixLandingPulse();
+  landingPulse.group.position.set(x, 0, z);
+  landingPulse.group.visible = false;
+  effectsGroup.add(landingPulse.group);
+  tl.call(() => {
+    landingPulse.group.visible = true;
+  }, [], 0.44);
+  tl.to(landingPulse.dotMat, { opacity: 0.6, duration: 0.08, ease: 'power1.out' }, 0.44);
+  tl.to(landingPulse.dotMesh.scale, { x: 1.0, y: 1.0, z: 1.0, duration: 0.3, ease: 'power2.out' }, 0.44);
+  tl.to(landingPulse.dotMat, { opacity: 0.0, duration: 0.26, ease: 'power1.in' }, 0.52);
+  tl.to(landingPulse.ringMat, { opacity: 0.45, duration: 0.06, ease: 'power1.out' }, 0.44);
+  tl.to(landingPulse.ring.scale, { x: 2.2, y: 1, z: 2.2, duration: 0.26, ease: 'power2.out' }, 0.44);
+  tl.to(landingPulse.ringMat, { opacity: 0, duration: 0.2, ease: 'power1.in' }, 0.5);
+
+  let landingPulseDisposed = false;
+  const disposeLandingPulse = () => {
+    if (landingPulseDisposed) return;
+    landingPulseDisposed = true;
+    effectsGroup.remove(landingPulse.group);
+    landingPulse.dotMesh.geometry.dispose();
+    landingPulse.dotMat.map?.dispose();
+    landingPulse.dotMat.dispose();
+    landingPulse.ring.geometry.dispose();
+    landingPulse.ringMat.dispose();
+  };
+  tl.call(disposeLandingPulse, [], 0.82);
   if (outlineMat) {
     tl.to(outlineMat, { opacity: 0.95, duration: 1.6, ease: 'none' }, 0.06);
     tl.to(outlineMat, { opacity: 0.0, duration: 0.9, ease: 'power1.in' }, 1.66);
@@ -321,4 +528,6 @@ export function animateJump(
     }, 1.68);
     tl.to(sourceMat, { opacity: sourceOriginalOpacity, duration: 0.9, ease: 'power1.in' }, 1.68);
   }
+
+  tl.eventCallback('onInterrupt', disposeLandingPulse);
 }
