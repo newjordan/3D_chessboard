@@ -1540,11 +1540,11 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                 className="w-full h-full flex items-center justify-center lifted-piece-shell"
                 initial={{ scale: 1, filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))' }}
                 animate={{
-                  scale: [1, 1.45, 1.25, 1],
+                  scale: [1, 1.8, 1.4, 1], // Increased peak scale for more "height"
                   filter: [
                     'drop-shadow(0 0 0px rgba(0,0,0,0))',
-                    `drop-shadow(0 0 12px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 30px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
-                    `drop-shadow(0 0 15px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 35px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
+                    `drop-shadow(0 0 15px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 40px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
+                    `drop-shadow(0 0 18px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 45px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
                     `drop-shadow(0 0 4px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowNear}) drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowFar})`,
                   ],
                 }}
@@ -1552,7 +1552,7 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                   delay: movingPieceFx.startDelayMs / 1000,
                   duration: movingPieceFx.durationMs / 1000,
                   ease: "easeInOut",
-                  times: [0, 0.45, 0.8, 1],
+                  times: [0, 0.5, 0.85, 1], // Peak scale exactly at 0.5
                 }}
               >
                 <motion.div
