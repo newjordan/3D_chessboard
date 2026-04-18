@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Providers from "@/components/Providers";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { Toaster } from "sonner";
+import AppShell from "@/components/AppShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,20 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased chess-pattern`}>
-        <Providers>
-          <Navbar />
-          <main className="pt-24 min-h-screen">
-            {children}
-          </main>
-          <Footer />
-          <Toaster 
-            theme="dark" 
-            position="bottom-right" 
-            toastOptions={{
-              className: "bg-black/80 border border-white/10 backdrop-blur-xl text-white font-sans",
-            }}
-          />
-        </Providers>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

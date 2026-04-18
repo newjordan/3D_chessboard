@@ -53,38 +53,6 @@ const STARS: Star[] = (() => {
 const DARK_SQUARE_BG = '#020914';
 const LIGHT_SQUARE_BG = '#0b2a45';
 
-// Retro CRT-style SVG filters
-const CRT_FILTERS_SVG = (
-  <svg className="hidden">
-    <defs>
-      <filter id="chromatic-aberration">
-        <feColorMatrix
-          type="matrix"
-          values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"
-          in="SourceGraphic"
-          result="red"
-        />
-        <feColorMatrix
-          type="matrix"
-          values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"
-          in="SourceGraphic"
-          result="green"
-        />
-        <feColorMatrix
-          type="matrix"
-          values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"
-          in="SourceGraphic"
-          result="blue"
-        />
-        <feOffset in="red" dx="0.8" dy="0" result="red-offset" />
-        <feOffset in="blue" dx="-0.8" dy="0" result="blue-offset" />
-        <feBlend in="red-offset" in2="green" mode="screen" result="rg" />
-        <feBlend in="rg" in2="blue-offset" mode="screen" />
-      </filter>
-    </defs>
-  </svg>
-);
-
 // Phosphor-CRT retro dot matrix for light squares.
 const LIGHT_SQUARE_DOTMATRIX_SVG = (() => {
   const rng = mulberry32(771);
@@ -1025,7 +993,6 @@ const squareToRC = (sq: string): [number, number] | null => {
 
 export const Board2D: React.FC<Board2DProps> = (props) => {
   const { board, lastMove, fxMove, fxKey, fxSpeed = 1 } = props;
-  const [glitch, setGlitch] = useState(false);
   const [pulse, setPulse] = useState<{
     key: number;
     introPings: FinalSquarePing[];
@@ -1052,14 +1019,11 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     const from = squareToRC(fxMove.from);
     const to = squareToRC(fxMove.to);
     if (!from || !to) return;
-    // Pulse rides the circuit-graph railway — orthogonal trace through the generated PCB
-    // network from a source-square node to a destination-square node. The green piece glow
-    // (piece-move-glow) is the "active piece" indicator; the circuit pulse is the data-packet
-    // running the railway. They fire together but trace different paths on purpose.
     const nodePath = findNodePath(from, to);
     if (!nodePath || nodePath.length < 2) return;
     const moveColor = board[to[0]]?.[to[1]]?.color ?? 'w';
-    const pulseFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), moveColor, fxSpeed);
+    // Slow down the circuit pulse slightly to match new pacing
+    const pulseFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), moveColor, fxSpeed * 0.8);
     setPulse({ key: (fxKey ?? 0) + Math.random(), ...pulseFx });
   }, [board, fxKey, fxMove, fxSpeed]);
 
@@ -1073,8 +1037,12 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
 
     const nodePath = findNodePath(from, to);
     if (!nodePath || nodePath.length < 2) return;
-    const moveFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), pieceAtDestination.color, fxSpeed);
+    const moveFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), pieceAtDestination.color, fxSpeed * 0.8);
     const key = (fxKey ?? 0) + Math.random();
+    
+    // Smooth out and slow down the move duration
+    const durationMs = Math.max(1000, moveFx.moveDurationMs * 1.4);
+    
     setMovingPieceFx({
       key,
       from,
@@ -1085,31 +1053,21 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         color: pieceAtDestination.color,
       },
       startDelayMs: moveFx.moveStartDelayMs,
-      durationMs: moveFx.moveDurationMs,
+      durationMs,
     });
 
     const timer = window.setTimeout(() => {
       setMovingPieceFx((current) => (current?.key === key ? null : current));
-    }, moveFx.moveStartDelayMs + moveFx.moveDurationMs + 220);
+    }, moveFx.moveStartDelayMs + durationMs + 220);
 
     return () => window.clearTimeout(timer);
   }, [board, fxKey, fxMove, fxSpeed]);
 
-  useEffect(() => {
-    if (fxKey != null) {
-      setGlitch(true);
-      const timer = setTimeout(() => setGlitch(false), 80);
-      return () => clearTimeout(timer);
-    }
-  }, [fxKey]);
-
   return (
     <div
       data-testid="board2d-root"
-      className={`relative w-full aspect-square overflow-hidden bg-black board2d-crt-container ${glitch ? 'board2d-glitch' : ''}`}
+      className="relative w-full aspect-square overflow-hidden bg-black board2d-container"
     >
-      {CRT_FILTERS_SVG}
-      
       {/* Background Space layer */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
@@ -1580,21 +1538,21 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
             >
               <motion.div
                 className="w-full h-full flex items-center justify-center lifted-piece-shell"
-                initial={{ scale: 0.98 }}
+                initial={{ scale: 1, filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))' }}
                 animate={{
-                  scale: [0.98, 1.28, 1.18, 1],
+                  scale: [1, 1.45, 1.25, 1],
                   filter: [
                     'drop-shadow(0 0 0px rgba(0,0,0,0))',
-                    `drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 20px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
-                    `drop-shadow(0 0 12px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 28px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
+                    `drop-shadow(0 0 12px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 30px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
+                    `drop-shadow(0 0 15px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 35px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
                     `drop-shadow(0 0 4px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowNear}) drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowFar})`,
                   ],
                 }}
                 transition={{
                   delay: movingPieceFx.startDelayMs / 1000,
                   duration: movingPieceFx.durationMs / 1000,
-                  ease: [0.2, 0.82, 0.22, 1],
-                  times: [0, 0.24, 0.72, 1],
+                  ease: "easeInOut",
+                  times: [0, 0.45, 0.8, 1],
                 }}
               >
                 <motion.div
@@ -1611,20 +1569,20 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                   transition={{
                     delay: movingPieceFx.startDelayMs / 1000,
                     duration: movingPieceFx.durationMs / 1000,
-                    ease: [0.2, 0.82, 0.22, 1],
-                    times: [0, 0.14, 0.76, 1],
+                    ease: "easeInOut",
+                    times: [0, 0.2, 0.8, 1],
                   }}
                 >
                   <motion.div
                     className="absolute inset-0 opacity-65 mix-blend-screen lifted-piece-ghost"
                     style={{ filter: getMoveFxPalette(movingPieceFx.piece.color).ghostFilter }}
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 0.68, 0.52, 0] }}
+                    animate={{ opacity: [0, 0.4, 0.3, 0] }}
                     transition={{
                       delay: movingPieceFx.startDelayMs / 1000,
                       duration: movingPieceFx.durationMs / 1000,
-                      ease: [0.2, 0.82, 0.22, 1],
-                      times: [0, 0.18, 0.7, 1],
+                      ease: "easeInOut",
+                      times: [0, 0.3, 0.7, 1],
                     }}
                     aria-hidden="true"
                   >
@@ -1651,38 +1609,12 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
       <div className="absolute inset-0 pointer-events-none z-[61] opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
       <div className="absolute inset-0 pointer-events-none z-[62] opacity-10 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_0%,transparent_60%)]" />
       
-      {/* Scanline Animation Overlay */}
-      <div className="absolute inset-0 pointer-events-none z-[63] board2d-scanline" />
+      {/* Scanline Animation Overlay (Disabled for clarity, kept as empty div if needed for future layers) */}
+      <div className="absolute inset-0 pointer-events-none z-[63]" />
 
       <style jsx global>{`
-        .board2d-crt-container {
-          filter: url(#chromatic-aberration);
-        }
-        .board2d-scanline {
-          background: linear-gradient(
-            to bottom,
-            transparent,
-            transparent 50%,
-            rgba(0, 0, 0, 0.2) 50%,
-            rgba(0, 0, 0, 0.2)
-          );
-          background-size: 100% 4px;
-          animation: scanline 10s linear infinite;
-        }
-        @keyframes scanline {
-          0% { background-position: 0 0; }
-          100% { background-position: 0 100%; }
-        }
-        .board2d-glitch {
-          animation: glitch 0.1s linear;
-        }
-        @keyframes glitch {
-          0% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); filter: brightness(1.2) contrast(1.1); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); filter: hue-rotate(90deg); }
-          80% { transform: translate(2px, -2px); }
-          100% { transform: translate(0); }
+        .board2d-container {
+          /* Clean container */
         }
         .board2d-main-grid {
           background-image: 

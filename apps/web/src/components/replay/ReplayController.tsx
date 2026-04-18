@@ -133,14 +133,14 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     const nextMove = history[currentPly];
     const requestedPlaybackMs = 1000 / effectivePlaybackRate;
     const minimum2DDelay = nextMove?.captured
-      ? 1580
-      : 1440;
+      ? 2400 // Slower for captures to allow animations to breathe
+      : 2200; // Slower for normal moves
     const minimum3DDelay = nextMove?.captured
       ? BOARD3D_CAPTURE_DURATION_MS / effectivePlaybackRate
       : BOARD3D_MOVE_DURATION_MS / effectivePlaybackRate;
     const restBeatMs = viewMode === '3D'
       ? 220 / Math.min(effectivePlaybackRate, 1.8)
-      : 420;
+      : 600; // Longer rest between moves in 2D
     const effectivePlaybackSpeed = viewMode === '3D'
       ? Math.max(requestedPlaybackMs, minimum3DDelay) + restBeatMs
       : Math.max(requestedPlaybackMs, minimum2DDelay) + restBeatMs;

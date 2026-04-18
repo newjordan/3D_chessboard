@@ -1,0 +1,17 @@
+{
+  "generated_at_utc": "2026-04-15T20:25:39.332626+00:00",
+  "model": "gpt-image-1",
+  "size": "1024x1024",
+  "quality": "high",
+  "prompt": "Create exactly six separate chess pieces in one horizontal row, left to right: king, queen, rook, bishop, knight, pawn. Front orthographic view. Keep the same design language and stroke weight for all. All six must be fully visible with transparent space before king and after pawn. Leave clear transparent vertical gutters between each piece. Use a smaller scale so no piece touches image edges. Transparent background. Flat 2D retro CRT chess icon style. No photorealism, no 3D rendering, no glossy shading, no noise grain, no metallic texture. Use clean electric-cyan contour lines with a mild bloom and uniform tiny dot-matrix interior fill. Crisp readable silhouette at small size on transparent black background. No text.",
+  "raw_strip": "apps/web/public/replay/openai-piece-set/raw/generated_strip.png",
+  "pieces": [
+    "apps/web/public/replay/openai-piece-set/white/01_king.png",
+    "apps/web/public/replay/openai-piece-set/white/02_queen.png",
+    "apps/web/public/replay/openai-piece-set/white/03_rook.png",
+    "apps/web/public/replay/openai-piece-set/white/04_bishop.png",
+    "apps/web/public/replay/openai-piece-set/white/05_knight.png",
+    "apps/web/public/replay/openai-piece-set/white/06_pawn.png"
+  ],
+  "preview_strip": "apps/web/public/replay/openai-piece-set/preview_strip.png"
+}
