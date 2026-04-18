@@ -25,6 +25,7 @@ interface ReplayControllerProps {
   whitePieceUrl?: string;
   blackPieceUrl?: string;
   initialViewMode?: '2D' | '3D';
+  initialPly?: number;
 }
 
 export const ReplayController: React.FC<ReplayControllerProps> = ({ 
@@ -34,9 +35,10 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   whitePieceUrl,
   blackPieceUrl,
   initialViewMode = '2D',
+  initialPly = 0,
 }) => {
   const [selectedGameIndex, setSelectedGameIndex] = useState(0);
-  const [currentPly, setCurrentPly] = useState(0);
+  const [currentPly, setCurrentPly] = useState(initialPly);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [viewMode, setViewMode] = useState<'2D' | '3D'>(initialViewMode);
@@ -44,7 +46,8 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   const moveListRef = useRef<HTMLDivElement>(null);
   const board3dRef = useRef<Board3DHandle>(null);
   const prevPlyRef = useRef(0);
-  const speedOptions = [1, 2, 3, 4] as const;
+  const speedOptions = [1] as const;
+  const effectivePlaybackRate = viewMode === '2D' ? 1 : playbackRate;
 
   const gamesList = useMemo(() => {
     if (!pgn) return [];
@@ -107,14 +110,14 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         !!move.captured,
         move.flags ?? '',
         move.promotion ?? undefined,
-        playbackRate
+        effectivePlaybackRate
       );
     } else {
       const temp = new Chess();
       for (let i = 0; i < currentPly; i++) temp.move(history[i]);
       board3dRef.current.resetToPosition(temp.fen());
     }
-  }, [currentPly, viewMode, history, playbackRate]);
+  }, [currentPly, viewMode, history, effectivePlaybackRate]);
 
   // Sync 3D board when switching to 3D view
   useEffect(() => {
@@ -128,19 +131,25 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const nextMove = history[currentPly];
-    const requestedPlaybackMs = 1000 / playbackRate;
+    const requestedPlaybackMs = 1000 / effectivePlaybackRate;
+    const minimum2DDelay = nextMove?.captured
+      ? 1580
+      : 1440;
     const minimum3DDelay = nextMove?.captured
-      ? BOARD3D_CAPTURE_DURATION_MS / playbackRate
-      : BOARD3D_MOVE_DURATION_MS / playbackRate;
+      ? BOARD3D_CAPTURE_DURATION_MS / effectivePlaybackRate
+      : BOARD3D_MOVE_DURATION_MS / effectivePlaybackRate;
+    const restBeatMs = viewMode === '3D'
+      ? 220 / Math.min(effectivePlaybackRate, 1.8)
+      : 420;
     const effectivePlaybackSpeed = viewMode === '3D'
-      ? Math.max(requestedPlaybackMs, minimum3DDelay)
-      : requestedPlaybackMs;
+      ? Math.max(requestedPlaybackMs, minimum3DDelay) + restBeatMs
+      : Math.max(requestedPlaybackMs, minimum2DDelay) + restBeatMs;
 
     if (isPlaying && currentPly < history.length) {
       interval = setInterval(() => setCurrentPly((prev) => prev + 1), effectivePlaybackSpeed);
     } else { setIsPlaying(false); }
     return () => clearInterval(interval);
-  }, [isPlaying, currentPly, history, playbackRate, viewMode]);
+  }, [isPlaying, currentPly, history, effectivePlaybackRate, viewMode]);
 
   const boardState = useMemo(() => {
     const tempChess = new Chess();
@@ -172,41 +181,53 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     };
   }, [whiteName, blackName]);
 
-  const nextToPlay = useMemo(() => {
-    if (currentPly >= history.length) return null;
-    return currentPly % 2 === 0 ? 'white' : 'black';
-  }, [currentPly, history.length]);
-
-  const nextTetromino = useMemo(() => {
-    if (nextToPlay === 'white') {
-      return [
-        [0, 1, 0, 0],
-        [1, 1, 1, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-      ];
-    }
-    if (nextToPlay === 'black') {
-      return [
-        [1, 1, 0, 0],
-        [0, 1, 1, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-      ];
-    }
-    return [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ];
-  }, [nextToPlay]);
-
   const triggerSquareFlash = () => {
     if (viewMode !== '3D' || !board3dRef.current) return;
     const normalized = flashTargetSquare.trim().toLowerCase();
     if (!/^[a-h][1-8]$/.test(normalized)) return;
     board3dRef.current.flashSquare(normalized);
+  };
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          setCurrentPly((prev) => Math.max(0, prev - 1));
+          setIsPlaying(false);
+          break;
+        case 'ArrowRight':
+          setCurrentPly((prev) => Math.min(history.length, prev + 1));
+          setIsPlaying(false);
+          break;
+        case ' ':
+          e.preventDefault();
+          setIsPlaying((prev) => !prev);
+          break;
+        case 'Home':
+          setCurrentPly(0);
+          setIsPlaying(false);
+          break;
+        case 'End':
+          setCurrentPly(history.length);
+          setIsPlaying(false);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [history.length]);
+
+  const handleCapture = () => {
+    // In a real system, this might trigger a server-side Playwright capture
+    // For now, we'll provide a nice message and maybe use the browser's print/save if possible
+    // or just console log the intent.
+    const url = `/dev/board2d?pgn=${encodeURIComponent(pgn)}&ply=${currentPly}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -269,7 +290,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                     blackPieceUrl={blackPieceUrl}
                     fxMove={fxMove}
                     fxKey={currentPly}
-                    fxSpeed={playbackRate}
+                    fxSpeed={1}
                   />
                 </div>
              )}
@@ -295,21 +316,55 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
           </div>
 
           {/* Console Controls Bar - Fixed and Compact */}
-          <div className="flex-none flex items-center justify-between p-3 bg-white/[0.03] border border-white/5">
+          <div className="flex-none flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
             <div className="flex items-center gap-1">
-              <button onClick={() => { setCurrentPly(0); setIsPlaying(false); }} title="Reset" className="p-2 hover:bg-white/5 transition-colors text-white/40"><RotateCcw size={16} /></button>
-              <button onClick={() => setCurrentPly(Math.max(0, currentPly - 1))} title="Prev" className="p-2 hover:bg-white/5 transition-colors text-white/60"><ChevronLeft size={20} /></button>
+              <button 
+                onClick={() => { setCurrentPly(0); setIsPlaying(false); }} 
+                title="Reset (Home)" 
+                className="p-2 hover:bg-white/5 transition-colors text-white/40 border border-transparent hover:border-white/10 active:bg-white/10"
+              >
+                <RotateCcw size={16} />
+              </button>
+              <button 
+                onClick={() => { setCurrentPly(Math.max(0, currentPly - 1)); setIsPlaying(false); }} 
+                title="Prev (Left)" 
+                className="p-2 hover:bg-white/5 transition-colors text-white/60 border border-transparent hover:border-white/10 active:bg-white/10"
+              >
+                <ChevronLeft size={20} />
+              </button>
               <button 
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="w-10 h-10 flex items-center justify-center bg-white text-black hover:scale-105 transition-all shadow-xl active:scale-95 mx-1"
+                title="Play/Pause (Space)"
+                className="w-10 h-10 flex items-center justify-center bg-white text-black hover:scale-105 transition-all shadow-[0_0_15px_rgba(255,255,255,0.3)] active:scale-95 mx-1 border border-white"
               >
                 {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} className="ml-0.5" fill="currentColor" />}
               </button>
-              <button onClick={() => setCurrentPly(Math.min(history.length, currentPly + 1))} title="Next" className="p-2 hover:bg-white/5 transition-colors text-white/60"><ChevronRight size={20} /></button>
-              <button onClick={() => { setCurrentPly(history.length); setIsPlaying(false); }} title="End" className="p-2 hover:bg-white/5 transition-colors text-white/40"><FastForward size={16} /></button>
+              <button 
+                onClick={() => { setCurrentPly(Math.min(history.length, currentPly + 1)); setIsPlaying(false); }} 
+                title="Next (Right)" 
+                className="p-2 hover:bg-white/5 transition-colors text-white/60 border border-transparent hover:border-white/10 active:bg-white/10"
+              >
+                <ChevronRight size={20} />
+              </button>
+              <button 
+                onClick={() => { setCurrentPly(history.length); setIsPlaying(false); }} 
+                title="End (End)" 
+                className="p-2 hover:bg-white/5 transition-colors text-white/40 border border-transparent hover:border-white/10 active:bg-white/10"
+              >
+                <FastForward size={16} />
+              </button>
             </div>
 
             <div className="flex items-center gap-4">
+               {viewMode === '2D' && (
+                 <button
+                   onClick={handleCapture}
+                   className="flex items-center gap-2 px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest bg-white/[0.05] text-white/60 border border-white/10 hover:bg-white/10 hover:text-white transition-all group"
+                 >
+                   <Maximize2 size={10} className="group-hover:scale-110 transition-transform" />
+                   High-Res Capture
+                 </button>
+               )}
                {viewMode === '3D' && (
                  <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 p-1">
                    <input
@@ -334,11 +389,9 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                    <button
                      key={speed}
                      onClick={() => setPlaybackRate(speed)}
-                     className={`px-2 py-1 text-[9px] technical-label transition-colors ${
-                       playbackRate === speed ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
-                     }`}
+                     className="px-2 py-1 text-[9px] technical-label bg-white/10 text-white cursor-default"
                    >
-                     {speed}x
+                     {viewMode === '2D' ? '1x locked' : `${speed}x`}
                    </button>
                  ))}
                </div>
@@ -377,36 +430,6 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
 
           {/* Sidebar Footer - Static */}
           <div className="flex-none p-4 bg-white/[0.01] border-t border-white/5">
-                <div className="pb-3 mb-3 border-b border-white/5">
-                   <div className="flex justify-between items-center text-[9px] technical-label opacity-50">
-                     <span>Next To Play</span>
-                     <span className="font-bold uppercase tracking-widest">{nextToPlay ?? 'Done'}</span>
-                   </div>
-                   <div className="mt-2 inline-grid grid-cols-4 gap-[2px] p-1 border border-white/10 bg-black/25">
-                     {nextTetromino.flatMap((row, rowIdx) =>
-                       row.map((cell, colIdx) => {
-                         const active = cell === 1;
-                         const fill = nextToPlay === 'white'
-                           ? 'rgba(126, 225, 255, 0.48)'
-                           : 'rgba(125, 255, 0, 0.42)';
-                         const glow = nextToPlay === 'white'
-                           ? '0 0 6px rgba(126, 225, 255, 0.22)'
-                           : '0 0 6px rgba(125, 255, 0, 0.2)';
-
-                         return (
-                           <span
-                             key={`${rowIdx}-${colIdx}`}
-                             className="w-2.5 h-2.5 border border-white/10"
-                             style={{
-                               backgroundColor: active ? fill : 'rgba(255,255,255,0.02)',
-                               boxShadow: active ? glow : 'none',
-                             }}
-                           />
-                         );
-                       })
-                     )}
-                   </div>
-                </div>
                 <div className="flex justify-between items-center text-[9px] technical-label opacity-40">
                    <span>Isolation Level</span>
                    <span className="font-bold uppercase tracking-widest text-accent/60">High Performance</span>
