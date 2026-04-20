@@ -1040,8 +1040,9 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     const moveFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), pieceAtDestination.color, fxSpeed * 0.8);
     const key = (fxKey ?? 0) + Math.random();
     
-    // Smooth out and slow down the move duration
-    const durationMs = Math.max(1200, moveFx.moveDurationMs * 1.8);
+    // Reduce the move duration and start the animation sooner
+    const durationMs = Math.max(600, moveFx.moveDurationMs * 1.1);
+    const startDelayMs = moveFx.moveStartDelayMs * 0.4;
     
     setMovingPieceFx({
       key,
@@ -1052,13 +1053,13 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         type: pieceAtDestination.type,
         color: pieceAtDestination.color,
       },
-      startDelayMs: moveFx.moveStartDelayMs,
+      startDelayMs,
       durationMs,
     });
 
     const timer = window.setTimeout(() => {
       setMovingPieceFx((current) => (current?.key === key ? null : current));
-    }, moveFx.moveStartDelayMs + durationMs + 220);
+    }, startDelayMs + durationMs + 220);
 
     return () => window.clearTimeout(timer);
   }, [board, fxKey, fxMove, fxSpeed]);
@@ -1513,46 +1514,70 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
 
         <AnimatePresence>
           {movingPieceFx && (
-            <motion.div
-              key={`moving-piece-${movingPieceFx.key}`}
-              className="absolute pointer-events-none z-30"
-              style={{
-                left: `${movingPieceFx.from[1] * 12.5}%`,
-                top: `${movingPieceFx.from[0] * 12.5}%`,
-                width: '12.5%',
-                height: '12.5%',
-              }}
-              initial={{ 
-                x: '0%', 
-                y: '0%', 
-                scale: 1,
-                filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))'
-              }}
-              animate={{
-                x: `${(movingPieceFx.to[1] - movingPieceFx.from[1]) * 100}%`,
-                y: `${(movingPieceFx.to[0] - movingPieceFx.from[0]) * 100}%`,
-                scale: [1, 1.85, 1], // Symmetric peak
-                filter: [
-                  'drop-shadow(0 0 0px rgba(0,0,0,0))',
-                  `drop-shadow(0 0 20px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 50px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
-                  'drop-shadow(0 0 2px rgba(0,0,0,0))',
-                ],
-              }}
-              exit={{ opacity: 0 }}
-              transition={{
-                delay: movingPieceFx.startDelayMs / 1000,
-                duration: movingPieceFx.durationMs / 1000,
-                ease: "easeInOut",
-                scale: {
-                  times: [0, 0.5, 1],
-                  ease: "easeInOut"
-                },
-                filter: {
-                  times: [0, 0.5, 1],
-                  ease: "easeInOut"
-                }
-              }}
-            >
+            <React.Fragment key={`moving-piece-wrapper-${movingPieceFx.key}`}>
+              <svg
+                className="absolute inset-[8.6%] pointer-events-none z-[25] overflow-visible"
+                aria-hidden="true"
+              >
+                <motion.line
+                  x1={`${movingPieceFx.from[1] * 12.5 + 6.25}%`}
+                  y1={`${movingPieceFx.from[0] * 12.5 + 6.25}%`}
+                  x2={`${movingPieceFx.to[1] * 12.5 + 6.25}%`}
+                  y2={`${movingPieceFx.to[0] * 12.5 + 6.25}%`}
+                  stroke={getMoveFxPalette(movingPieceFx.piece.color).travelCore}
+                  strokeWidth="0.8%"
+                  strokeLinecap="round"
+                  filter={`drop-shadow(0 0 6px ${getMoveFxPalette(movingPieceFx.piece.color).travelHalo})`}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: [0, 0.8, 0.8, 0] }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    delay: movingPieceFx.startDelayMs / 1000,
+                    duration: movingPieceFx.durationMs / 1000,
+                    ease: "easeInOut",
+                    opacity: { times: [0, 0.2, 0.8, 1], ease: "easeInOut" }
+                  }}
+                />
+              </svg>
+              <motion.div
+                className="absolute pointer-events-none z-30"
+                style={{
+                  left: `${movingPieceFx.from[1] * 12.5}%`,
+                  top: `${movingPieceFx.from[0] * 12.5}%`,
+                  width: '12.5%',
+                  height: '12.5%',
+                }}
+                initial={{ 
+                  x: '0%', 
+                  y: '0%', 
+                  scale: 1,
+                  filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))'
+                }}
+                animate={{
+                  x: `${(movingPieceFx.to[1] - movingPieceFx.from[1]) * 100}%`,
+                  y: `${(movingPieceFx.to[0] - movingPieceFx.from[0]) * 100}%`,
+                  scale: [1, 1.35, 1], // Reduced scale peak
+                  filter: [
+                    'drop-shadow(0 0 0px rgba(0,0,0,0))',
+                    `drop-shadow(0 0 15px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 35px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
+                    `drop-shadow(0 0 4px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowNear}) drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowFar})`,
+                  ],
+                }}
+                exit={{ opacity: 0 }}
+                transition={{
+                  delay: movingPieceFx.startDelayMs / 1000,
+                  duration: movingPieceFx.durationMs / 1000,
+                  ease: "easeInOut",
+                  scale: {
+                    times: [0, 0.5, 1],
+                    ease: "easeInOut"
+                  },
+                  filter: {
+                    times: [0, 0.5, 1],
+                    ease: "easeInOut"
+                  }
+                }}
+              >
               <div className="w-full h-full flex items-center justify-center lifted-piece-shell">
                 <motion.div
                   className="relative w-full h-full flex items-center justify-center lifted-piece-outline"
@@ -1599,6 +1624,7 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                 </motion.div>
               </div>
             </motion.div>
+            </React.Fragment>
           )}
         </AnimatePresence>
       </div>
