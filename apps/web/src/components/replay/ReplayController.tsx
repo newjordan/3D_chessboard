@@ -129,26 +129,44 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    const nextMove = history[currentPly];
-    const requestedPlaybackMs = 1000 / effectivePlaybackRate;
-    const minimum2DDelay = nextMove?.captured
-      ? 2400 // Slower for captures to allow animations to breathe
-      : 2200; // Slower for normal moves
-    const minimum3DDelay = nextMove?.captured
-      ? BOARD3D_CAPTURE_DURATION_MS / effectivePlaybackRate
-      : BOARD3D_MOVE_DURATION_MS / effectivePlaybackRate;
-    const restBeatMs = viewMode === '3D'
-      ? 220 / Math.min(effectivePlaybackRate, 1.8)
-      : 600; // Longer rest between moves in 2D
-    const effectivePlaybackSpeed = viewMode === '3D'
-      ? Math.max(requestedPlaybackMs, minimum3DDelay) + restBeatMs
-      : Math.max(requestedPlaybackMs, minimum2DDelay) + restBeatMs;
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (isPlaying) {
+      if (currentPly < history.length) {
+        const nextMove = history[currentPly];
+        const rate = effectivePlaybackRate;
+        const requestedPlaybackMs = 1000 / rate;
+        
+        // Base delays that scale with playback rate
+        const base2DDelay = (nextMove?.captured ? 2400 : 2200) / rate;
+        const base3DDelay = (nextMove?.captured
+          ? BOARD3D_CAPTURE_DURATION_MS
+          : BOARD3D_MOVE_DURATION_MS) / rate;
+        
+        const restBeatMs = viewMode === '3D'
+          ? 220 / Math.min(rate, 1.8)
+          : 600 / rate;
 
-    if (isPlaying && currentPly < history.length) {
-      interval = setInterval(() => setCurrentPly((prev) => prev + 1), effectivePlaybackSpeed);
-    } else { setIsPlaying(false); }
-    return () => clearInterval(interval);
+        const effectivePlaybackSpeed = viewMode === '3D'
+          ? Math.max(requestedPlaybackMs, base3DDelay) + restBeatMs
+          : Math.max(requestedPlaybackMs, base2DDelay) + restBeatMs;
+
+        interval = setInterval(() => {
+          setCurrentPly((prev) => {
+            if (prev >= history.length - 1) {
+              setIsPlaying(false);
+            }
+            return Math.min(history.length, prev + 1);
+          });
+        }, effectivePlaybackSpeed);
+      } else {
+        setIsPlaying(false);
+      }
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isPlaying, currentPly, history, effectivePlaybackRate, viewMode]);
 
   const boardState = useMemo(() => {
@@ -220,7 +238,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [history.length]);
+  }, [history.length, isPlaying]);
 
   const handleCapture = () => {
     // In a real system, this might trigger a server-side Playwright capture

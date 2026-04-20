@@ -1041,7 +1041,7 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     const key = (fxKey ?? 0) + Math.random();
     
     // Smooth out and slow down the move duration
-    const durationMs = Math.max(1000, moveFx.moveDurationMs * 1.4);
+    const durationMs = Math.max(1200, moveFx.moveDurationMs * 1.8);
     
     setMovingPieceFx({
       key,
@@ -1532,18 +1532,16 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
               transition={{
                 delay: movingPieceFx.startDelayMs / 1000,
                 duration: movingPieceFx.durationMs / 1000,
-                ease: [0.2, 0.82, 0.22, 1],
-                times: [0, 0.08, 0.78, 1],
+                ease: "easeInOut",
               }}
             >
               <motion.div
                 className="w-full h-full flex items-center justify-center lifted-piece-shell"
                 initial={{ scale: 1, filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))' }}
                 animate={{
-                  scale: [1, 1.8, 1.4, 1], // Increased peak scale for more "height"
+                  scale: [1, 1.8, 1], // Symmetric peak at exactly 50%
                   filter: [
                     'drop-shadow(0 0 0px rgba(0,0,0,0))',
-                    `drop-shadow(0 0 15px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 40px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
                     `drop-shadow(0 0 18px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 45px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
                     `drop-shadow(0 0 4px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowNear}) drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowFar})`,
                   ],
@@ -1552,7 +1550,7 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                   delay: movingPieceFx.startDelayMs / 1000,
                   duration: movingPieceFx.durationMs / 1000,
                   ease: "easeInOut",
-                  times: [0, 0.5, 0.85, 1], // Peak scale exactly at 0.5
+                  times: [0, 0.5, 1],
                 }}
               >
                 <motion.div
