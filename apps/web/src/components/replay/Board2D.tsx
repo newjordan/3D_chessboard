@@ -1522,37 +1522,38 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                 width: '12.5%',
                 height: '12.5%',
               }}
-              initial={{ x: '0%', y: '0%', opacity: 1 }}
+              initial={{ 
+                x: '0%', 
+                y: '0%', 
+                scale: 1,
+                filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))'
+              }}
               animate={{
                 x: `${(movingPieceFx.to[1] - movingPieceFx.from[1]) * 100}%`,
                 y: `${(movingPieceFx.to[0] - movingPieceFx.from[0]) * 100}%`,
-                opacity: [1, 1, 1, 1],
+                scale: [1, 1.85, 1], // Symmetric peak
+                filter: [
+                  'drop-shadow(0 0 0px rgba(0,0,0,0))',
+                  `drop-shadow(0 0 20px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 50px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
+                  'drop-shadow(0 0 2px rgba(0,0,0,0))',
+                ],
               }}
               exit={{ opacity: 0 }}
               transition={{
                 delay: movingPieceFx.startDelayMs / 1000,
                 duration: movingPieceFx.durationMs / 1000,
                 ease: "easeInOut",
+                scale: {
+                  times: [0, 0.5, 1],
+                  ease: "easeInOut"
+                },
+                filter: {
+                  times: [0, 0.5, 1],
+                  ease: "easeInOut"
+                }
               }}
             >
-              <motion.div
-                className="w-full h-full flex items-center justify-center lifted-piece-shell"
-                initial={{ scale: 1, filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))' }}
-                animate={{
-                  scale: [1, 1.8, 1], // Symmetric peak at exactly 50%
-                  filter: [
-                    'drop-shadow(0 0 0px rgba(0,0,0,0))',
-                    `drop-shadow(0 0 18px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 45px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
-                    `drop-shadow(0 0 4px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowNear}) drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowFar})`,
-                  ],
-                }}
-                transition={{
-                  delay: movingPieceFx.startDelayMs / 1000,
-                  duration: movingPieceFx.durationMs / 1000,
-                  ease: "easeInOut",
-                  times: [0, 0.5, 1],
-                }}
-              >
+              <div className="w-full h-full flex items-center justify-center lifted-piece-shell">
                 <motion.div
                   className="relative w-full h-full flex items-center justify-center lifted-piece-outline"
                   initial={{ filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))' }}
@@ -1596,7 +1597,7 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                     squareId={movingPieceFx.toSquare}
                   />
                 </motion.div>
-              </motion.div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
