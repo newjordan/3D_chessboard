@@ -1,0 +1,390 @@
+{
+  "generated_at": "2026-04-23T18:10:56Z",
+  "choice_count": 12,
+  "choices": [
+    {
+      "piece": "king",
+      "color": "white",
+      "asset_id": 2608,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/king/white/lila-shahi-ivory-brown__wK.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2324,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/king/white/lila-cooke__wK.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2494,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/king/white/lila-maestro__wK.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2240,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/king/white/lila-california__wK.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "king",
+      "color": "black",
+      "asset_id": 2602,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/king/black/lila-shahi-ivory-brown__bK.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2318,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/king/black/lila-cooke__bK.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2488,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/king/black/lila-maestro__bK.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2234,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/king/black/lila-california__bK.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "queen",
+      "color": "white",
+      "asset_id": 2611,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/queen/white/lila-shahi-ivory-brown__wQ.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2327,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/queen/white/lila-cooke__wQ.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2497,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/queen/white/lila-maestro__wQ.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2243,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/queen/white/lila-california__wQ.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "queen",
+      "color": "black",
+      "asset_id": 2605,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/queen/black/lila-shahi-ivory-brown__bQ.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2321,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/queen/black/lila-cooke__bQ.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2491,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/queen/black/lila-maestro__bQ.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2237,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/queen/black/lila-california__bQ.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "rook",
+      "color": "white",
+      "asset_id": 2612,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/rook/white/lila-shahi-ivory-brown__wR.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2328,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/rook/white/lila-cooke__wR.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2498,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/rook/white/lila-maestro__wR.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2244,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/rook/white/lila-california__wR.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "rook",
+      "color": "black",
+      "asset_id": 2606,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/rook/black/lila-shahi-ivory-brown__bR.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2322,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/rook/black/lila-cooke__bR.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2492,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/rook/black/lila-maestro__bR.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2238,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/rook/black/lila-california__bR.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "bishop",
+      "color": "white",
+      "asset_id": 2607,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/bishop/white/lila-shahi-ivory-brown__wB.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2323,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/bishop/white/lila-cooke__wB.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2493,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/bishop/white/lila-maestro__wB.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2239,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/bishop/white/lila-california__wB.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "bishop",
+      "color": "black",
+      "asset_id": 2601,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/bishop/black/lila-shahi-ivory-brown__bB.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2317,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/bishop/black/lila-cooke__bB.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2487,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/bishop/black/lila-maestro__bB.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2233,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/bishop/black/lila-california__bB.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "knight",
+      "color": "white",
+      "asset_id": 2609,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/knight/white/lila-shahi-ivory-brown__wN.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2325,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/knight/white/lila-cooke__wN.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2495,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/knight/white/lila-maestro__wN.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2241,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/knight/white/lila-california__wN.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "knight",
+      "color": "black",
+      "asset_id": 2603,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/knight/black/lila-shahi-ivory-brown__bN.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2319,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/knight/black/lila-cooke__bN.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2489,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/knight/black/lila-maestro__bN.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2235,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/knight/black/lila-california__bN.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "pawn",
+      "color": "white",
+      "asset_id": 2610,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/pawn/white/lila-shahi-ivory-brown__wP.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2326,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/pawn/white/lila-cooke__wP.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2496,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/pawn/white/lila-maestro__wP.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2242,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/pawn/white/lila-california__wP.svg",
+          "set_score": 222.2
+        }
+      ]
+    },
+    {
+      "piece": "pawn",
+      "color": "black",
+      "asset_id": 2604,
+      "source_name": "lila",
+      "set_name": "shahi-ivory-brown",
+      "local_library_path": "library/pieces/pawn/black/lila-shahi-ivory-brown__bP.svg",
+      "set_score": 223.367,
+      "alternatives_top3": [
+        {
+          "asset_id": 2320,
+          "source_name": "lila",
+          "set_name": "cooke",
+          "local_library_path": "library/pieces/pawn/black/lila-cooke__bP.svg",
+          "set_score": 222.933
+        },
+        {
+          "asset_id": 2490,
+          "source_name": "lila",
+          "set_name": "maestro",
+          "local_library_path": "library/pieces/pawn/black/lila-maestro__bP.svg",
+          "set_score": 222.5
+        },
+        {
+          "asset_id": 2236,
+          "source_name": "lila",
+          "set_name": "california",
+          "local_library_path": "library/pieces/pawn/black/lila-california__bP.svg",
+          "set_score": 222.2
+        }
+      ]
+    }
+  ]
+}
