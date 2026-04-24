@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Board2DMoveFx {
@@ -23,6 +23,7 @@ interface Board2DProps {
 const FILE_IDS = 'abcdefgh';
 const FILE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
 const RANK_LABELS = ['8', '7', '6', '5', '4', '3', '2', '1'] as const;
+const MATERIAL_CELLS = Array.from({ length: 16 }, (_, idx) => idx);
 
 function mulberry32(seed: number) {
   let s = seed >>> 0;
@@ -1107,6 +1108,19 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
       })()
     : null;
 
+  const materialLoss = useMemo(() => {
+    const counts = { w: 0, b: 0 };
+    for (const row of board) {
+      for (const piece of row) {
+        if (piece?.color === 'w' || piece?.color === 'b') counts[piece.color] += 1;
+      }
+    }
+    return {
+      w: Math.max(0, Math.min(16, 16 - counts.w)),
+      b: Math.max(0, Math.min(16, 16 - counts.b)),
+    };
+  }, [board]);
+
   return (
     <div
       data-testid="board2d-root"
@@ -1147,10 +1161,35 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           <span key={`l-${r}`} className="flex items-center justify-center board2d-coordinate">{r}</span>
         ))}
       </div>
-      <div className="absolute top-[7.4%] bottom-[7.4%] right-0 w-[7.4%] grid grid-rows-8 pointer-events-none" aria-hidden="true">
-        {RANK_LABELS.map((r) => (
-          <span key={`r-${r}`} className="flex items-center justify-center board2d-coordinate">{r}</span>
-        ))}
+      <div className="absolute top-[7.4%] bottom-[7.4%] right-0 w-[7.4%] pointer-events-none board2d-material-rail" aria-hidden="true">
+        <div className="board2d-material-group board2d-material-group-black">
+          <div className="board2d-material-readout board2d-material-readout-black">
+            <span>B</span>
+            <strong>{materialLoss.b.toString().padStart(2, '0')}</strong>
+          </div>
+          <div className="board2d-material-grid">
+            {MATERIAL_CELLS.map((cell) => (
+              <span
+                key={`black-loss-${cell}`}
+                className={`board2d-material-cell board2d-material-cell-black ${cell < materialLoss.b ? 'board2d-material-cell-filled' : ''}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="board2d-material-group board2d-material-group-white">
+          <div className="board2d-material-readout board2d-material-readout-white">
+            <span>W</span>
+            <strong>{materialLoss.w.toString().padStart(2, '0')}</strong>
+          </div>
+          <div className="board2d-material-grid">
+            {MATERIAL_CELLS.map((cell) => (
+              <span
+                key={`white-loss-${cell}`}
+                className={`board2d-material-cell board2d-material-cell-white ${cell < materialLoss.w ? 'board2d-material-cell-filled' : ''}`}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="absolute inset-[7.4%] grid grid-cols-8 grid-rows-8 border border-[#54f6ff]/65 shadow-[0_0_34px_rgba(45,239,255,0.22),inset_0_0_28px_rgba(56,255,214,0.11)] board2d-main-grid">
@@ -1871,6 +1910,79 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           font-weight: 700;
           letter-spacing: 0;
           text-shadow: 0 0 8px rgba(62, 239, 255, 0.58);
+        }
+        .board2d-material-rail {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: center;
+          padding: 4.4% 0 4.4%;
+        }
+        .board2d-material-group {
+          width: min(58%, 34px);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+        }
+        .board2d-material-readout {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          width: 100%;
+          font-family: var(--font-geist-mono), ui-monospace, monospace;
+          font-size: clamp(5.5px, 1vw, 8px);
+          line-height: 1;
+          letter-spacing: 0;
+          text-shadow: 0 0 8px currentColor;
+        }
+        .board2d-material-readout span {
+          opacity: 0.68;
+        }
+        .board2d-material-readout strong {
+          font-weight: 800;
+          font-size: 1.14em;
+        }
+        .board2d-material-readout-black {
+          color: rgba(191, 145, 255, 0.76);
+        }
+        .board2d-material-readout-white {
+          color: rgba(126, 255, 238, 0.78);
+        }
+        .board2d-material-grid {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-rows: repeat(8, minmax(0, 1fr));
+          gap: 3px;
+          padding: 3px;
+          border: 1px solid rgba(126, 255, 226, 0.14);
+          background: rgba(0, 10, 14, 0.28);
+          box-shadow:
+            0 0 12px rgba(45, 239, 255, 0.08),
+            inset 0 0 10px rgba(45, 239, 255, 0.055);
+        }
+        .board2d-material-cell {
+          aspect-ratio: 1;
+          min-width: 0;
+          border: 1px solid rgba(124, 242, 255, 0.2);
+          background: rgba(7, 26, 34, 0.48);
+          box-shadow: inset 0 0 5px rgba(94, 246, 255, 0.05);
+        }
+        .board2d-material-cell-black.board2d-material-cell-filled {
+          border-color: rgba(160, 86, 255, 0.72);
+          background: rgba(103, 33, 255, 0.62);
+          box-shadow:
+            0 0 8px rgba(106, 29, 255, 0.44),
+            inset 0 0 7px rgba(226, 200, 255, 0.22);
+        }
+        .board2d-material-cell-white.board2d-material-cell-filled {
+          border-color: rgba(139, 255, 240, 0.76);
+          background: rgba(21, 224, 205, 0.6);
+          box-shadow:
+            0 0 8px rgba(25, 230, 210, 0.42),
+            inset 0 0 7px rgba(218, 255, 250, 0.2);
         }
         .board2d-main-grid {
           background-image: 
