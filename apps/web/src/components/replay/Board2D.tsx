@@ -524,6 +524,28 @@ type MovingPieceFx = {
 const MOVE_SOURCE_DOUBLE_FLASH_MS = 420;
 const MOVE_DEST_DOUBLE_FLASH_MS = 420;
 const MOVE_PRELUDE_MS = MOVE_SOURCE_DOUBLE_FLASH_MS + MOVE_DEST_DOUBLE_FLASH_MS;
+const LOCAL_CIRCUIT_TRACE_MS = 920;
+const LOCAL_CIRCUIT_TRACE_COLORS = {
+  w: { core: '#92fff0', halo: '#19e6d2' },
+  b: { core: '#d8b6ff', halo: '#6a1dff' },
+} as const;
+
+function getLocalCircuitTraceColors(color: string) {
+  return color === 'b' ? LOCAL_CIRCUIT_TRACE_COLORS.b : LOCAL_CIRCUIT_TRACE_COLORS.w;
+}
+
+function getMoveTraceSquares(from: [number, number], to: [number, number]) {
+  const dr = Math.sign(to[0] - from[0]);
+  const dc = Math.sign(to[1] - from[1]);
+  const rowDistance = Math.abs(to[0] - from[0]);
+  const colDistance = Math.abs(to[1] - from[1]);
+  const isLineMove = from[0] === to[0] || from[1] === to[1] || rowDistance === colDistance;
+
+  if (!isLineMove) return [`${from[0]}:${from[1]}`, `${to[0]}:${to[1]}`];
+
+  const steps = Math.max(rowDistance, colDistance);
+  return Array.from({ length: steps + 1 }, (_, idx) => `${from[0] + dr * idx}:${from[1] + dc * idx}`);
+}
 
 const GREEN_MOVE_FX_PALETTE: MoveFxPalette = {
   radialInner: '#d8ffb0',
@@ -559,38 +581,11 @@ function getPieceGlowVars(palette: MoveFxPalette): React.CSSProperties {
   } as React.CSSProperties & Record<'--piece-glow-near' | '--piece-glow-far', string>;
 }
 
-function getDirectTracerVars(palette: MoveFxPalette): React.CSSProperties {
-  return {
-    '--direct-tracer-core': palette.travelCore,
-    '--direct-tracer-halo': palette.travelHalo,
-    '--direct-tracer-ping': palette.pingCore,
-  } as React.CSSProperties &
-    Record<'--direct-tracer-core' | '--direct-tracer-halo' | '--direct-tracer-ping', string>;
-}
-
 function getMovePreludeVars(palette: MoveFxPalette): React.CSSProperties {
   return {
     '--move-prelude-core': palette.pingCore,
     '--move-prelude-halo': palette.travelHalo,
   } as React.CSSProperties & Record<'--move-prelude-core' | '--move-prelude-halo', string>;
-}
-
-function getDirectTracerGeometry(fx: MovingPieceFx) {
-  const fromX = fx.from[1] * 12.5 + 6.25;
-  const fromY = fx.from[0] * 12.5 + 6.25;
-  const toX = fx.to[1] * 12.5 + 6.25;
-  const toY = fx.to[0] * 12.5 + 6.25;
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-
-  return {
-    fromX,
-    fromY,
-    toX,
-    toY,
-    length: Math.hypot(dx, dy),
-    angle: Math.atan2(dy, dx) * (180 / Math.PI),
-  };
 }
 
 function buildCircuitPulseFx(
@@ -966,16 +961,8 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     const from = squareToRC(fxMove.from);
     const to = squareToRC(fxMove.to);
     if (!from || !to) return;
-    const nodePath = findNodePath(from, to);
-    if (!nodePath || nodePath.length < 2) return;
-    const moveColor = board[to[0]]?.[to[1]]?.color ?? 'w';
-    // Slow down the circuit pulse slightly to match new pacing
-    const pulseFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), moveColor, fxSpeed * 0.8);
-    const timer = window.setTimeout(() => {
-      setPulse({ key: (fxKey ?? 0) + Math.random(), ...pulseFx });
-    }, MOVE_PRELUDE_MS);
-    return () => window.clearTimeout(timer);
-  }, [board, fxKey, fxMove, fxSpeed]);
+    setPulse(null);
+  }, [fxMove]);
 
   useEffect(() => {
     if (!fxMove || !fxMove.from || !fxMove.to) return;
@@ -1018,30 +1005,6 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     };
   }, [board, fxKey, fxMove, fxSpeed]);
 
-  const directMoveTrace = lastMove
-    ? (() => {
-        const from = squareToRC(lastMove.from);
-        const to = squareToRC(lastMove.to);
-        if (!from || !to) return null;
-        const color = board[to[0]]?.[to[1]]?.color ?? 'w';
-        const fx: MovingPieceFx = {
-          key: fxKey ?? 0,
-          from,
-          to,
-          toSquare: lastMove.to,
-          piece: { type: board[to[0]]?.[to[1]]?.type ?? 'p', color },
-          startDelayMs: 0,
-          durationMs: 820,
-        };
-        return {
-          key: `${lastMove.from}-${lastMove.to}-${fxKey ?? 0}`,
-          geometry: getDirectTracerGeometry(fx),
-          palette: getMoveFxPalette(color),
-          delayMs: MOVE_PRELUDE_MS,
-        };
-      })()
-    : null;
-
   const movePreludeCue = lastMove
     ? (() => {
         const from = squareToRC(lastMove.from);
@@ -1053,6 +1016,20 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           from,
           to,
           palette: getMoveFxPalette(color),
+        };
+      })()
+    : null;
+
+  const localCircuitTrace = lastMove
+    ? (() => {
+        const from = squareToRC(lastMove.from);
+        const to = squareToRC(lastMove.to);
+        if (!from || !to) return null;
+        const color = board[to[0]]?.[to[1]]?.color ?? 'w';
+        return {
+          key: `${lastMove.from}-${lastMove.to}-${fxKey ?? 0}`,
+          squares: new Set(getMoveTraceSquares(from, to)),
+          colors: getLocalCircuitTraceColors(color),
         };
       })()
     : null;
@@ -1109,6 +1086,17 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
             const squareId = `${FILE_IDS[c]}${8 - r}`;
             const isHighlighted = Boolean(lastMove && lastMove.to === squareId && movingPieceFx == null);
             const hideForLiftedMove = movingPieceFx?.toSquare === squareId;
+            const showLocalCircuitTrace = Boolean(localCircuitTrace?.squares.has(`${r}:${c}`));
+            const localCircuitEdges =
+              showLocalCircuitTrace
+                ? CIRCUIT_GRAPH.edges
+                    .filter((edge) => edge.kind === 'interior' && edge.squares.some(([er, ec]) => er === r && ec === c))
+                : [];
+            const localCircuitNodes =
+              showLocalCircuitTrace
+                ? CIRCUIT_GRAPH.nodes
+                    .filter((node) => node.kind === 'interior' && node.x >= c && node.x <= c + 1 && node.y >= r && node.y <= r + 1)
+                : [];
 
             const isLight = (r + c) % 2 === 0;
             return (
@@ -1133,6 +1121,64 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                   }}
                 />
                 <div className="absolute inset-0 pointer-events-none board2d-square-sheen" aria-hidden="true" />
+                {showLocalCircuitTrace && localCircuitTrace && (
+                  <svg
+                    key={`local-circuit-${localCircuitTrace.key}-${squareId}`}
+                    className="absolute inset-0 w-full h-full pointer-events-none local-circuit-trace"
+                    viewBox={`${c} ${r} 1 1`}
+                    preserveAspectRatio="none"
+                    style={{
+                      '--local-circuit-core': localCircuitTrace.colors.core,
+                      '--local-circuit-halo': localCircuitTrace.colors.halo,
+                      animationDelay: `${MOVE_PRELUDE_MS}ms`,
+                      animationDuration: `${LOCAL_CIRCUIT_TRACE_MS}ms`,
+                    } as React.CSSProperties & Record<'--local-circuit-core' | '--local-circuit-halo', string>}
+                    aria-hidden="true"
+                  >
+                    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+                      {localCircuitEdges.map((edge) => (
+                        <React.Fragment key={edge.id}>
+                          <path
+                            d={edge.path}
+                            stroke="var(--local-circuit-halo)"
+                            strokeWidth={0.082}
+                            strokeOpacity={0.5}
+                            className="local-circuit-trace-path local-circuit-trace-halo"
+                          />
+                          <path
+                            d={edge.path}
+                            stroke="var(--local-circuit-core)"
+                            strokeWidth={0.034}
+                            strokeOpacity={0.92}
+                            className="local-circuit-trace-path"
+                          />
+                        </React.Fragment>
+                      ))}
+                    </g>
+                    <g>
+                      {localCircuitNodes.map((node) => (
+                        <React.Fragment key={node.id}>
+                          <circle
+                            cx={node.x}
+                            cy={node.y}
+                            r="0.06"
+                            fill="var(--local-circuit-halo)"
+                            fillOpacity="0.28"
+                            className="local-circuit-trace-node"
+                          />
+                          <circle
+                            cx={node.x}
+                            cy={node.y}
+                            r="0.028"
+                            fill="var(--local-circuit-core)"
+                            fillOpacity="0.95"
+                            className="local-circuit-trace-node"
+                          />
+                        </React.Fragment>
+                      ))}
+                    </g>
+                  </svg>
+                )}
                 {isHighlighted && (
                   <>
                     <div className="absolute inset-[7%] border border-[#d8fff2]/85 shadow-[0_0_14px_rgba(99,255,216,0.52)]" />
@@ -1542,59 +1588,6 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         </AnimatePresence>
 
         <AnimatePresence>
-          {directMoveTrace && (
-            <div
-              key={`direct-tracer-${directMoveTrace.key}`}
-              className="absolute inset-0 pointer-events-none z-[26] direct-move-tracer"
-              style={getDirectTracerVars(directMoveTrace.palette)}
-              aria-hidden="true"
-            >
-              <div
-                className="absolute direct-move-tracer-axis"
-                style={{
-                  left: `${directMoveTrace.geometry.fromX}%`,
-                  top: `${directMoveTrace.geometry.fromY}%`,
-                  width: `${directMoveTrace.geometry.length}%`,
-                  transform: `rotate(${directMoveTrace.geometry.angle}deg)`,
-                }}
-              >
-                <div
-                  className="direct-move-tracer-beam"
-                  style={{ animationDelay: `${directMoveTrace.delayMs}ms` }}
-                />
-                <div
-                  className="direct-move-tracer-core"
-                  style={{ animationDelay: `${directMoveTrace.delayMs}ms` }}
-                />
-              </div>
-              <motion.div
-                className="absolute direct-move-tracer-head"
-                initial={{
-                  left: `${directMoveTrace.geometry.fromX}%`,
-                  top: `${directMoveTrace.geometry.fromY}%`,
-                  opacity: 0,
-                  scale: 0.52,
-                }}
-                animate={{
-                  left: `${directMoveTrace.geometry.toX}%`,
-                  top: `${directMoveTrace.geometry.toY}%`,
-                  opacity: [0, 0.95, 0.72, 0],
-                  scale: [0.55, 1, 0.78, 0.36],
-                }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  delay: directMoveTrace.delayMs / 1000,
-                  duration: 0.72,
-                  ease: [0.16, 0.8, 0.24, 1],
-                  opacity: { times: [0, 0.16, 0.78, 1], ease: "easeInOut" },
-                  scale: { times: [0, 0.28, 0.8, 1], ease: "easeInOut" },
-                }}
-              />
-            </div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
           {movingPieceFx && (
             <React.Fragment key={`moving-piece-wrapper-${movingPieceFx.key}`}>
               <div className="absolute inset-0 pointer-events-none z-30 overflow-visible">
@@ -1967,6 +1960,42 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         .piece-move-glow {
           animation: pieceMoveGlow 760ms ease-out forwards;
           will-change: filter;
+        }
+        @keyframes localCircuitTracePulse {
+          0% {
+            opacity: 0;
+            filter: brightness(1) saturate(1);
+            transform: scale(0.985);
+          }
+          16% {
+            opacity: 0.92;
+            filter: brightness(1.34) saturate(1.18);
+            transform: scale(1);
+          }
+          58% {
+            opacity: 0.68;
+            filter: brightness(1.16) saturate(1.08);
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            filter: brightness(1) saturate(1);
+            transform: scale(1.015);
+          }
+        }
+        .local-circuit-trace {
+          opacity: 0;
+          z-index: 8;
+          mix-blend-mode: screen;
+          transform-origin: center;
+          animation-name: localCircuitTracePulse;
+          animation-timing-function: cubic-bezier(0.2, 0.8, 0.24, 1);
+          animation-fill-mode: forwards;
+          filter: drop-shadow(0 0 0.28px var(--local-circuit-halo))
+            drop-shadow(0 0 0.48px var(--local-circuit-core));
+        }
+        .local-circuit-trace-halo {
+          filter: blur(0.012px);
         }
         @keyframes movePreludeDoubleFlash {
           0% {
