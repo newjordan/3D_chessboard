@@ -1032,7 +1032,29 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     };
   }, [board, fxKey, fxMove, fxSpeed]);
 
-  const directMoveTrace = lastMove
+  const directMoveTrace = fxMove?.from && fxMove.to
+    ? (() => {
+        const from = squareToRC(fxMove.from);
+        const to = squareToRC(fxMove.to);
+        if (!from || !to) return null;
+        const color = board[to[0]]?.[to[1]]?.color ?? board[from[0]]?.[from[1]]?.color ?? 'w';
+        const fx: MovingPieceFx = {
+          key: fxKey ?? 0,
+          from,
+          to,
+          toSquare: fxMove.to,
+          piece: { type: board[to[0]]?.[to[1]]?.type ?? board[from[0]]?.[from[1]]?.type ?? 'p', color },
+          startDelayMs: 0,
+          durationMs: 820,
+        };
+        return {
+          key: `${fxMove.from}-${fxMove.to}-${fxKey ?? 0}`,
+          geometry: getDirectTracerGeometry(fx),
+          palette: getMoveFxPalette(color),
+          delayMs: MOVE_PRELUDE_MS,
+        };
+      })()
+    : lastMove
     ? (() => {
         const from = squareToRC(lastMove.from);
         const to = squareToRC(lastMove.to);
@@ -1755,55 +1777,6 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
               style={getDirectTracerVars(directMoveTrace.palette)}
               aria-hidden="true"
             >
-              <svg
-                className="absolute inset-0 w-full h-full pointer-events-none direct-move-tracer-svg"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <motion.line
-                  x1={directMoveTrace.geometry.fromX}
-                  y1={directMoveTrace.geometry.fromY}
-                  x2={directMoveTrace.geometry.toX}
-                  y2={directMoveTrace.geometry.toY}
-                  className="direct-move-tracer-svg-halo"
-                  pathLength={100}
-                  stroke="var(--direct-tracer-halo)"
-                  strokeWidth={2.15}
-                  strokeLinecap="round"
-                  strokeDasharray={100}
-                  initial={{ opacity: 0, strokeDashoffset: 100 }}
-                  animate={{ opacity: [0, 1, 0.88, 0], strokeDashoffset: [100, 0, -8, -18] }}
-                  transition={{
-                    delay: directMoveTrace.delayMs / 1000,
-                    duration: 0.92,
-                    ease: [0.16, 0.8, 0.24, 1],
-                    opacity: { times: [0, 0.14, 0.72, 1] },
-                    strokeDashoffset: { times: [0, 0.14, 0.72, 1] },
-                  }}
-                />
-                <motion.line
-                  x1={directMoveTrace.geometry.fromX}
-                  y1={directMoveTrace.geometry.fromY}
-                  x2={directMoveTrace.geometry.toX}
-                  y2={directMoveTrace.geometry.toY}
-                  className="direct-move-tracer-svg-core"
-                  pathLength={100}
-                  stroke="var(--direct-tracer-core)"
-                  strokeWidth={0.62}
-                  strokeLinecap="round"
-                  strokeDasharray={100}
-                  initial={{ opacity: 0, strokeDashoffset: 100 }}
-                  animate={{ opacity: [0, 1, 0.92, 0], strokeDashoffset: [100, 0, -8, -18] }}
-                  transition={{
-                    delay: directMoveTrace.delayMs / 1000,
-                    duration: 0.92,
-                    ease: [0.16, 0.8, 0.24, 1],
-                    opacity: { times: [0, 0.14, 0.72, 1] },
-                    strokeDashoffset: { times: [0, 0.14, 0.72, 1] },
-                  }}
-                />
-              </svg>
               <div
                 className="absolute direct-move-tracer-axis"
                 style={{
@@ -1813,14 +1786,22 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                   transform: `rotate(${directMoveTrace.geometry.angle}deg)`,
                 }}
               >
-                <div
-                  className="direct-move-tracer-beam"
-                  style={{ animationDelay: `${directMoveTrace.delayMs}ms` }}
-                />
-                <div
-                  className="direct-move-tracer-core"
-                  style={{ animationDelay: `${directMoveTrace.delayMs}ms` }}
-                />
+                <motion.div
+                  className="absolute direct-move-tracer-shot"
+                  initial={{ left: '0%', opacity: 0, scaleX: 0.58 }}
+                  animate={{ left: ['0%', '68%', '100%'], opacity: [0, 1, 0.98, 0], scaleX: [0.58, 1.06, 0.84, 0.42] }}
+                  transition={{
+                    delay: directMoveTrace.delayMs / 1000,
+                    duration: 0.9,
+                    ease: [0.16, 0.8, 0.24, 1],
+                    left: { delay: directMoveTrace.delayMs / 1000, duration: 0.9, times: [0, 0.72, 1] },
+                    opacity: { delay: directMoveTrace.delayMs / 1000, duration: 0.9, times: [0, 0.12, 0.78, 1] },
+                    scaleX: { delay: directMoveTrace.delayMs / 1000, duration: 0.9, times: [0, 0.2, 0.78, 1] },
+                  }}
+                >
+                  <span className="direct-move-tracer-shot-halo" />
+                  <span className="direct-move-tracer-shot-core" />
+                </motion.div>
               </div>
               <motion.div
                 className="absolute direct-move-tracer-head"
@@ -1833,16 +1814,16 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                 animate={{
                   left: `${directMoveTrace.geometry.toX}%`,
                   top: `${directMoveTrace.geometry.toY}%`,
-                  opacity: [0, 0.95, 0.72, 0],
-                  scale: [0.55, 1, 0.78, 0.36],
+                  opacity: [0, 1, 0.9, 0],
+                  scale: [0.45, 1.08, 0.82, 0.34],
                 }}
                 exit={{ opacity: 0 }}
                 transition={{
                   delay: directMoveTrace.delayMs / 1000,
-                  duration: 0.72,
+                  duration: 0.9,
                   ease: [0.16, 0.8, 0.24, 1],
-                  opacity: { times: [0, 0.16, 0.78, 1], ease: "easeInOut" },
-                  scale: { times: [0, 0.28, 0.8, 1], ease: "easeInOut" },
+                  opacity: { delay: directMoveTrace.delayMs / 1000, duration: 0.9, times: [0, 0.14, 0.78, 1], ease: "easeInOut" },
+                  scale: { delay: directMoveTrace.delayMs / 1000, duration: 0.9, times: [0, 0.24, 0.78, 1], ease: "easeInOut" },
                 }}
               />
             </div>
@@ -2203,97 +2184,45 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         .move-prelude-square-dest {
           animation-delay: ${MOVE_SOURCE_DOUBLE_FLASH_MS}ms;
         }
-        @keyframes directTracerGrow {
-          0% {
-            opacity: 0;
-            transform: translateY(-50%) scaleX(0);
-          }
-          16% {
-            opacity: 1;
-            transform: translateY(-50%) scaleX(1);
-          }
-          70% {
-            opacity: 0.72;
-            transform: translateY(-50%) scaleX(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-50%) scaleX(1);
-          }
-        }
         .direct-move-tracer {
           z-index: 64;
           mix-blend-mode: screen;
         }
-        @keyframes directTracerSvgPulse {
-          0% {
-            opacity: 0;
-            stroke-dashoffset: 100;
-          }
-          14% {
-            opacity: 1;
-            stroke-dashoffset: 0;
-          }
-          72% {
-            opacity: 0.88;
-            stroke-dashoffset: -8;
-          }
-          100% {
-            opacity: 0;
-            stroke-dashoffset: -18;
-          }
-        }
-        .direct-move-tracer-svg-halo,
-        .direct-move-tracer-svg-core {
-          opacity: 0;
-          stroke-linecap: round;
-          stroke-dasharray: 100;
-          stroke-dashoffset: 100;
-          animation: directTracerSvgPulse 920ms cubic-bezier(0.16, 0.8, 0.24, 1) forwards;
-        }
-        .direct-move-tracer-svg-halo {
-          stroke: var(--direct-tracer-halo);
-          stroke-width: 2.15;
-          filter: blur(0.38px) drop-shadow(0 0 7px var(--direct-tracer-halo));
-        }
-        .direct-move-tracer-svg-core {
-          stroke: var(--direct-tracer-core);
-          stroke-width: 0.62;
-          filter: drop-shadow(0 0 3px var(--direct-tracer-core));
-        }
         .direct-move-tracer-axis {
           height: 0;
           transform-origin: 0 50%;
+          overflow: visible;
         }
-        .direct-move-tracer-beam {
+        .direct-move-tracer-shot {
+          top: 50%;
+          width: clamp(28px, 20%, 74px);
+          height: 18px;
+          margin-left: -14px;
+          margin-top: -9px;
+          transform-origin: 50% 50%;
+        }
+        .direct-move-tracer-shot-halo,
+        .direct-move-tracer-shot-core {
           position: absolute;
           left: 0;
           top: 50%;
           width: 100%;
-          height: 12px;
           border-radius: 999px;
-          background: linear-gradient(90deg, rgba(216, 255, 183, 0.04), var(--direct-tracer-core), var(--direct-tracer-halo));
-          opacity: 0;
-          transform-origin: 0 50%;
           transform: translateY(-50%);
-          filter: blur(5px) drop-shadow(0 0 18px var(--direct-tracer-halo));
-          animation: directTracerGrow 980ms cubic-bezier(0.16, 0.8, 0.24, 1) forwards;
+          mix-blend-mode: screen;
         }
-        .direct-move-tracer-core {
-          position: absolute;
-          left: 0;
-          top: 50%;
-          width: 100%;
-          height: 3px;
-          border-radius: 999px;
-          background: linear-gradient(90deg, rgba(216, 255, 183, 0.08), var(--direct-tracer-core) 42%, var(--direct-tracer-ping));
-          opacity: 0;
-          transform-origin: 0 50%;
-          transform: translateY(-50%);
+        .direct-move-tracer-shot-halo {
+          height: 16px;
+          background: linear-gradient(90deg, transparent 0%, var(--direct-tracer-halo) 48%, var(--direct-tracer-ping) 76%, transparent 100%);
+          filter: blur(4px) drop-shadow(0 0 15px var(--direct-tracer-halo));
+          opacity: 0.86;
+        }
+        .direct-move-tracer-shot-core {
+          height: 4px;
+          background: linear-gradient(90deg, transparent 0%, var(--direct-tracer-core) 38%, var(--direct-tracer-ping) 76%, transparent 100%);
           box-shadow:
-            0 0 8px var(--direct-tracer-core),
-            0 0 18px var(--direct-tracer-halo);
-          animation: directTracerGrow 900ms cubic-bezier(0.16, 0.8, 0.24, 1) forwards;
+            0 0 7px var(--direct-tracer-core),
+            0 0 16px var(--direct-tracer-halo);
         }
         .direct-move-tracer-head {
           width: 18px;
