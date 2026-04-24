@@ -47,6 +47,7 @@ function VisualLabContent() {
           whiteName="CORE_AI"
           blackName="DATA_SENTRY"
           initialViewMode="2D"
+          initialPly={ply}
         />
       </main>
     </div>

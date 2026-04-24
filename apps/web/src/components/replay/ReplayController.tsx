@@ -13,7 +13,6 @@ import {
   ChevronRight, 
   RotateCcw,
   FastForward,
-  History as HistoryIcon,
   Box as BoxIcon,
   Maximize2
 } from 'lucide-react';
@@ -43,7 +42,6 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [viewMode, setViewMode] = useState<'2D' | '3D'>(initialViewMode);
   const [flashTargetSquare, setFlashTargetSquare] = useState('e5');
-  const moveListRef = useRef<HTMLDivElement>(null);
   const board3dRef = useRef<Board3DHandle>(null);
   const prevPlyRef = useRef(0);
   const speedOptions = [1, 2, 3, 4] as const;
@@ -72,29 +70,10 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     }
   }, [currentGamePgn]);
 
-  const pairedMoves = useMemo(() => {
-    const pairs = [];
-    for (let i = 0; i < history.length; i += 2) {
-      pairs.push({
-        index: Math.floor(i / 2) + 1,
-        white: { ply: i + 1, san: history[i].san },
-        black: history[i + 1] ? { ply: i + 2, san: history[i + 1].san } : null
-      });
-    }
-    return pairs;
-  }, [history]);
-
   useEffect(() => {
-    if (moveListRef.current) {
-      const activeMove = moveListRef.current.querySelector('[data-active="true"]');
-      if (activeMove) activeMove.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [currentPly]);
-
-  useEffect(() => {
-    setCurrentPly(0);
+    setCurrentPly(selectedGameIndex === 0 ? initialPly : 0);
     setIsPlaying(false);
-  }, [selectedGameIndex]);
+  }, [selectedGameIndex, initialPly]);
 
   // Sync 3D board when ply changes
   useEffect(() => {
@@ -192,6 +171,14 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     };
   }, [currentPly, history]);
 
+  const currentMoveLabel = useMemo(() => {
+    if (currentPly === 0 || !history[currentPly - 1]) return 'START';
+    const move = history[currentPly - 1];
+    const moveNumber = Math.floor((currentPly - 1) / 2) + 1;
+    const sidePrefix = currentPly % 2 === 1 ? `${moveNumber}.` : `${moveNumber}...`;
+    return `${sidePrefix} ${move.san}`;
+  }, [currentPly, history]);
+
   const playerNames = useMemo(() => {
     return {
       white: whiteName || 'White AI',
@@ -241,7 +228,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   }, [history.length, isPlaying]);
 
   return (
-    <div className="flex flex-col gap-4 w-full h-full max-w-[1400px] mx-auto overflow-hidden">
+    <div className="flex flex-col gap-4 w-full h-full max-w-[1660px] mx-auto overflow-hidden">
       {/* Game Selector Tabs - Compact */}
       <div className="flex-none flex items-center justify-between">
         <div className="flex gap-1 bg-white/[0.02] p-1 border border-white/5">
@@ -279,8 +266,8 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
         </div>
       </div>
 
-      {/* Main Dual-Pane Layout - Locked Height */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+      {/* Main Board Layout - Locked Height */}
+      <div className="flex-1 min-h-0 grid grid-cols-1">
         
         {/* Left Pane: Board & Primary Controls */}
         <div className="flex flex-col gap-4 min-h-0">
@@ -292,7 +279,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                  blackName={playerNames.black}
                />
              ) : (
-                <div className="w-full h-full max-w-[600px] aspect-square">
+                <div className="max-w-full aspect-square" style={{ width: 'min(100%, calc(100vh - 274px))' }}>
                   <Board2D 
                     board={boardState as any} 
                     lastMove={lastMove} 
@@ -301,6 +288,7 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                     fxMove={fxMove}
                     fxKey={currentPly}
                     fxSpeed={playbackRate}
+                    moveLabel={currentMoveLabel}
                   />
                 </div>
              )}
@@ -369,6 +357,13 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
               </button>
             </div>
 
+            <div className="hidden sm:flex min-w-0 flex-1 items-center justify-center px-4">
+              <div className="technical-label flex min-w-[128px] items-center justify-center border border-white/5 bg-white/[0.025] px-4 py-2 text-[10px] uppercase tracking-widest text-white/70">
+                <span className="mr-3 text-white/25">Move</span>
+                <strong className="font-mono text-[12px] text-white">{currentMoveLabel}</strong>
+              </div>
+            </div>
+
             <div className="flex items-center gap-4">
                {viewMode === '3D' && (
                  <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 p-1">
@@ -408,41 +403,6 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                  {currentPly}<span className="opacity-20 mx-1">/</span>{history.length}
                </div>
             </div>
-          </div>
-        </div>
-
-        {/* Right Pane: Pro Sidebar (Move List) - Scrollable with locked height */}
-        <div className="flex-none flex flex-col bg-[#0d0d0d] border border-white/5 overflow-hidden min-h-0 h-full">
-          <div className="flex-none p-4 border-b border-white/5">
-            <h3 className="technical-label flex items-center gap-2 text-[10px]">
-              <HistoryIcon size={12} className="text-white/40" /> Move Notation
-            </h3>
-          </div>
-
-          <div ref={moveListRef} className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-            <div className="flex flex-col gap-0.5">
-              {pairedMoves.map((pair) => (
-                <div key={pair.index} className="grid grid-cols-[35px_1fr_1fr] items-center text-[10px] technical-label">
-                  <div className="py-1.5 text-center opacity-20 font-mono text-[8px]">{pair.index}.</div>
-                  <button onClick={() => { setCurrentPly(pair.white.ply); setIsPlaying(false); }} data-active={currentPly === pair.white.ply}
-                    className={`py-1.5 px-3 text-left transition-all ${currentPly === pair.white.ply ? 'bg-white/10 text-white font-bold' : 'opacity-40 hover:opacity-100 hover:bg-white/[0.02]'}`}
-                  > {pair.white.san} </button>
-                  {pair.black && (
-                    <button onClick={() => { setCurrentPly(pair.black!.ply); setIsPlaying(false); }} data-active={currentPly === pair.black.ply}
-                      className={`py-1.5 px-3 text-left transition-all ${currentPly === pair.black.ply ? 'bg-white/10 text-white font-bold' : 'opacity-40 hover:opacity-100 hover:bg-white/[0.02]'}`}
-                    > {pair.black.san} </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Sidebar Footer - Static */}
-          <div className="flex-none p-4 bg-white/[0.01] border-t border-white/5">
-                <div className="flex justify-between items-center text-[9px] technical-label opacity-40">
-                   <span>Isolation Level</span>
-                   <span className="font-bold uppercase tracking-widest text-accent/60">High Performance</span>
-                </div>
           </div>
         </div>
 

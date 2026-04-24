@@ -18,12 +18,14 @@ interface Board2DProps {
   fxMove?: Board2DMoveFx | null;
   fxKey?: number;
   fxSpeed?: number;
+  moveLabel?: string;
 }
 
 const FILE_IDS = 'abcdefgh';
 const FILE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
 const RANK_LABELS = ['8', '7', '6', '5', '4', '3', '2', '1'] as const;
 const MATERIAL_CELLS = Array.from({ length: 16 }, (_, idx) => idx);
+const ADVANTAGE_CELLS = Array.from({ length: 4 }, (_, idx) => idx);
 
 function mulberry32(seed: number) {
   let s = seed >>> 0;
@@ -962,7 +964,7 @@ const squareToRC = (sq: string): [number, number] | null => {
 };
 
 export const Board2D: React.FC<Board2DProps> = (props) => {
-  const { board, lastMove, fxMove, fxKey, fxSpeed = 1 } = props;
+  const { board, lastMove, fxMove, fxKey, fxSpeed = 1, moveLabel = 'START' } = props;
   const [pulse, setPulse] = useState<{
     key: number;
     introPings: FinalSquarePing[];
@@ -1120,6 +1122,11 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
       b: Math.max(0, Math.min(16, 16 - counts.b)),
     };
   }, [board]);
+  const materialSwing = materialLoss.b - materialLoss.w;
+  const materialAdvantage = {
+    side: materialSwing > 0 ? 'w' : materialSwing < 0 ? 'b' : null,
+    cells: Math.min(4, Math.ceil(Math.abs(materialSwing) / 4)),
+  };
 
   return (
     <div
@@ -1138,18 +1145,15 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         ))}
       </svg>
 
-      {/* Retro-tech UI Overlay (Decorative Corners & Labels) */}
-      <div className="absolute inset-0 pointer-events-none border border-[#2defff]/28 z-50">
-        <div className="absolute top-2 left-2 w-9 h-9 border-t-2 border-l-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
-        <div className="absolute top-2 right-2 w-9 h-9 border-t-2 border-r-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
-        <div className="absolute bottom-2 left-2 w-9 h-9 border-b-2 border-l-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
-        <div className="absolute bottom-2 right-2 w-9 h-9 border-b-2 border-r-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
-      </div>
-
-      <div className="absolute top-0 left-[7.4%] right-[7.4%] h-[7.4%] grid grid-cols-8 pointer-events-none" aria-hidden="true">
-        {FILE_LABELS.map((f) => (
-          <span key={`t-${f}`} className="flex items-center justify-center board2d-coordinate">{f}</span>
-        ))}
+      <div className="absolute top-0 left-[7.4%] right-[7.4%] h-[8.9%] pointer-events-none board2d-move-ticker" aria-hidden="true">
+        <div className="board2d-move-ticker-track">
+          {Array.from({ length: 5 }, (_, idx) => (
+            <span key={`move-ticker-${idx}`} className="board2d-move-ticker-item">
+              <span>MOVE</span>
+              <strong>{moveLabel}</strong>
+            </span>
+          ))}
+        </div>
       </div>
       <div className="absolute bottom-0 left-[7.4%] right-[7.4%] h-[7.4%] grid grid-cols-8 pointer-events-none" aria-hidden="true">
         {FILE_LABELS.map((f) => (
@@ -1175,6 +1179,18 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
               />
             ))}
           </div>
+        </div>
+        <div className="board2d-material-advantage" aria-hidden="true">
+          {ADVANTAGE_CELLS.map((cell) => (
+            <span
+              key={`material-advantage-${cell}`}
+              className={`board2d-material-advantage-cell ${
+                cell < materialAdvantage.cells && materialAdvantage.side
+                  ? `board2d-material-advantage-cell-${materialAdvantage.side}`
+                  : ''
+              }`}
+            />
+          ))}
         </div>
         <div className="board2d-material-group board2d-material-group-white">
           <div className="board2d-material-readout board2d-material-readout-white">
@@ -1883,11 +1899,8 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           background:
             radial-gradient(circle at 50% 48%, rgba(38, 244, 255, 0.065), transparent 44%),
             linear-gradient(135deg, #020508 0%, #020b12 48%, #03110e 100%);
-          border: 1px solid rgba(88, 246, 255, 0.28);
-          box-shadow:
-            0 0 0 1px rgba(61, 255, 216, 0.08),
-            0 20px 70px rgba(0, 0, 0, 0.62),
-            inset 0 0 42px rgba(34, 239, 255, 0.08);
+          border: 0;
+          box-shadow: none;
           isolation: isolate;
         }
         .board2d-container::before {
@@ -1904,12 +1917,75 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           z-index: 1;
         }
         .board2d-coordinate {
-          color: rgba(113, 239, 255, 0.66);
+          color: rgba(144, 247, 255, 0.85);
           font-family: var(--font-geist-mono), ui-monospace, monospace;
-          font-size: clamp(7px, 1.35vw, 10px);
-          font-weight: 700;
+          font-size: clamp(16px, 3.15vw, 25px);
+          font-weight: 900;
           letter-spacing: 0;
-          text-shadow: 0 0 8px rgba(62, 239, 255, 0.58);
+          text-shadow: none;
+        }
+        .board2d-move-ticker {
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          color: rgba(126, 255, 238, 0.88);
+          font-family: var(--font-geist-mono), ui-monospace, monospace;
+          text-shadow:
+            0 0 9px rgba(62, 239, 255, 0.7),
+            0 0 20px rgba(45, 239, 255, 0.28);
+        }
+        .board2d-move-ticker::before,
+        .board2d-move-ticker::after {
+          content: "";
+          position: absolute;
+          top: 18%;
+          bottom: 18%;
+          width: 14%;
+          z-index: 2;
+          pointer-events: none;
+        }
+        .board2d-move-ticker::before {
+          left: 0;
+          background: linear-gradient(90deg, rgba(0, 8, 13, 0.95), transparent);
+        }
+        .board2d-move-ticker::after {
+          right: 0;
+          background: linear-gradient(90deg, transparent, rgba(0, 8, 13, 0.95));
+        }
+        .board2d-move-ticker-track {
+          position: absolute;
+          left: 0;
+          display: flex;
+          width: max-content;
+          animation: board2dMoveTickerScroll 28s linear infinite;
+          animation-delay: -7s;
+        }
+        .board2d-move-ticker-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          flex: 0 0 auto;
+          padding: 0 38px;
+          font-size: clamp(15px, 3vw, 24px);
+          font-weight: 900;
+          letter-spacing: 0;
+          white-space: nowrap;
+        }
+        .board2d-move-ticker-item span {
+          color: rgba(126, 255, 238, 0.52);
+          font-size: 0.68em;
+        }
+        .board2d-move-ticker-item strong {
+          color: rgba(255, 255, 255, 0.95);
+          font-size: 1.12em;
+        }
+        @keyframes board2dMoveTickerScroll {
+          from {
+            transform: translateX(85%);
+          }
+          to {
+            transform: translateX(-85%);
+          }
         }
         .board2d-material-rail {
           display: flex;
@@ -1919,11 +1995,38 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           padding: 4.4% 0 4.4%;
         }
         .board2d-material-group {
-          width: min(58%, 34px);
+          width: min(78%, 46px);
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 5px;
+        }
+        .board2d-material-advantage {
+          width: calc(100% - 2px);
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 6px;
+        }
+        .board2d-material-advantage-cell {
+          aspect-ratio: 2.2 / 1;
+          min-width: 0;
+          background: rgba(9, 35, 45, 0.72);
+          box-shadow: inset 0 0 9px rgba(94, 246, 255, 0.12);
+          transition:
+            background-color 220ms cubic-bezier(0.2, 0.8, 0.24, 1),
+            box-shadow 220ms cubic-bezier(0.2, 0.8, 0.24, 1);
+        }
+        .board2d-material-advantage-cell-b {
+          background: rgba(103, 33, 255, 0.68);
+          box-shadow:
+            0 0 8px rgba(106, 29, 255, 0.44),
+            inset 0 0 7px rgba(226, 200, 255, 0.24);
+        }
+        .board2d-material-advantage-cell-w {
+          background: rgba(21, 224, 205, 0.66);
+          box-shadow:
+            0 0 8px rgba(25, 230, 210, 0.42),
+            inset 0 0 7px rgba(218, 255, 250, 0.22);
         }
         .board2d-material-readout {
           display: flex;
@@ -1932,23 +2035,23 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           gap: 3px;
           width: 100%;
           font-family: var(--font-geist-mono), ui-monospace, monospace;
-          font-size: clamp(5.5px, 1vw, 8px);
+          font-size: clamp(13px, 2.7vw, 21px);
           line-height: 1;
           letter-spacing: 0;
-          text-shadow: 0 0 8px currentColor;
+          text-shadow: none;
         }
         .board2d-material-readout span {
-          opacity: 0.68;
+          opacity: 0.86;
         }
         .board2d-material-readout strong {
-          font-weight: 800;
-          font-size: 1.14em;
+          font-weight: 900;
+          font-size: 1.32em;
         }
         .board2d-material-readout-black {
-          color: rgba(191, 145, 255, 0.76);
+          color: rgba(191, 145, 255, 0.85);
         }
         .board2d-material-readout-white {
-          color: rgba(126, 255, 238, 0.78);
+          color: rgba(126, 255, 238, 0.85);
         }
         .board2d-material-grid {
           width: 100%;
