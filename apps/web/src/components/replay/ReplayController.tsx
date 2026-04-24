@@ -46,8 +46,8 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
   const moveListRef = useRef<HTMLDivElement>(null);
   const board3dRef = useRef<Board3DHandle>(null);
   const prevPlyRef = useRef(0);
-  const speedOptions = [1] as const;
-  const effectivePlaybackRate = viewMode === '2D' ? 1 : playbackRate;
+  const speedOptions = [1, 2, 3, 4] as const;
+  const effectivePlaybackRate = playbackRate;
 
   const gamesList = useMemo(() => {
     if (!pgn) return [];
@@ -240,14 +240,6 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [history.length, isPlaying]);
 
-  const handleCapture = () => {
-    // In a real system, this might trigger a server-side Playwright capture
-    // For now, we'll provide a nice message and maybe use the browser's print/save if possible
-    // or just console log the intent.
-    const url = `/dev/board2d?pgn=${encodeURIComponent(pgn)}&ply=${currentPly}`;
-    window.open(url, '_blank');
-  };
-
   return (
     <div className="flex flex-col gap-4 w-full h-full max-w-[1400px] mx-auto overflow-hidden">
       {/* Game Selector Tabs - Compact */}
@@ -308,29 +300,33 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                     blackPieceUrl={blackPieceUrl}
                     fxMove={fxMove}
                     fxKey={currentPly}
-                    fxSpeed={1}
+                    fxSpeed={playbackRate}
                   />
                 </div>
              )}
 
               {/* Player Labels */}
-              <div className="absolute top-6 left-6 flex flex-col gap-1 items-start">
-                <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Opponent</span>
-                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md flex items-center gap-2">
-                  <span className={`w-2 h-2 border border-white/20 bg-[#999999] ${currentPly % 2 === 1 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
-                  <span className="font-bold text-xs">{playerNames.black}</span>
-                  <span className="text-[9px] opacity-40 lowercase">Black</span>
-                </div>
-              </div>
+              {viewMode === '3D' && (
+                <>
+                  <div className="absolute top-6 left-6 flex flex-col gap-1 items-start">
+                    <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Opponent</span>
+                    <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md flex items-center gap-2">
+                      <span className={`w-2 h-2 border border-white/20 bg-[#999999] ${currentPly % 2 === 1 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
+                      <span className="font-bold text-xs">{playerNames.black}</span>
+                      <span className="text-[9px] opacity-40 lowercase">Black</span>
+                    </div>
+                  </div>
 
-              <div className="absolute bottom-6 right-6 flex flex-col gap-1 items-end">
-                <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md flex items-center gap-2">
-                  <span className="text-[9px] opacity-40 lowercase">White</span>
-                  <span className="font-bold text-xs">{playerNames.white}</span>
-                  <span className={`w-2 h-2 border border-white/20 bg-white ${currentPly % 2 === 0 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
-                </div>
-                <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Current Player</span>
-              </div>
+                  <div className="absolute bottom-6 right-6 flex flex-col gap-1 items-end">
+                    <div className="technical-label px-3 py-1.5 bg-black/80 border border-white/10 backdrop-blur-md flex items-center gap-2">
+                      <span className="text-[9px] opacity-40 lowercase">White</span>
+                      <span className="font-bold text-xs">{playerNames.white}</span>
+                      <span className={`w-2 h-2 border border-white/20 bg-white ${currentPly % 2 === 0 && currentPly < history.length ? 'ring-2 ring-accent ring-offset-1 ring-offset-black' : ''}`} />
+                    </div>
+                    <span className="text-[10px] technical-label opacity-40 uppercase tracking-tighter">Current Player</span>
+                  </div>
+                </>
+              )}
           </div>
 
           {/* Console Controls Bar - Fixed and Compact */}
@@ -374,15 +370,6 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
             </div>
 
             <div className="flex items-center gap-4">
-               {viewMode === '2D' && (
-                 <button
-                   onClick={handleCapture}
-                   className="flex items-center gap-2 px-3 py-1.5 text-[9px] technical-label uppercase tracking-widest bg-white/[0.05] text-white/60 border border-white/10 hover:bg-white/10 hover:text-white transition-all group"
-                 >
-                   <Maximize2 size={10} className="group-hover:scale-110 transition-transform" />
-                   High-Res Capture
-                 </button>
-               )}
                {viewMode === '3D' && (
                  <div className="flex items-center gap-1 bg-white/[0.02] border border-white/10 p-1">
                    <input
@@ -407,9 +394,13 @@ export const ReplayController: React.FC<ReplayControllerProps> = ({
                    <button
                      key={speed}
                      onClick={() => setPlaybackRate(speed)}
-                     className="px-2 py-1 text-[9px] technical-label bg-white/10 text-white cursor-default"
+                     className={`px-2 py-1 text-[9px] technical-label transition-colors ${
+                       playbackRate === speed
+                         ? 'bg-white/15 text-white'
+                         : 'bg-transparent text-white/45 hover:bg-white/10 hover:text-white'
+                     }`}
                    >
-                     {viewMode === '2D' ? '1x locked' : `${speed}x`}
+                     {speed}x
                    </button>
                  ))}
                </div>
