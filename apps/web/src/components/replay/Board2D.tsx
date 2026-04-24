@@ -50,28 +50,30 @@ const STARS: Star[] = (() => {
   return arr;
 })();
 
-const DARK_SQUARE_BG = '#020914';
-const LIGHT_SQUARE_BG = '#0b2a45';
+const DARK_SQUARE_BG = '#02070d';
+const LIGHT_SQUARE_BG = '#08263b';
 
-// Phosphor-CRT retro dot matrix for light squares.
-const LIGHT_SQUARE_DOTMATRIX_SVG = (() => {
-  const rng = mulberry32(771);
+function buildDotMatrixSvg(seed: number, fill: string, baseOpacity: number, jitter = 0.22) {
+  const rng = mulberry32(seed);
   const circles: string[] = [];
-  const spacing = 3;
+  const spacing = 4;
   const half = spacing / 2;
   for (let y = half; y < 64; y += spacing) {
     for (let x = half; x < 64; x += spacing) {
-      const jx = (rng() - 0.5) * 0.3;
-      const jy = (rng() - 0.5) * 0.3;
-      const rDot = 0.5 + rng() * 0.2;
-      const op = 0.35 + rng() * 0.65;
+      const jx = (rng() - 0.5) * jitter;
+      const jy = (rng() - 0.5) * jitter;
+      const rDot = 0.42 + rng() * 0.18;
+      const op = baseOpacity + rng() * (1 - baseOpacity);
       circles.push(
         `<circle cx='${(x + jx).toFixed(2)}' cy='${(y + jy).toFixed(2)}' r='${rDot.toFixed(2)}' fill-opacity='${op.toFixed(2)}'/>`,
       );
     }
   }
-  return `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><g fill='%23a0e4ff'>${circles.join('')}</g></svg>")`;
-})();
+  return `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><g fill='${fill}'>${circles.join('')}</g></svg>")`;
+}
+
+const LIGHT_SQUARE_DOTMATRIX_SVG = buildDotMatrixSvg(771, '%238ceaff', 0.24);
+const DARK_SQUARE_DOTMATRIX_SVG = buildDotMatrixSvg(1771, '%23236f88', 0.12, 0.12);
 
 // Board-wide circuit graph. Generated once at module scope with a fixed seed so every render
 // of the component shows the same PCB pattern. Coordinates live in square-space (0..8 × 0..8),
@@ -519,6 +521,10 @@ type MovingPieceFx = {
   durationMs: number;
 };
 
+const MOVE_SOURCE_DOUBLE_FLASH_MS = 420;
+const MOVE_DEST_DOUBLE_FLASH_MS = 420;
+const MOVE_PRELUDE_MS = MOVE_SOURCE_DOUBLE_FLASH_MS + MOVE_DEST_DOUBLE_FLASH_MS;
+
 const GREEN_MOVE_FX_PALETTE: MoveFxPalette = {
   radialInner: '#d8ffb0',
   radialOuter: '#7dff00',
@@ -548,9 +554,43 @@ function getMoveFxPalette(color: string): MoveFxPalette {
 
 function getPieceGlowVars(palette: MoveFxPalette): React.CSSProperties {
   return {
-    ['--piece-glow-near' as any]: palette.pieceGlowNear,
-    ['--piece-glow-far' as any]: palette.pieceGlowFar,
-  } as React.CSSProperties;
+    '--piece-glow-near': palette.pieceGlowNear,
+    '--piece-glow-far': palette.pieceGlowFar,
+  } as React.CSSProperties & Record<'--piece-glow-near' | '--piece-glow-far', string>;
+}
+
+function getDirectTracerVars(palette: MoveFxPalette): React.CSSProperties {
+  return {
+    '--direct-tracer-core': palette.travelCore,
+    '--direct-tracer-halo': palette.travelHalo,
+    '--direct-tracer-ping': palette.pingCore,
+  } as React.CSSProperties &
+    Record<'--direct-tracer-core' | '--direct-tracer-halo' | '--direct-tracer-ping', string>;
+}
+
+function getMovePreludeVars(palette: MoveFxPalette): React.CSSProperties {
+  return {
+    '--move-prelude-core': palette.pingCore,
+    '--move-prelude-halo': palette.travelHalo,
+  } as React.CSSProperties & Record<'--move-prelude-core' | '--move-prelude-halo', string>;
+}
+
+function getDirectTracerGeometry(fx: MovingPieceFx) {
+  const fromX = fx.from[1] * 12.5 + 6.25;
+  const fromY = fx.from[0] * 12.5 + 6.25;
+  const toX = fx.to[1] * 12.5 + 6.25;
+  const toY = fx.to[0] * 12.5 + 6.25;
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+
+  return {
+    fromX,
+    fromY,
+    toX,
+    toY,
+    length: Math.hypot(dx, dy),
+    angle: Math.atan2(dy, dx) * (180 / Math.PI),
+  };
 }
 
 function buildCircuitPulseFx(
@@ -799,187 +839,94 @@ const pieceNameMap: Record<string, string> = {
   k: 'king',
 };
 
-const layeredPieceIndexMap: Record<string, number> = {
-  queen: 0,
-  king: 1,
-  rook: 2,
-  pawn: 3,
-  bishop: 4,
-  knight: 5,
-};
-
-const dotmaxPieceMap: Record<string, string> = {
-  king: '01_king.png',
-  queen: '02_queen.png',
-  rook: '03_rook.png',
-  bishop: '04_bishop.png',
-  knight: '05_knight.png',
-  pawn: '06_pawn.png',
+const finalPieceIdMap: Record<string, string> = {
+  king: 'K',
+  queen: 'Q',
+  rook: 'R',
+  bishop: 'B',
+  knight: 'N',
+  pawn: 'P',
 };
 
 const pieceScaleMap: Record<string, number> = {
-  king: 1.08,
-  queen: 1.02,
-  rook: 0.94,
-  bishop: 0.98,
-  knight: 1.0,
+  king: 0.94,
+  queen: 0.92,
+  rook: 0.9,
+  bishop: 0.9,
+  knight: 0.92,
   pawn: 0.84,
 };
 
-const DOTMAX_ASSET_VERSION = '4';
-const DOTMAX_DITHER_MODES = {
-  outlineA: 'bayer',
-  outlineB: 'atkinson',
-  interiorA: 'floyd',
-  interiorB: 'none',
-} as const;
-
-function hashSeed(input: string): number {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-
-const PieceImage = ({ color, type, squareId }: { color: string; type: string; squareId: string }) => {
+const PieceImage = ({ color, type }: { color: string; type: string; squareId: string }) => {
   const name = pieceNameMap[type.toLowerCase()];
-  const index = layeredPieceIndexMap[name];
+  const assetId = finalPieceIdMap[name];
   const isWhite = color === 'w';
-  const dotmaxFile = dotmaxPieceMap[name];
 
-  if (dotmaxFile) {
-    const variantDir = isWhite ? 'white' : 'black';
-    const modeSrc = (mode: string) =>
-      `/replay/dotmax-piece-set/modes/${mode}/${variantDir}/${dotmaxFile}?v=${DOTMAX_ASSET_VERSION}`;
-    const legacySrc = `/replay/dotmax-piece-set/${variantDir}/${dotmaxFile}?v=${DOTMAX_ASSET_VERSION}`;
-    const outlineA = modeSrc(DOTMAX_DITHER_MODES.outlineA);
-    const outlineB = modeSrc(DOTMAX_DITHER_MODES.outlineB);
-    const interiorA = modeSrc(DOTMAX_DITHER_MODES.interiorA);
-    const interiorB = modeSrc(DOTMAX_DITHER_MODES.interiorB);
-
-    const pieceScale = pieceScaleMap[name] ?? 1;
-    const seed = hashSeed(`${squareId}-${name}-${color}`);
-    const cycle = 3.6 + ((seed % 400) / 400) * 2.4;
-    const phase = -(((seed >>> 8) % 1000) / 1000) * cycle;
-    const outlineCycle = cycle * 1.27;
-    const outlinePhase = phase * 0.63;
+  if (name && assetId) {
+    const pieceScale = pieceScaleMap[name] ?? 0.9;
+    const finalPieceSrc = `/replay/final_12_mixed/${isWhite ? 'w' : 'b'}${assetId}.svg`;
+    const pieceStyle = {
+      transform: `scale(${pieceScale})`,
+      transformOrigin: '50% 100%',
+      '--piece-mask-image': `url("${finalPieceSrc}")`,
+    } as React.CSSProperties & Record<'--piece-mask-image', string>;
 
     return (
       <div
-        className="relative w-full h-full select-none pointer-events-none"
-        style={{ transform: `scale(${pieceScale})`, transformOrigin: '50% 100%' }}
+        className={`relative w-full h-full select-none pointer-events-none chess-piece chess-piece-final chess-piece-${color}`}
+        style={pieceStyle}
         aria-label={`${color} ${name}`}
         role="img"
       >
-        <div className="absolute inset-0 [transform:scale(1.05)]">
-          <img
-            src={outlineA}
-            alt=""
-            aria-hidden="true"
-            className={`absolute inset-0 w-full h-full object-contain mix-blend-screen ${
-              isWhite
-                ? 'opacity-[0.44] [filter:brightness(1.08)_saturate(0.74)_contrast(1.04)]'
-                : 'opacity-[0.3] [filter:brightness(1.02)_saturate(0.62)_contrast(1.03)]'
-            }`}
-            style={{ animation: `dotmaxDitherPulseA ${outlineCycle}s ease-in-out ${outlinePhase}s infinite` }}
-          />
-          <img
-            src={outlineB}
-            alt=""
-            aria-hidden="true"
-            className={`absolute inset-0 w-full h-full object-contain mix-blend-screen ${
-              isWhite
-                ? 'opacity-[0.22] [filter:brightness(1.02)_saturate(0.7)_contrast(1.02)]'
-                : 'opacity-[0.2] [filter:brightness(0.99)_saturate(0.55)_contrast(1.02)]'
-            }`}
-            style={{ animation: `dotmaxDitherPulseB ${outlineCycle}s ease-in-out ${outlinePhase}s infinite` }}
-          />
-        </div>
         <img
-          src={interiorA}
-          alt={`${color} ${name}`}
-          className={`absolute inset-0 w-full h-full object-contain [image-rendering:auto] ${
-            isWhite
-              ? 'opacity-[0.96] [filter:brightness(1.16)_saturate(0.8)_contrast(1.05)] drop-shadow-[0_0_8px_rgba(126,188,232,0.34)]'
-              : 'opacity-[0.9] [filter:brightness(1.03)_saturate(0.64)_contrast(1.04)] drop-shadow-[0_0_7px_rgba(74,128,170,0.3)]'
-          }`}
-          style={{ animation: `dotmaxDitherPulseA ${cycle}s ease-in-out ${phase}s infinite` }}
-        />
-        <img
-          src={interiorB}
+          src={finalPieceSrc}
           alt=""
           aria-hidden="true"
-          className={`absolute inset-0 w-full h-full object-contain mix-blend-screen ${
-            isWhite
-              ? 'opacity-[0.2] [filter:brightness(1.14)_saturate(0.68)_contrast(1.02)]'
-              : 'opacity-[0.16] [filter:brightness(1.05)_saturate(0.5)_contrast(1.01)]'
-          }`}
-          style={{ animation: `dotmaxDitherPulseB ${cycle}s ease-in-out ${phase}s infinite` }}
+          className="absolute inset-0 w-full h-full object-contain chess-piece-final-aura"
+          draggable={false}
         />
         <img
-          src={legacySrc}
+          src={finalPieceSrc}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-contain opacity-0 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-contain chess-piece-final-rim"
+          draggable={false}
         />
-        <div
-          className={`absolute inset-0 ${
-            isWhite
-              ? 'bg-[radial-gradient(circle_at_50%_14%,rgba(208,230,252,0.13),transparent_58%)]'
-              : 'bg-[radial-gradient(circle_at_50%_16%,rgba(90,132,176,0.1),transparent_58%)]'
-          }`}
+        <img
+          src={finalPieceSrc}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-contain chess-piece-final-img"
+          draggable={false}
         />
+        <img
+          src={finalPieceSrc}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-contain chess-piece-final-chroma chess-piece-final-chroma-a"
+          draggable={false}
+        />
+        <img
+          src={finalPieceSrc}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-contain chess-piece-final-chroma chess-piece-final-chroma-b"
+          draggable={false}
+        />
+        <div className="absolute inset-0 chess-piece-final-tint" aria-hidden="true" />
+        <div className="absolute inset-0 chess-piece-final-specular" aria-hidden="true" />
+        <div className="absolute inset-0 chess-piece-final-scan" aria-hidden="true" />
       </div>
     );
   }
 
-  if (index == null) {
-    const fallbackSrc = `/${name}-${color}.svg`;
-    return (
-      <img
-        src={fallbackSrc}
-        alt={`${color} ${name}`}
-        className="w-[84%] h-[84%] object-contain select-none pointer-events-none drop-shadow-[0_0_10px_rgba(125,210,255,0.2)]"
-      />
-    );
-  }
-
-  const silhouetteSrc = `/replay/layered-piece-set/piece_${index}_silhouette.svg`;
-  const halftoneSrc = `/replay/layered-piece-set/piece_${index}_halftone.svg`;
-  const glowSrc = `/replay/layered-piece-set/piece_${index}_glow.svg`;
-
-  const bodyColor = isWhite ? '#dceeff' : '#0b141d';
-  const halftoneColor = isWhite ? '#ffffff' : '#2f4358';
-  const glowColor = isWhite ? '#7fd7ff' : '#3b89be';
-
-  const makeMaskStyle = (src: string, fill: string): React.CSSProperties => ({
-    backgroundColor: fill,
-    WebkitMaskImage: `url(${src})`,
-    maskImage: `url(${src})`,
-    WebkitMaskRepeat: 'no-repeat',
-    maskRepeat: 'no-repeat',
-    WebkitMaskSize: 'contain',
-    maskSize: 'contain',
-    WebkitMaskPosition: 'center',
-    maskPosition: 'center',
-  });
-
+  const fallbackSrc = `/${name}-${color}.svg`;
   return (
-    <div
-      className="relative w-[90%] h-[90%] select-none pointer-events-none"
-      aria-label={`${color} ${name}`}
-      role="img"
-    >
-      <div className="absolute inset-0" style={makeMaskStyle(silhouetteSrc, bodyColor)} />
-      <div className="absolute inset-0 opacity-30" style={makeMaskStyle(halftoneSrc, halftoneColor)} />
-      <div
-        className="absolute inset-0 opacity-85 drop-shadow-[0_0_9px_rgba(85,196,255,0.45)]"
-        style={makeMaskStyle(glowSrc, glowColor)}
-      />
-    </div>
+    <img
+      src={fallbackSrc}
+      alt={`${color} ${name}`}
+      className="w-[84%] h-[84%] object-contain select-none pointer-events-none drop-shadow-[0_0_10px_rgba(125,210,255,0.2)]"
+    />
   );
 };
 
@@ -1024,7 +971,10 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     const moveColor = board[to[0]]?.[to[1]]?.color ?? 'w';
     // Slow down the circuit pulse slightly to match new pacing
     const pulseFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), moveColor, fxSpeed * 0.8);
-    setPulse({ key: (fxKey ?? 0) + Math.random(), ...pulseFx });
+    const timer = window.setTimeout(() => {
+      setPulse({ key: (fxKey ?? 0) + Math.random(), ...pulseFx });
+    }, MOVE_PRELUDE_MS);
+    return () => window.clearTimeout(timer);
   }, [board, fxKey, fxMove, fxSpeed]);
 
   useEffect(() => {
@@ -1040,29 +990,72 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
     const moveFx = buildCircuitPulseFx(nodePath, from, to, Boolean(fxMove.captured), pieceAtDestination.color, fxSpeed * 0.8);
     const key = (fxKey ?? 0) + Math.random();
     
-    // Reduce the move duration and start the animation sooner
-    const durationMs = Math.max(600, moveFx.moveDurationMs * 1.1);
-    const startDelayMs = moveFx.moveStartDelayMs * 0.4;
-    
-    setMovingPieceFx({
-      key,
-      from,
-      to,
-      toSquare: fxMove.to,
-      piece: {
-        type: pieceAtDestination.type,
-        color: pieceAtDestination.color,
-      },
-      startDelayMs,
-      durationMs,
-    });
+    const durationMs = Math.max(420, Math.min(680, moveFx.moveDurationMs * 0.38));
+    const startDelayMs = 0;
 
-    const timer = window.setTimeout(() => {
+    const startTimer = window.setTimeout(() => {
+      setMovingPieceFx({
+        key,
+        from,
+        to,
+        toSquare: fxMove.to,
+        piece: {
+          type: pieceAtDestination.type,
+          color: pieceAtDestination.color,
+        },
+        startDelayMs,
+        durationMs,
+      });
+    }, MOVE_PRELUDE_MS);
+
+    const clearTimer = window.setTimeout(() => {
       setMovingPieceFx((current) => (current?.key === key ? null : current));
-    }, startDelayMs + durationMs + 220);
+    }, MOVE_PRELUDE_MS + startDelayMs + durationMs);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(startTimer);
+      window.clearTimeout(clearTimer);
+    };
   }, [board, fxKey, fxMove, fxSpeed]);
+
+  const directMoveTrace = lastMove
+    ? (() => {
+        const from = squareToRC(lastMove.from);
+        const to = squareToRC(lastMove.to);
+        if (!from || !to) return null;
+        const color = board[to[0]]?.[to[1]]?.color ?? 'w';
+        const fx: MovingPieceFx = {
+          key: fxKey ?? 0,
+          from,
+          to,
+          toSquare: lastMove.to,
+          piece: { type: board[to[0]]?.[to[1]]?.type ?? 'p', color },
+          startDelayMs: 0,
+          durationMs: 820,
+        };
+        return {
+          key: `${lastMove.from}-${lastMove.to}-${fxKey ?? 0}`,
+          geometry: getDirectTracerGeometry(fx),
+          palette: getMoveFxPalette(color),
+          delayMs: MOVE_PRELUDE_MS,
+        };
+      })()
+    : null;
+
+  const movePreludeCue = lastMove
+    ? (() => {
+        const from = squareToRC(lastMove.from);
+        const to = squareToRC(lastMove.to);
+        if (!from || !to) return null;
+        const color = board[to[0]]?.[to[1]]?.color ?? 'w';
+        return {
+          key: `${lastMove.from}-${lastMove.to}-${fxKey ?? 0}`,
+          from,
+          to,
+          palette: getMoveFxPalette(color),
+        };
+      })()
+    : null;
 
   return (
     <div
@@ -1082,35 +1075,35 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
       </svg>
 
       {/* Retro-tech UI Overlay (Decorative Corners & Labels) */}
-      <div className="absolute inset-0 pointer-events-none border-[6px] border-[#1a1a1a] z-50">
-        <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-[#55aaff]/40" />
-        <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-[#55aaff]/40" />
-        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-[#55aaff]/40" />
-        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-[#55aaff]/40" />
+      <div className="absolute inset-0 pointer-events-none border border-[#2defff]/28 z-50">
+        <div className="absolute top-2 left-2 w-9 h-9 border-t-2 border-l-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
+        <div className="absolute top-2 right-2 w-9 h-9 border-t-2 border-r-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
+        <div className="absolute bottom-2 left-2 w-9 h-9 border-b-2 border-l-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
+        <div className="absolute bottom-2 right-2 w-9 h-9 border-b-2 border-r-2 border-[#50f6ff]/70 shadow-[0_0_18px_rgba(45,239,255,0.25)]" />
       </div>
 
-      <div className="absolute top-0 left-[8.6%] right-[8.6%] h-[8.6%] grid grid-cols-8 pointer-events-none" aria-hidden="true">
+      <div className="absolute top-0 left-[7.4%] right-[7.4%] h-[7.4%] grid grid-cols-8 pointer-events-none" aria-hidden="true">
         {FILE_LABELS.map((f) => (
-          <span key={`t-${f}`} className="flex items-center justify-center technical-label text-[10px] font-mono text-[#66ccff] drop-shadow-[0_0_4px_rgba(68,170,255,0.5)] font-bold">{f}</span>
+          <span key={`t-${f}`} className="flex items-center justify-center board2d-coordinate">{f}</span>
         ))}
       </div>
-      <div className="absolute bottom-0 left-[8.6%] right-[8.6%] h-[8.6%] grid grid-cols-8 pointer-events-none" aria-hidden="true">
+      <div className="absolute bottom-0 left-[7.4%] right-[7.4%] h-[7.4%] grid grid-cols-8 pointer-events-none" aria-hidden="true">
         {FILE_LABELS.map((f) => (
-          <span key={`b-${f}`} className="flex items-center justify-center technical-label text-[10px] font-mono text-[#66ccff] drop-shadow-[0_0_4px_rgba(68,170,255,0.5)] font-bold">{f}</span>
+          <span key={`b-${f}`} className="flex items-center justify-center board2d-coordinate">{f}</span>
         ))}
       </div>
-      <div className="absolute top-[8.6%] bottom-[8.6%] left-0 w-[8.6%] grid grid-rows-8 pointer-events-none" aria-hidden="true">
+      <div className="absolute top-[7.4%] bottom-[7.4%] left-0 w-[7.4%] grid grid-rows-8 pointer-events-none" aria-hidden="true">
         {RANK_LABELS.map((r) => (
-          <span key={`l-${r}`} className="flex items-center justify-center technical-label text-[10px] font-mono text-[#66ccff] drop-shadow-[0_0_4px_rgba(68,170,255,0.5)] font-bold">{r}</span>
+          <span key={`l-${r}`} className="flex items-center justify-center board2d-coordinate">{r}</span>
         ))}
       </div>
-      <div className="absolute top-[8.6%] bottom-[8.6%] right-0 w-[8.6%] grid grid-rows-8 pointer-events-none" aria-hidden="true">
+      <div className="absolute top-[7.4%] bottom-[7.4%] right-0 w-[7.4%] grid grid-rows-8 pointer-events-none" aria-hidden="true">
         {RANK_LABELS.map((r) => (
-          <span key={`r-${r}`} className="flex items-center justify-center technical-label text-[10px] font-mono text-[#66ccff] drop-shadow-[0_0_4px_rgba(68,170,255,0.5)] font-bold">{r}</span>
+          <span key={`r-${r}`} className="flex items-center justify-center board2d-coordinate">{r}</span>
         ))}
       </div>
 
-      <div className="absolute inset-[8.6%] grid grid-cols-8 grid-rows-8 border-2 border-[#55aaff]/60 shadow-[0_0_30px_rgba(85,170,255,0.25),inset_0_0_20px_rgba(73,183,255,0.15)] board2d-main-grid">
+      <div className="absolute inset-[7.4%] grid grid-cols-8 grid-rows-8 border border-[#54f6ff]/65 shadow-[0_0_34px_rgba(45,239,255,0.22),inset_0_0_28px_rgba(56,255,214,0.11)] board2d-main-grid">
         {board.map((row, r) =>
           row.map((square, c) => {
             const squareId = `${FILE_IDS[c]}${8 - r}`;
@@ -1121,27 +1114,29 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
             return (
               <div
                 key={`${r}-${c}`}
-                className="relative flex items-center justify-center"
+                data-square-id={squareId}
+                className={`relative flex items-center justify-center board2d-square ${
+                  isLight ? 'board2d-square-light' : 'board2d-square-dark'
+                }`}
                 style={{ backgroundColor: isLight ? LIGHT_SQUARE_BG : DARK_SQUARE_BG }}
               >
-                {isLight && (
-                  <div
-                    data-layer="dotmatrix"
-                    aria-hidden="true"
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      backgroundImage: LIGHT_SQUARE_DOTMATRIX_SVG,
-                      backgroundSize: '100% 100%',
-                      backgroundRepeat: 'no-repeat',
-                      mixBlendMode: 'screen',
-                      opacity: 0.45,
-                    }}
-                  />
-                )}
+                <div
+                  data-layer="dotmatrix"
+                  aria-hidden="true"
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundImage: isLight ? LIGHT_SQUARE_DOTMATRIX_SVG : DARK_SQUARE_DOTMATRIX_SVG,
+                    backgroundSize: '100% 100%',
+                    backgroundRepeat: 'no-repeat',
+                    mixBlendMode: 'screen',
+                    opacity: isLight ? 0.46 : 0.24,
+                  }}
+                />
+                <div className="absolute inset-0 pointer-events-none board2d-square-sheen" aria-hidden="true" />
                 {isHighlighted && (
                   <>
-                    <div className="absolute inset-[8%] border border-[#a8e2ff]/80 shadow-[0_0_12px_rgba(108,189,255,0.45)]" />
-                    <div className="absolute inset-0 bg-[#7ec9ff]/12" />
+                    <div className="absolute inset-[7%] border border-[#d8fff2]/85 shadow-[0_0_14px_rgba(99,255,216,0.52)]" />
+                    <div className="absolute inset-0 bg-[#4dffc8]/13" />
                   </>
                 )}
 
@@ -1149,10 +1144,14 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
                   {square && !hideForLiftedMove && (
                     <motion.div
                       key={`${square.type}-${square.color}-${squareId}`}
-                      initial={{ scale: 0.78, opacity: 0 }}
+                      initial={lastMove?.to === squareId ? false : { scale: 0.78, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0.78, opacity: 0 }}
-                      transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                      transition={
+                        lastMove?.to === squareId
+                          ? { duration: 0 }
+                          : { type: 'spring', stiffness: 260, damping: 26 }
+                      }
                       className="w-full h-full flex items-center justify-center z-10"
                     >
                       {lastMove?.to === squareId ? (
@@ -1176,7 +1175,7 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
 
         <svg
           data-layer="circuit-graph"
-          className="absolute inset-0 w-full h-full pointer-events-none z-[4] hidden"
+          className="absolute inset-0 w-full h-full pointer-events-none z-[4] board2d-circuit-graph"
           viewBox="0 0 8 8"
           preserveAspectRatio="none"
           aria-hidden="true"
@@ -1513,117 +1512,193 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         </svg>
 
         <AnimatePresence>
+          {movePreludeCue && (
+            <div
+              key={`move-prelude-${movePreludeCue.key}`}
+              className="absolute inset-0 pointer-events-none z-[24]"
+              style={getMovePreludeVars(movePreludeCue.palette)}
+              aria-hidden="true"
+            >
+              <div
+                className="absolute move-prelude-square move-prelude-square-source"
+                style={{
+                  left: `${movePreludeCue.from[1] * 12.5}%`,
+                  top: `${movePreludeCue.from[0] * 12.5}%`,
+                  width: '12.5%',
+                  height: '12.5%',
+                }}
+              />
+              <div
+                className="absolute move-prelude-square move-prelude-square-dest"
+                style={{
+                  left: `${movePreludeCue.to[1] * 12.5}%`,
+                  top: `${movePreludeCue.to[0] * 12.5}%`,
+                  width: '12.5%',
+                  height: '12.5%',
+                }}
+              />
+            </div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {directMoveTrace && (
+            <div
+              key={`direct-tracer-${directMoveTrace.key}`}
+              className="absolute inset-0 pointer-events-none z-[26] direct-move-tracer"
+              style={getDirectTracerVars(directMoveTrace.palette)}
+              aria-hidden="true"
+            >
+              <div
+                className="absolute direct-move-tracer-axis"
+                style={{
+                  left: `${directMoveTrace.geometry.fromX}%`,
+                  top: `${directMoveTrace.geometry.fromY}%`,
+                  width: `${directMoveTrace.geometry.length}%`,
+                  transform: `rotate(${directMoveTrace.geometry.angle}deg)`,
+                }}
+              >
+                <div
+                  className="direct-move-tracer-beam"
+                  style={{ animationDelay: `${directMoveTrace.delayMs}ms` }}
+                />
+                <div
+                  className="direct-move-tracer-core"
+                  style={{ animationDelay: `${directMoveTrace.delayMs}ms` }}
+                />
+              </div>
+              <motion.div
+                className="absolute direct-move-tracer-head"
+                initial={{
+                  left: `${directMoveTrace.geometry.fromX}%`,
+                  top: `${directMoveTrace.geometry.fromY}%`,
+                  opacity: 0,
+                  scale: 0.52,
+                }}
+                animate={{
+                  left: `${directMoveTrace.geometry.toX}%`,
+                  top: `${directMoveTrace.geometry.toY}%`,
+                  opacity: [0, 0.95, 0.72, 0],
+                  scale: [0.55, 1, 0.78, 0.36],
+                }}
+                exit={{ opacity: 0 }}
+                transition={{
+                  delay: directMoveTrace.delayMs / 1000,
+                  duration: 0.72,
+                  ease: [0.16, 0.8, 0.24, 1],
+                  opacity: { times: [0, 0.16, 0.78, 1], ease: "easeInOut" },
+                  scale: { times: [0, 0.28, 0.8, 1], ease: "easeInOut" },
+                }}
+              />
+            </div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
           {movingPieceFx && (
             <React.Fragment key={`moving-piece-wrapper-${movingPieceFx.key}`}>
-              <svg
-                className="absolute inset-[8.6%] pointer-events-none z-[25] overflow-visible"
-                aria-hidden="true"
-              >
-                <motion.line
-                  x1={`${movingPieceFx.from[1] * 12.5 + 6.25}%`}
-                  y1={`${movingPieceFx.from[0] * 12.5 + 6.25}%`}
-                  x2={`${movingPieceFx.to[1] * 12.5 + 6.25}%`}
-                  y2={`${movingPieceFx.to[0] * 12.5 + 6.25}%`}
-                  stroke={getMoveFxPalette(movingPieceFx.piece.color).travelCore}
-                  strokeWidth="0.8%"
-                  strokeLinecap="round"
-                  filter={`drop-shadow(0 0 6px ${getMoveFxPalette(movingPieceFx.piece.color).travelHalo})`}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: [0, 0.8, 0.8, 0] }}
+              <div className="absolute inset-0 pointer-events-none z-30 overflow-visible">
+                <motion.div
+                  data-moving-piece="true"
+                  data-moving-piece-to={movingPieceFx.toSquare}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${movingPieceFx.from[1] * 12.5}%`,
+                    top: `${movingPieceFx.from[0] * 12.5}%`,
+                    width: '12.5%',
+                    height: '12.5%',
+                    transformOrigin: '50% 50%',
+                  }}
+                  initial={{
+                    x: '0%',
+                    y: '0%',
+                  }}
+                  animate={{
+                    x: `${(movingPieceFx.to[1] - movingPieceFx.from[1]) * 100}%`,
+                    y: `${(movingPieceFx.to[0] - movingPieceFx.from[0]) * 100}%`,
+                  }}
                   exit={{ opacity: 0 }}
                   transition={{
                     delay: movingPieceFx.startDelayMs / 1000,
                     duration: movingPieceFx.durationMs / 1000,
-                    ease: "easeInOut",
-                    opacity: { times: [0, 0.2, 0.8, 1], ease: "easeInOut" }
-                  }}
-                />
-              </svg>
-              <motion.div
-                className="absolute pointer-events-none z-30"
-                style={{
-                  left: `${movingPieceFx.from[1] * 12.5}%`,
-                  top: `${movingPieceFx.from[0] * 12.5}%`,
-                  width: '12.5%',
-                  height: '12.5%',
-                }}
-                initial={{ 
-                  x: '0%', 
-                  y: '0%', 
-                  scale: 1,
-                  filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))'
-                }}
-                animate={{
-                  x: `${(movingPieceFx.to[1] - movingPieceFx.from[1]) * 100}%`,
-                  y: `${(movingPieceFx.to[0] - movingPieceFx.from[0]) * 100}%`,
-                  scale: [1, 1.35, 1], // Reduced scale peak
-                  filter: [
-                    'drop-shadow(0 0 0px rgba(0,0,0,0))',
-                    `drop-shadow(0 0 15px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 35px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
-                    `drop-shadow(0 0 4px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowNear}) drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowFar})`,
-                  ],
-                }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  delay: movingPieceFx.startDelayMs / 1000,
-                  duration: movingPieceFx.durationMs / 1000,
-                  ease: "easeInOut",
-                  scale: {
-                    times: [0, 0.5, 1],
-                    ease: "easeInOut"
-                  },
-                  filter: {
-                    times: [0, 0.5, 1],
-                    ease: "easeInOut"
-                  }
-                }}
-              >
-              <div className="w-full h-full flex items-center justify-center lifted-piece-shell">
-                <motion.div
-                  className="relative w-full h-full flex items-center justify-center lifted-piece-outline"
-                  initial={{ filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))' }}
-                  animate={{
-                    filter: [
-                      'drop-shadow(0 0 0 rgba(0,0,0,0))',
-                      getMoveFxPalette(movingPieceFx.piece.color).outlineFilter,
-                      getMoveFxPalette(movingPieceFx.piece.color).outlineFilter,
-                      'drop-shadow(0 0 0 rgba(0,0,0,0))',
-                    ],
-                  }}
-                  transition={{
-                    delay: movingPieceFx.startDelayMs / 1000,
-                    duration: movingPieceFx.durationMs / 1000,
-                    ease: "easeInOut",
-                    times: [0, 0.2, 0.8, 1],
+                    ease: [0.33, 0, 0.2, 1],
+                    x: { ease: [0.33, 0, 0.2, 1] },
+                    y: { ease: [0.33, 0, 0.2, 1] }
                   }}
                 >
                   <motion.div
-                    className="absolute inset-0 opacity-65 mix-blend-screen lifted-piece-ghost"
-                    style={{ filter: getMoveFxPalette(movingPieceFx.piece.color).ghostFilter }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 0.4, 0.3, 0] }}
+                    className="w-full h-full flex items-center justify-center lifted-piece-shell"
+                    initial={{
+                      scale: 1,
+                      filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))',
+                    }}
+                    animate={{
+                      scale: [1, 1.35, 1],
+                      filter: [
+                        'drop-shadow(0 0 0px rgba(0,0,0,0))',
+                        `drop-shadow(0 0 13px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowNear}) drop-shadow(0 0 28px ${getMoveFxPalette(movingPieceFx.piece.color).shellGlowFar})`,
+                        `drop-shadow(0 0 4px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowNear}) drop-shadow(0 0 8px ${getMoveFxPalette(movingPieceFx.piece.color).pieceGlowFar})`,
+                      ],
+                    }}
                     transition={{
                       delay: movingPieceFx.startDelayMs / 1000,
                       duration: movingPieceFx.durationMs / 1000,
-                      ease: "easeInOut",
-                      times: [0, 0.3, 0.7, 1],
+                      scale: {
+                        times: [0, 0.5, 1],
+                        ease: [0.4, 0, 0.2, 1],
+                      },
+                      filter: {
+                        times: [0, 0.5, 1],
+                        ease: [0.4, 0, 0.2, 1],
+                      },
                     }}
-                    aria-hidden="true"
                   >
-                    <PieceImage
-                      color={movingPieceFx.piece.color}
-                      type={movingPieceFx.piece.type}
-                      squareId={`${movingPieceFx.toSquare}-ghost`}
-                    />
+                    <motion.div
+                      className="relative w-full h-full flex items-center justify-center lifted-piece-outline"
+                      initial={{ filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))' }}
+                      animate={{
+                        filter: [
+                          'drop-shadow(0 0 0 rgba(0,0,0,0))',
+                          getMoveFxPalette(movingPieceFx.piece.color).outlineFilter,
+                          getMoveFxPalette(movingPieceFx.piece.color).outlineFilter,
+                          'drop-shadow(0 0 0 rgba(0,0,0,0))',
+                        ],
+                      }}
+                      transition={{
+                        delay: movingPieceFx.startDelayMs / 1000,
+                        duration: movingPieceFx.durationMs / 1000,
+                        ease: "easeInOut",
+                        times: [0, 0.2, 0.8, 1],
+                      }}
+                    >
+                      <motion.div
+                        className="absolute inset-0 opacity-65 mix-blend-screen lifted-piece-ghost"
+                        style={{ filter: getMoveFxPalette(movingPieceFx.piece.color).ghostFilter }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 0.32, 0.24, 0] }}
+                        transition={{
+                          delay: movingPieceFx.startDelayMs / 1000,
+                          duration: movingPieceFx.durationMs / 1000,
+                          ease: "easeInOut",
+                          times: [0, 0.3, 0.7, 1],
+                        }}
+                        aria-hidden="true"
+                      >
+                        <PieceImage
+                          color={movingPieceFx.piece.color}
+                          type={movingPieceFx.piece.type}
+                          squareId={`${movingPieceFx.toSquare}-ghost`}
+                        />
+                      </motion.div>
+                      <PieceImage
+                        color={movingPieceFx.piece.color}
+                        type={movingPieceFx.piece.type}
+                        squareId={movingPieceFx.toSquare}
+                      />
+                    </motion.div>
                   </motion.div>
-                  <PieceImage
-                    color={movingPieceFx.piece.color}
-                    type={movingPieceFx.piece.type}
-                    squareId={movingPieceFx.toSquare}
-                  />
                 </motion.div>
               </div>
-            </motion.div>
             </React.Fragment>
           )}
         </AnimatePresence>
@@ -1639,16 +1714,88 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
 
       <style jsx global>{`
         .board2d-container {
-          /* Clean container */
+          background:
+            radial-gradient(circle at 50% 48%, rgba(38, 244, 255, 0.065), transparent 44%),
+            linear-gradient(135deg, #020508 0%, #020b12 48%, #03110e 100%);
+          border: 1px solid rgba(88, 246, 255, 0.28);
+          box-shadow:
+            0 0 0 1px rgba(61, 255, 216, 0.08),
+            0 20px 70px rgba(0, 0, 0, 0.62),
+            inset 0 0 42px rgba(34, 239, 255, 0.08);
+          isolation: isolate;
+        }
+        .board2d-container::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background-image:
+            linear-gradient(rgba(62, 255, 219, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(62, 255, 219, 0.05) 1px, transparent 1px);
+          background-size: 4.15% 4.15%;
+          mask-image: radial-gradient(circle at 50% 50%, black 0%, transparent 74%);
+          opacity: 0.52;
+          z-index: 1;
+        }
+        .board2d-coordinate {
+          color: rgba(113, 239, 255, 0.66);
+          font-family: var(--font-geist-mono), ui-monospace, monospace;
+          font-size: clamp(7px, 1.35vw, 10px);
+          font-weight: 700;
+          letter-spacing: 0;
+          text-shadow: 0 0 8px rgba(62, 239, 255, 0.58);
         }
         .board2d-main-grid {
           background-image: 
-            linear-gradient(rgba(85, 170, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(85, 170, 255, 0.05) 1px, transparent 1px);
+            linear-gradient(rgba(73, 246, 255, 0.095) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(73, 246, 255, 0.095) 1px, transparent 1px);
           background-size: 12.5% 12.5%;
+          backdrop-filter: blur(0.2px);
+        }
+        .board2d-main-grid::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            linear-gradient(90deg, transparent 0 12.35%, rgba(126, 255, 226, 0.14) 12.45% 12.55%, transparent 12.65%),
+            linear-gradient(0deg, transparent 0 12.35%, rgba(126, 255, 226, 0.12) 12.45% 12.55%, transparent 12.65%);
+          background-size: 12.5% 12.5%;
+          mix-blend-mode: screen;
+          opacity: 0.34;
+          z-index: 6;
+        }
+        .board2d-square {
+          overflow: hidden;
+        }
+        .board2d-square::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          opacity: 0.58;
+          background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 44%),
+            radial-gradient(circle at 50% 50%, rgba(67, 251, 255, 0.06), transparent 62%);
+        }
+        .board2d-square-light {
+          box-shadow: inset 0 0 20px rgba(55, 220, 255, 0.105);
+        }
+        .board2d-square-dark {
+          box-shadow: inset 0 0 18px rgba(29, 255, 214, 0.045);
+        }
+        .board2d-square-sheen {
+          background:
+            linear-gradient(90deg, rgba(96, 255, 225, 0.08), transparent 26%, transparent 74%, rgba(63, 238, 255, 0.07)),
+            linear-gradient(0deg, rgba(96, 255, 225, 0.055), transparent 24%, transparent 74%, rgba(63, 238, 255, 0.055));
+          opacity: 0.42;
+        }
+        .board2d-circuit-graph {
+          opacity: 0.2;
+          mix-blend-mode: screen;
         }
         .circuit-edge-highway {
-          stroke-opacity: 0.32;
+          stroke-opacity: 0.34;
         }
         .circuit-edge-bridge {
           stroke-opacity: 0.22;
@@ -1657,7 +1804,7 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
           stroke-opacity: 0.16;
         }
         .circuit-node-highway {
-          fill-opacity: 0.55;
+          fill-opacity: 0.36;
         }
         .circuit-node-interior {
           fill-opacity: 0.2;
@@ -1820,6 +1967,385 @@ export const Board2D: React.FC<Board2DProps> = (props) => {
         .piece-move-glow {
           animation: pieceMoveGlow 760ms ease-out forwards;
           will-change: filter;
+        }
+        @keyframes movePreludeDoubleFlash {
+          0% {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          13% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          28% {
+            opacity: 0.2;
+            transform: scale(1.025);
+          }
+          43% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          66% {
+            opacity: 0.3;
+            transform: scale(1.04);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(1.08);
+          }
+        }
+        .move-prelude-square {
+          opacity: 0;
+          transform-origin: center;
+          animation: movePreludeDoubleFlash ${MOVE_SOURCE_DOUBLE_FLASH_MS}ms cubic-bezier(0.18, 0.8, 0.24, 1) forwards;
+        }
+        .move-prelude-square::before,
+        .move-prelude-square::after {
+          content: "";
+          position: absolute;
+          inset: 8%;
+          pointer-events: none;
+        }
+        .move-prelude-square::before {
+          border: 2px solid var(--move-prelude-core);
+          box-shadow:
+            0 0 12px var(--move-prelude-core),
+            0 0 28px var(--move-prelude-halo),
+            inset 0 0 18px rgba(186, 255, 116, 0.18);
+        }
+        .move-prelude-square::after {
+          background:
+            radial-gradient(circle at 50% 50%, rgba(231, 255, 190, 0.3), rgba(125, 255, 0, 0.16) 38%, transparent 68%);
+          mix-blend-mode: screen;
+        }
+        .move-prelude-square-dest {
+          animation-delay: ${MOVE_SOURCE_DOUBLE_FLASH_MS}ms;
+        }
+        @keyframes directTracerGrow {
+          0% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0);
+          }
+          16% {
+            opacity: 1;
+            transform: translateY(-50%) scaleX(1);
+          }
+          70% {
+            opacity: 0.72;
+            transform: translateY(-50%) scaleX(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(1);
+          }
+        }
+        .direct-move-tracer {
+          mix-blend-mode: screen;
+        }
+        .direct-move-tracer-axis {
+          height: 0;
+          transform-origin: 0 50%;
+        }
+        .direct-move-tracer-beam {
+          position: absolute;
+          left: 0;
+          top: 50%;
+          width: 100%;
+          height: 12px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, rgba(216, 255, 183, 0.04), var(--direct-tracer-core), var(--direct-tracer-halo));
+          opacity: 0;
+          transform-origin: 0 50%;
+          transform: translateY(-50%);
+          filter: blur(5px) drop-shadow(0 0 18px var(--direct-tracer-halo));
+          animation: directTracerGrow 980ms cubic-bezier(0.16, 0.8, 0.24, 1) forwards;
+        }
+        .direct-move-tracer-core {
+          position: absolute;
+          left: 0;
+          top: 50%;
+          width: 100%;
+          height: 3px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, rgba(216, 255, 183, 0.08), var(--direct-tracer-core) 42%, var(--direct-tracer-ping));
+          opacity: 0;
+          transform-origin: 0 50%;
+          transform: translateY(-50%);
+          box-shadow:
+            0 0 8px var(--direct-tracer-core),
+            0 0 18px var(--direct-tracer-halo);
+          animation: directTracerGrow 900ms cubic-bezier(0.16, 0.8, 0.24, 1) forwards;
+        }
+        .direct-move-tracer-head {
+          width: 18px;
+          height: 18px;
+          margin-left: -9px;
+          margin-top: -9px;
+          border-radius: 999px;
+          background:
+            radial-gradient(circle, var(--direct-tracer-ping) 0 22%, var(--direct-tracer-core) 36%, rgba(125, 255, 0, 0.08) 72%, transparent 76%);
+          box-shadow:
+            0 0 12px var(--direct-tracer-core),
+            0 0 26px var(--direct-tracer-halo);
+          mix-blend-mode: screen;
+        }
+        .chess-piece {
+          filter: none;
+        }
+        .chess-piece-final {
+          filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.7));
+        }
+        .chess-piece::before {
+          content: "";
+          position: absolute;
+          inset: 9% 12% 6%;
+          border-radius: 999px;
+          background: radial-gradient(ellipse at 50% 63%, rgba(0, 7, 12, 0.76), rgba(0, 14, 18, 0.24) 48%, transparent 72%);
+          filter: blur(1px);
+          opacity: 0.82;
+        }
+        .chess-piece-final-img {
+          padding: 5% 6% 8%;
+          z-index: 3;
+        }
+        .chess-piece-w .chess-piece-final-img {
+          filter:
+            brightness(0.98)
+            saturate(0.92)
+            contrast(1.1);
+        }
+        .chess-piece-b .chess-piece-final-img {
+          filter:
+            hue-rotate(248deg)
+            brightness(0.58)
+            saturate(1.25)
+            contrast(1.28);
+        }
+        .chess-piece-final-aura,
+        .chess-piece-final-rim,
+        .chess-piece-final-chroma {
+          padding: 5% 6% 8%;
+          pointer-events: none;
+          user-select: none;
+        }
+        .chess-piece-final-aura {
+          z-index: 1;
+          display: none;
+          opacity: 0;
+          transform: scale(1);
+          transform-origin: 50% 60%;
+          mix-blend-mode: screen;
+          filter: none;
+        }
+        .chess-piece-w .chess-piece-final-aura {
+          filter: none;
+        }
+        .chess-piece-b .chess-piece-final-aura {
+          opacity: 0;
+          filter: none;
+        }
+        .chess-piece-final-rim {
+          z-index: 2;
+          opacity: 0.14;
+          transform: translate(-0.5px, -0.5px) scale(1.004);
+          transform-origin: 50% 60%;
+          mix-blend-mode: screen;
+        }
+        .chess-piece-w .chess-piece-final-rim {
+          filter:
+            brightness(0)
+            saturate(100%)
+            invert(91%)
+            sepia(30%)
+            saturate(814%)
+            hue-rotate(127deg)
+            brightness(108%)
+            contrast(102%);
+        }
+        .chess-piece-b .chess-piece-final-rim {
+          opacity: 0.24;
+          filter:
+            brightness(0)
+            saturate(100%)
+            invert(18%)
+            sepia(87%)
+            saturate(1800%)
+            hue-rotate(248deg)
+            brightness(82%)
+            contrast(108%);
+        }
+        .chess-piece-final-chroma {
+          z-index: 7;
+          opacity: 0.48;
+          mix-blend-mode: screen;
+          transform-origin: 50% 58%;
+        }
+        .chess-piece-final-chroma-a {
+          transform: translate(-1.8px, 0.75px);
+        }
+        .chess-piece-final-chroma-b {
+          transform: translate(1.8px, -0.75px);
+        }
+        .chess-piece-w .chess-piece-final-chroma-a {
+          filter:
+            brightness(0)
+            saturate(100%)
+            invert(57%)
+            sepia(93%)
+            saturate(552%)
+            hue-rotate(118deg)
+            brightness(112%)
+            contrast(104%);
+        }
+        .chess-piece-w .chess-piece-final-chroma-b {
+          opacity: 0.42;
+          filter:
+            brightness(0)
+            saturate(100%)
+            invert(86%)
+            sepia(46%)
+            saturate(1148%)
+            hue-rotate(165deg)
+            brightness(107%)
+            contrast(103%);
+        }
+        .chess-piece-b .chess-piece-final-chroma {
+          opacity: 0.54;
+        }
+        .chess-piece-b .chess-piece-final-chroma-a {
+          filter:
+            brightness(0)
+            saturate(100%)
+            invert(13%)
+            sepia(95%)
+            saturate(2600%)
+            hue-rotate(258deg)
+            brightness(92%)
+            contrast(112%);
+        }
+        .chess-piece-b .chess-piece-final-chroma-b {
+          opacity: 0.42;
+          filter:
+            brightness(0)
+            saturate(100%)
+            invert(52%)
+            sepia(88%)
+            saturate(1098%)
+            hue-rotate(180deg)
+            brightness(104%)
+            contrast(106%);
+        }
+        .chess-piece-final-tint,
+        .chess-piece-final-specular,
+        .chess-piece-final-scan {
+          -webkit-mask-image: var(--piece-mask-image);
+          mask-image: var(--piece-mask-image);
+          -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+          -webkit-mask-size: 88% 87%;
+          mask-size: 88% 87%;
+          -webkit-mask-position: center 48%;
+          mask-position: center 48%;
+        }
+        .chess-piece-final-tint {
+          z-index: 4;
+          inset: 0;
+          opacity: 1;
+          mix-blend-mode: multiply;
+          background:
+            linear-gradient(145deg, #57f6eb 0%, #b7fff8 33%, #18c9bd 70%, #90fff5 100%);
+        }
+        .chess-piece-w .chess-piece-final-tint::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(circle at 42% 22%, rgba(234, 255, 253, 0.42), transparent 30%),
+            linear-gradient(180deg, rgba(148, 255, 248, 0.18), rgba(15, 176, 166, 0.16));
+          mix-blend-mode: screen;
+        }
+        .chess-piece-b .chess-piece-final-tint {
+          opacity: 0.52;
+          mix-blend-mode: screen;
+          background: linear-gradient(135deg, rgba(52, 22, 112, 0.75), rgba(92, 51, 190, 0.38) 44%, rgba(30, 12, 75, 0.7));
+        }
+        .chess-piece-final-specular {
+          z-index: 5;
+          inset: 0;
+          mix-blend-mode: screen;
+          opacity: 0.34;
+          background:
+            linear-gradient(135deg, rgba(197, 255, 251, 0.46) 0%, rgba(137, 255, 246, 0.12) 24%, transparent 48%),
+            radial-gradient(circle at 42% 18%, rgba(187, 255, 250, 0.34), transparent 28%),
+            linear-gradient(90deg, transparent 0 42%, rgba(104, 255, 242, 0.16) 49%, transparent 58%);
+        }
+        .chess-piece-b .chess-piece-final-specular {
+          opacity: 0.3;
+          background:
+            linear-gradient(135deg, rgba(86, 47, 169, 0.34), rgba(48, 24, 103, 0.08) 26%, transparent 48%),
+            radial-gradient(circle at 38% 20%, rgba(105, 66, 199, 0.26), transparent 30%),
+            linear-gradient(90deg, transparent 0 44%, rgba(79, 48, 173, 0.14) 51%, transparent 60%);
+        }
+        .chess-piece-final-scan {
+          z-index: 6;
+          inset: 0;
+          opacity: 0.1;
+          mix-blend-mode: overlay;
+          background:
+            repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.42) 0 1px, transparent 1px 5px),
+            repeating-linear-gradient(90deg, rgba(158, 255, 248, 0.2) 0 1px, transparent 1px 8px);
+        }
+        .chess-piece-b .chess-piece-final-scan {
+          opacity: 0.14;
+          mix-blend-mode: screen;
+          background:
+            repeating-linear-gradient(0deg, rgba(131, 91, 220, 0.36) 0 1px, transparent 1px 5px),
+            repeating-linear-gradient(90deg, rgba(79, 45, 161, 0.22) 0 1px, transparent 1px 8px);
+        }
+        .chess-piece-core {
+          opacity: 1;
+          filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.62))
+            drop-shadow(0 0 2px rgba(188, 255, 255, 0.18));
+        }
+        .chess-piece-b .chess-piece-core {
+          opacity: 0.96;
+          filter: drop-shadow(0 0 1px rgba(76, 237, 255, 0.65))
+            drop-shadow(0 1px 0 rgba(0, 0, 0, 0.82));
+        }
+        .chess-piece-halftone {
+          opacity: 0.28;
+          mix-blend-mode: screen;
+        }
+        .chess-piece-glow {
+          opacity: 0.5;
+          mix-blend-mode: screen;
+          filter: drop-shadow(0 0 3px rgba(75, 242, 255, 0.42));
+        }
+        .chess-piece-rim {
+          opacity: 0.18;
+          transform: scale(1.035);
+          transform-origin: 50% 58%;
+          mix-blend-mode: screen;
+          filter: blur(0.35px);
+        }
+        .chess-piece-aura {
+          opacity: 0.12;
+          transform: scale(1.13);
+          transform-origin: 50% 58%;
+          mix-blend-mode: screen;
+          filter: blur(2.2px);
+        }
+        .chess-piece-b .chess-piece-halftone {
+          opacity: 0.42;
+        }
+        .chess-piece-b .chess-piece-glow {
+          opacity: 0.72;
+        }
+        .chess-piece-b .chess-piece-rim {
+          opacity: 0.34;
+        }
+        .chess-piece-b .chess-piece-aura {
+          opacity: 0.2;
         }
         .lifted-piece-outline {}
         .lifted-piece-ghost {}
