@@ -1,137 +1,117 @@
-import * as THREE from 'three';
 import { setupScene } from './scene.js';
 import { createBoard } from './board.js';
 import { createPieces } from './pieces.js';
 import { updateTimer, addMove } from './ui.js';
 import { createAnimationsContext } from './animations.js';
+import { showWebGLFallback, webGL2IsAvailable } from './webgl.js';
+import { expandMove, haloState, resolveMove, SIMULATION_MOVES, stampLatestMove } from './logic/position.js';
 
 const appContainer = document.getElementById('app');
 
-const { scene, camera, renderer, composer, controls } = setupScene(appContainer);
-const { boardGroup, squareSize, offset } = createBoard(scene);
-const { piecesContainer, pieces, highlightPiece, unhighlightPiece } = await createPieces(scene, offset);
-
-const animCtx = createAnimationsContext(scene, boardGroup, piecesContainer, offset);
-
-const clock = new THREE.Clock();
-
-function animate() {
-  requestAnimationFrame(animate);
-  const delta = clock.getDelta();
-  const time = clock.getElapsedTime();
-
-  controls.update();
-
-  // Decaying timestamp effect on moved pieces (Static opacity, no flash)
-  pieces.forEach(p => {
-    // Keep halo locked to piece's flat coordinates, letting piece fly overhead
-    if (p.userData.haloGroup) {
-       p.userData.haloGroup.position.x = p.position.x;
-       p.userData.haloGroup.position.z = p.position.z;
-    }
-    
-    if (p.userData.moveAge !== undefined && p.userData.moveAge <= 3) {
-      const baseOpacities = [1.0, 0.5, 0.2, 0.05]; // Gradual static decay
-      p.userData.haloMat.opacity = baseOpacities[p.userData.moveAge];
-      if (p.userData.haloGroup) p.userData.haloGroup.visible = true;
-    } else {
-      if (p.userData.haloMat) {
-         p.userData.haloMat.opacity = 0;
-      }
-      if (p.userData.haloGroup) {
-         p.userData.haloGroup.visible = false;
-      }
-    }
+if (!webGL2IsAvailable()) {
+  showWebGLFallback();
+} else {
+  start().catch((error) => {
+    console.error(error);
+    showWebGLFallback();
   });
-
-  composer.render();
 }
 
-animate();
+async function start() {
+  const { scene, renderer, composer, controls } = setupScene(appContainer);
+  const { boardGroup, offset } = createBoard(scene);
+  const { piecesContainer, pieces, highlightPiece, unhighlightPiece } = await createPieces(scene, offset);
 
-// Automated Simulation Sequence
-const moves = [
-  // White Pawn e2-e4
-  { fR: 6, fF: 4, tR: 4, tF: 4, isCapture: false },
-  // Black Pawn e7-e5
-  { fR: 1, fF: 4, tR: 3, tF: 4, isCapture: false },
-  // White Knight g1-f3
-  { fR: 7, fF: 6, tR: 5, tF: 5, isCapture: false },
-  // Black Pawn d7-d5
-  { fR: 1, fF: 3, tR: 3, tF: 3, isCapture: false },
-  // White Pawn e4xd5 (Capture)
-  { fR: 4, fF: 4, tR: 3, tF: 3, isCapture: true },
-  // Black Queen d8xd5 (Capture)
-  { fR: 0, fF: 3, tR: 3, tF: 3, isCapture: true }
-];
+  const animCtx = createAnimationsContext(scene, boardGroup, piecesContainer, offset);
 
-let step = 0;
+  function syncHalos() {
+    pieces.forEach((piece) => {
+      if (piece.userData.haloGroup) {
+        piece.userData.haloGroup.position.x = piece.position.x;
+        piece.userData.haloGroup.position.z = piece.position.z;
+      }
 
-function nextMove() {
-  if (step >= moves.length) {
-     setTimeout(() => {
-        // Reset or just stop
-        console.log("Simulation complete.");
-     }, 2000);
-     return;
-  }
-  
-  const m = moves[step];
-  const actor = pieces.find(p => p.userData.rank === m.fR && p.userData.file === m.fF);
-  const target = pieces.find(p => p.userData.rank === m.tR && p.userData.file === m.tF);
-  
-  if (!actor) {
-    console.error("Actor not found for move", m);
-    step++;
-    nextMove();
-    return;
+      const halo = haloState(piece.userData.moveAge);
+      if (piece.userData.haloMat) piece.userData.haloMat.opacity = halo.opacity;
+      if (piece.userData.haloGroup) piece.userData.haloGroup.visible = halo.visible;
+    });
   }
 
-  // 1. Board calculates path
-  animCtx.animateLightningStrike(m.fR, m.fF, m.tR, m.tF, () => {
-     if (m.isCapture && target) {
-        // 2. Destroy victim if capture
+  renderer.setAnimationLoop(() => {
+    controls.update();
+    syncHalos();
+    composer.render();
+  });
+
+  // `?still=1` holds the opening position. The default still plays the line.
+  const autoplay = new URLSearchParams(window.location.search).get('still') !== '1';
+  if (autoplay) setTimeout(nextMove, 2000);
+
+  const moves = SIMULATION_MOVES.map(expandMove);
+  let step = 0;
+
+  function liveRecords() {
+    return pieces.map((mesh) => ({
+      mesh,
+      type: mesh.userData.type,
+      isWhite: mesh.userData.isWhite,
+      rank: mesh.userData.rank,
+      file: mesh.userData.file,
+    }));
+  }
+
+  function nextMove() {
+    if (step >= moves.length) {
+      setTimeout(() => {
+        console.log('Simulation complete.');
+      }, 2000);
+      return;
+    }
+
+    const scripted = moves[step];
+    let resolved;
+    try {
+      resolved = resolveMove(liveRecords(), scripted);
+    } catch (error) {
+      console.error(error);
+      step += 1;
+      nextMove();
+      return;
+    }
+
+    const actor = resolved.actor.mesh;
+    const target = resolved.occupant ? resolved.occupant.mesh : null;
+
+    const finishJump = () => {
+      stampLatestMove(pieces.map((piece) => piece.userData), actor.userData);
+      step += 1;
+      setTimeout(nextMove, 800);
+    };
+
+    animCtx.animateLightningStrike(scripted.fromRank, scripted.fromFile, scripted.toRank, scripted.toFile, () => {
+      if (scripted.capture && target) {
         animCtx.animateCapture(target, () => {
-           // Remove from local tracked array
-           const idx = pieces.indexOf(target);
-           if(idx > -1) pieces.splice(idx, 1);
-           
-           // 3. Jump to location
-           animCtx.animateJump(actor, m.tR, m.tF, () => {
-              // Increment global history decay
-              pieces.forEach(p => { if (p.userData.moveAge !== undefined) p.userData.moveAge++; });
-              actor.userData.moveAge = 0; // Stamp piece as most recently moved
-              
-              step++;
-              setTimeout(nextMove, 800); // Wait 0.8s before next sequence
-           });
+          const idx = pieces.indexOf(target);
+          if (idx > -1) pieces.splice(idx, 1);
+          animCtx.animateJump(actor, scripted.toRank, scripted.toFile, finishJump);
         });
-     } else {
-        // 2. Just jump to location
-        animCtx.animateJump(actor, m.tR, m.tF, () => {
-           // Increment global history decay
-           pieces.forEach(p => { if (p.userData.moveAge !== undefined) p.userData.moveAge++; });
-           actor.userData.moveAge = 0;
-           
-           step++;
-           setTimeout(nextMove, 800); 
-        });
-     }
-  });
-}
-
-// Start simulation sequence after 2s
-setTimeout(nextMove, 2000);
-
-// Expose API module
-window.ChessVisualizer = {
-  addMove,
-  updateTimer,
-  highlightPiece: (rank, file) => {
-    const p = pieces.find(p => p.userData.rank === rank && p.userData.file === file);
-    if (p) highlightPiece(p);
-  },
-  unhighlightAll: () => {
-    pieces.forEach(p => unhighlightPiece(p));
+      } else {
+        animCtx.animateJump(actor, scripted.toRank, scripted.toFile, finishJump);
+      }
+    });
   }
-};
+
+  window.ChessVisualizer = {
+    addMove,
+    updateTimer,
+    highlightPiece: (rank, file) => {
+      const piece = pieces.find((item) => item.userData.rank === rank && item.userData.file === file);
+      if (piece) highlightPiece(piece);
+    },
+    unhighlightAll: () => {
+      pieces.forEach((piece) => unhighlightPiece(piece));
+    },
+  };
+
+  return { scene, renderer, composer, controls };
+}

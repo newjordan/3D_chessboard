@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 export function setupScene(container) {
   const scene = new THREE.Scene();
@@ -37,13 +37,16 @@ export function setupScene(container) {
     0.25 // threshold
   );
 
-  const DotMatrixShader = {
+  // GLSL 3, which is what WebGLRenderer compiles for WebGL 2. The mask is the
+  // same 2.5-pixel grid as before: lit texels are dimmed slightly in the gaps.
+  const dotMatrixMaterial = new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
     uniforms: {
-      "tDiffuse": { value: null },
-      "resolution": { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+      tDiffuse: { value: null },
+      resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     },
     vertexShader: `
-      varying vec2 vUv;
+      out vec2 vUv;
       void main() {
         vUv = uv;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -52,24 +55,19 @@ export function setupScene(container) {
     fragmentShader: `
       uniform sampler2D tDiffuse;
       uniform vec2 resolution;
-      varying vec2 vUv;
+      in vec2 vUv;
+      out vec4 fragColor;
       void main() {
-        vec4 texel = texture2D(tDiffuse, vUv);
-        // Create 2x2 or 3x3 pixel grid mask
+        vec4 texel = texture(tDiffuse, vUv);
         vec2 grid = fract(vUv * (resolution / 2.5));
         float dotMask = step(0.3, grid.x) * step(0.3, grid.y);
-        
-        // Subtract from color to create gaps (dot mask)
-        // Only apply noticeably to lit areas to preserve deep blacks
-        float luma = dot(texel.rgb, vec3(0.299, 0.587, 0.114));
         vec3 techFuzz = texel.rgb * (dotMask * 0.2 + 0.8);
-        
-        gl_FragColor = vec4(techFuzz, texel.a);
+        fragColor = vec4(techFuzz, texel.a);
       }
-    `
-  };
+    `,
+  });
 
-  const dotMatrixPass = new ShaderPass(DotMatrixShader);
+  const dotMatrixPass = new ShaderPass(dotMatrixMaterial);
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);

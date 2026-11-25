@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Holographic 3D Chess</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23000510'/%3E%3Cpath d='M7 25h18M9 21h14M11 21v-7h10v7M13 14V9h6v5' fill='none' stroke='%2300e5ff' stroke-width='1.6'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +12,12 @@
   </head>
   <body>
     <div id="app"></div>
+    <div id="webgl-fallback" class="webgl-fallback" hidden role="alert">
+      <div class="webgl-fallback-card">
+        <h2>WebGL 2 is unavailable</h2>
+        <p></p>
+      </div>
+    </div>
     <div id="ui-layer">
       <!-- Frame Border overlay -->
       <div id="hud-screen-border"></div>

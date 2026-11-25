@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { squareToWorld } from './logic/coordinates.js';
+import { isWhiteRank, startingSetup } from './logic/position.js';
+import { PIECE_CODE_TO_TYPE, knightYaw, pieceScale, uprightRotation } from './logic/model.js';
 
 export async function createPieces(scene, offset) {
   const piecesContainer = new THREE.Group();
@@ -18,9 +21,9 @@ export async function createPieces(scene, offset) {
   
   // Await loading all external geometry assets provided by user
   await Promise.all(modelsToLoad.map(type => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // URL references the local Vite public mappings
-      loader.load(`/pieces_fbx/${type}.fbx`, (object) => {
+      loader.load(`${import.meta.env.BASE_URL}pieces_fbx/${type}.fbx`, (object) => {
         let geometry = null;
         object.traverse((child) => {
           if (child.isMesh && !geometry) {
@@ -34,14 +37,10 @@ export async function createPieces(scene, offset) {
           let yLen = geometry.boundingBox.max.y - geometry.boundingBox.min.y;
           let zLen = geometry.boundingBox.max.z - geometry.boundingBox.min.z;
           
-          // Dynamically stand the piece upright based on its longest dimension
-          if (xLen > yLen && xLen > zLen) {
-             // Laying along X axis: was upside down, so spin opposite direction
-             geometry.rotateZ(Math.PI / 2);
-          } else if (zLen > yLen && zLen > xLen) {
-             // Laying along Z axis: was upside down, so spin opposite direction
-             geometry.rotateX(Math.PI / 2);
-          }
+          // Stand the piece upright based on its longest dimension.
+          const turn = uprightRotation(xLen, yLen, zLen);
+          if (turn?.axis === 'z') geometry.rotateZ(turn.angle);
+          else if (turn?.axis === 'x') geometry.rotateX(turn.angle);
           // Now compute the bounds again after rotation
           geometry.computeBoundingBox();
           
@@ -55,22 +54,7 @@ export async function createPieces(scene, offset) {
           const zSize = geometry.boundingBox.max.z - geometry.boundingBox.min.z;
           const largestDim = Math.max(xSize, zSize);
 
-          let desiredHeight = 1.0;
-          switch(type) {
-              case 'pawn': desiredHeight = 0.8; break;
-              case 'rook': desiredHeight = 1.0; break;
-              case 'knight': desiredHeight = 1.25; break;
-              case 'bishop': desiredHeight = 1.4; break;
-              case 'queen': desiredHeight = 1.6; break;
-              case 'king': desiredHeight = 1.8; break;
-          }
-          
-          // If the model is enormously wide, we must cap its height scaling so it doesn't spill over a 1x1 square
-          let scaleFac = desiredHeight / ySize;
-          if (largestDim * scaleFac > 0.8) {
-              scaleFac = 0.8 / largestDim; // lock width to 0.8 maximum
-          }
-
+          const scaleFac = pieceScale(ySize, largestDim, type);
           geometry.scale(scaleFac, scaleFac, scaleFac);
           
           loadedGeometries[type] = geometry;
@@ -86,14 +70,13 @@ export async function createPieces(scene, offset) {
   function createTopologicalPiece(code, isWhite) {
     const group = new THREE.Group();
     
-    let typeMap = { 'P':'pawn', 'R':'rook', 'N':'knight', 'B':'bishop', 'Q':'queen', 'K':'king' };
-    const typeName = typeMap[code];
+    const typeName = PIECE_CODE_TO_TYPE[code];
     let geo = loadedGeometries[typeName];
 
     const material = isWhite ? whiteMaterial : blackMaterial;
     
     if (geo) {
-      // Use WireframeGeometry to map the lowpoly GLB into our neon lattice style
+      // Use WireframeGeometry to map the FBX mesh into the neon lattice style
       const wireframe = new THREE.LineSegments(new THREE.WireframeGeometry(geo), material);
       group.add(wireframe);
     } else {
@@ -130,7 +113,7 @@ export async function createPieces(scene, offset) {
 
     // Make knight face correct direction
     if (typeName === 'knight') {
-      group.rotation.y = (isWhite ? Math.PI : 0) - Math.PI / 2; 
+      group.rotation.y = knightYaw(isWhite);
     }
 
     group.userData = { material, haloMat, haloGroup };
@@ -138,29 +121,17 @@ export async function createPieces(scene, offset) {
     return group;
   }
 
-  const setup = [
-    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
-    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
-  ];
+  const setup = startingSetup();
 
   for(let rank = 0; rank < 8; rank++) {
     for(let file = 0; file < 8; file++) {
       const type = setup[rank][file];
       if (type) {
-        // Standard mapping: Ranks 0-1 Black, Ranks 6-7 White? 
-        // In our setup z is array index, let's say rank 0 is black (far) and rank 7 is white (near).
-        // The array has rank 0 starting at index 0. Let's make rank > 4 white.
-        const isWhite = rank > 4;
+        // Rank 0 is Black's back rank. White occupies ranks above 4.
+        const isWhite = isWhiteRank(rank);
         const piece = createTopologicalPiece(type, isWhite);
-        
-        const x = file * 1 - (offset - 0.5);
-        const z = (offset - 0.5) - (rank * 1);
+
+        const { x, z } = squareToWorld(rank, file, offset);
         
         piece.position.set(x, 0, z);
         piece.userData.haloGroup.position.set(x, 0, z);
