@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import { squareToWorld } from './logic/coordinates.js';
+import { placePiece } from './logic/position.js';
+import { lightningCorners, lightningUvs, pointAlongLightning } from './logic/lightning.js';
 
 export function createAnimationsContext(scene, boardGroup, piecesContainer, offset) {
   
@@ -51,13 +54,7 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
     return bGroup;
   };
 
-  const getPositionFromCoords = (rank, file) => {
-    return {
-      x: file * 1 - (offset - 0.5),
-      z: (offset - 0.5) - (rank * 1),
-      y: 0
-    };
-  };
+  const getPositionFromCoords = (rank, file) => squareToWorld(rank, file, offset);
 
   return {
     animateLightningStrike: (startRank, startFile, endRank, endFile, onComplete) => {
@@ -87,52 +84,40 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       }, 0);
 
       // 2 & 3. Energy Compression -> Nearest Corner
-      const dx = endPos.x - startPos.x;
-      const dz = endPos.z - startPos.z;
-      const snapCornerX = startPos.x + (dx > 0 ? 0.5 : -0.5);
-      const snapCornerZ = startPos.z + (dz > 0 ? 0.5 : -0.5);
+      const corners = lightningCorners(startPos, endPos);
+      const { snap, target, distZ, total } = corners;
       
       tl.to(bracket.children[0].material, { opacity: 0, duration: 0.1 }, "+=0.1"); // fade brackets leaving dot
       tl.to(bracket.children[1].scale, { x: 2, y: 2, z: 2, duration: 0.1 }, "<"); // dot absorbs energy
 
       tl.to(bracket.position, {
-        x: snapCornerX,
-        z: snapCornerZ,
+        x: snap.x,
+        z: snap.z,
         duration: 0.1,
         ease: "power1.inOut"
       });
 
       // 4. Grid Crawl: Double Pincer Path (Ride the closest rail into town!)
       // The target corner MUST be the PRECEDING edge relative to travel direction, not the far edge!
-      const targetCornerX = endPos.x + (dx > 0 ? -0.5 : 0.5);
-      const targetCornerZ = endPos.z + (dz > 0 ? -0.5 : 0.5);
-
-      const dist1 = Math.abs(snapCornerZ - targetCornerZ);
-      const dist2 = Math.abs(snapCornerX - targetCornerX);
-      const totalDist = dist1 + dist2;
-
       const tracePoints = [
-        new THREE.Vector3(snapCornerX, 0, snapCornerZ),
-        new THREE.Vector3(snapCornerX, 0, targetCornerZ),
-        new THREE.Vector3(targetCornerX, 0, targetCornerZ)
+        new THREE.Vector3(snap.x, 0, snap.z),
+        new THREE.Vector3(snap.x, 0, target.z),
+        new THREE.Vector3(target.x, 0, target.z)
       ];
 
       const traceGeo = new THREE.BufferGeometry().setFromPoints(tracePoints);
-      const uvs = new Float32Array([
-        0, 0,
-        (totalDist === 0) ? 0 : (dist1/totalDist), 0,
-        1, 0
-      ]);
+      const uvs = new Float32Array(lightningUvs(distZ, total));
       traceGeo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
       const traceMat = new THREE.ShaderMaterial({
+        glslVersion: THREE.GLSL3,
         uniforms: {
            uProgress: { value: 0.0 },
            uLength: { value: 0.85 }, // 85% trailing length for massive electricity drag
            color: { value: new THREE.Color(0x00ffff) }
         },
         vertexShader: `
-           varying float vUv;
+           out float vUv;
            void main() {
              vUv = uv.x;
              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -142,16 +127,17 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
            uniform float uProgress;
            uniform float uLength;
            uniform vec3 color;
-           varying float vUv;
+           in float vUv;
+           out vec4 fragColor;
            void main() {
              float dist = uProgress - vUv;
              if (dist >= 0.0 && dist <= uLength) {
                 // Non-linear fade so the head is extremely bright and the tail lingers
                 float alpha = pow(1.0 - (dist / uLength), 1.5);
                 // Multiplying color by 3.0 to severely trigger the UnrealBloomPass
-                gl_FragColor = vec4(color * 3.0, alpha);
+                fragColor = vec4(color * 3.0, alpha);
              } else {
-                gl_FragColor = vec4(0.0);
+                fragColor = vec4(0.0);
              }
            }
         `,
@@ -172,20 +158,10 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
         onUpdate: () => {
            traceMat.uniforms.uProgress.value = proxy.p;
            // Circle tracks the exact head of the bolt which rests at 1.0
-           let head = Math.min(proxy.p, 1.0);
-           
-           if (totalDist > 0) {
-               const split = dist1 / totalDist;
-               if (head <= split) {
-                   const t = (split === 0) ? 1 : head / split;
-                   bracket.position.x = snapCornerX;
-                   bracket.position.z = THREE.MathUtils.lerp(snapCornerZ, targetCornerZ, t);
-               } else {
-                   const t = (head - split) / (1.0 - split);
-                   bracket.position.x = THREE.MathUtils.lerp(snapCornerX, targetCornerX, t);
-                   bracket.position.z = targetCornerZ;
-               }
-           }
+           const head = Math.min(proxy.p, 1.0);
+           const point = pointAlongLightning(corners, head);
+           bracket.position.x = point.x;
+           bracket.position.z = point.z;
         }
       });
 
@@ -351,8 +327,7 @@ export function createAnimationsContext(scene, boardGroup, piecesContainer, offs
       
       // Update piece memory
       tl.call(() => {
-        piece.userData.rank = endRank;
-        piece.userData.file = endFile;
+        placePiece(piece.userData, endRank, endFile);
       });
     }
   };

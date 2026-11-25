@@ -1,12 +1,12 @@
 import * as THREE from 'three';
+import { SQUARE_SIZE, boardOffset } from './logic/coordinates.js';
 
 export function createBoard(scene) {
   const masterGroup = new THREE.Group();
   const boardGroup = new THREE.Group();
   
-  const squareSize = 1;
-  const boardSize = squareSize * 8;
-  const offset = boardSize / 2;
+  const squareSize = SQUARE_SIZE;
+  const offset = boardOffset();
   const boardThickness = 0.5;
 
   // Sharp thin grid

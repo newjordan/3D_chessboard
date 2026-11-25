@@ -25,6 +25,43 @@ body {
   display: none;
 }
 
+#webgl-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+#webgl-fallback[hidden] {
+  display: none;
+}
+
+.webgl-fallback-card {
+  max-width: 36rem;
+  padding: 1.5rem 1.75rem;
+  color: #9fd7ff;
+  background: rgba(0, 8, 20, 0.92);
+  border: 2px solid #2288ff;
+  box-shadow: 0 0 24px rgba(34, 136, 255, 0.35);
+}
+
+.webgl-fallback-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+  color: #66ccff;
+  text-shadow: 0 0 12px rgba(68, 170, 255, 0.8);
+}
+
+.webgl-fallback-card p {
+  margin: 0;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
 /* Frame overlay matching Image 2 */
 #hud-screen-border {
   position: absolute;
